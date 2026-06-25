@@ -1,0 +1,4 @@
+name: baseline
+description: "Statistical change-point baseline on the Market system."
+use_mock: true
+top_k: 1

@@ -1,0 +1,5 @@
+name: proposed
+description: "Your novelty method (M5). Start from baseline and improve detect/reasoner."
+use_mock: true
+top_k: 1
+# TODO(M5): add your method's hyper-parameters here.

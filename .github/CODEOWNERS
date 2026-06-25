@@ -1,0 +1,5 @@
+# CODEOWNERS — auto-requests review from the module owner on PRs.
+# Leader: edit these mappings as you finalize who owns what.
+/src/input_module/    @DuongNg1111
+/src/process_module/  @HoangNguyen2803
+/src/output_module/   @thanhthanh278

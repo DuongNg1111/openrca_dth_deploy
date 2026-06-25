@@ -1,0 +1,43 @@
+# Research notes — OpenRCA (literature-review starter)
+
+> Fill this in during **M2 (Literature Review)**. A skeleton is provided so newcomers know
+> exactly what to capture. This file becomes the *Related Work* + *Background* of the paper.
+
+## 1. The benchmark we build on
+- **OpenRCA** (Xu et al., ICLR 2025): *Can LLMs Locate the Root Cause of Software Failures?*
+  - 335 failures from 3 enterprise systems (`Telecom`, `Bank`, `Market`), **68 GB** telemetry.
+  - Task: given a failure (time window + system) and its telemetry, output the **root cause
+    component + reason + datetime**.
+  - Telemetry = **metrics** (KPI time series) + **logs** (semi-structured text) + **traces**
+    (dependency/call graphs).
+  - Baseline = an **RCA-agent** that writes Python to query telemetry (avoids huge contexts).
+  - Headline result: best model (Claude 3.5) solved only **~11.34%** → lots of room to improve.
+- Our system targets the **Market** system, framed as **Logistics / Delivery Platform RCA**.
+
+## 2. Reading list (each member reads >=2, writes a 5-line summary below)
+- [ ] OpenRCA paper (everyone) — https://openreview.net/forum?id=M4qNIzQYpd
+- [ ] An AIOps / RCA survey (e.g. "A Survey of AIOps for Failure Management")
+- [ ] One paper on **log-based** anomaly detection (e.g. DeepLog)
+- [ ] One paper on **trace-based** RCA / microservice fault localization
+- [ ] One paper on **metric** anomaly detection (e.g. time-series change-point)
+
+### Summary template (copy per paper)
+```
+Title / venue / year:
+Problem:
+Method (1-2 lines):
+Data used:
+Result:
+Why it matters for us / gap it leaves:
+```
+
+## 3. Gap & our angle (novelty brainstorm — pick in M5)
+1. **Heuristic + LLM hybrid** that uses cheap statistical triage first and only calls the LLM on hard cases (cut cost/latency vs the pure-agent baseline).
+2. **Trace-graph-aware retrieval** that walks the service dependency graph to localize the failing logistics service faster.
+3. **Domain-transfer framing** of microservice RCA as a logistics fulfillment pipeline (order -> warehouse -> shipment -> tracking) and measure if domain priors help.
+
+## 4. Glossary (metric / log / trace) — fill during M2/M3
+- **Metric / KPI**: ...
+- **Log**: ...
+- **Trace / span**: ...
+- **Root cause component**: ...
