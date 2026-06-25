@@ -50,3 +50,4 @@ python experiments/run_experiment.py --config experiments/configs/baseline.yaml
 open a Pull Request. Details in [`docs/01_git_workflow.md`](docs/01_git_workflow.md).
 
 TEST: Duong 
+TEST: ThanhThanh
