@@ -16,20 +16,18 @@
 
 ## 2. Reading list (each member reads >=2, writes a 5-line summary below)
 - [ ] OpenRCA paper (everyone) — https://openreview.net/forum?id=M4qNIzQYpd
+1/ OpenRCA paper 
+**Title / venue / year**: OpenRCA: Can Large Language Models Locate the Root Cause of Software Failures? / ICLR / 2025
+**Problem**: While LLMs are effective in early software development stages, their ability to perform post-deployment Root Cause Analysis (RCA) on massive, heterogeneous telemetry data in complex systems remains largely under-explored
+**Method (1-2 lines)**: The authors introduced OpenRCA, a goal-driven benchmark, and RCA-agent, a multi-agent system that uses program synthesis (Python) to analyze telemetry data programmatically, bypassing LLM context window limits
+**Data used**: 335 real-world failure cases across three enterprise systems (Telecom, Bank, and Market) containing over 68 GB of telemetry data, including metrics, logs, and traces
+**Result**: Current models struggle significantly; the best-performing model (Claude 3.5 Sonnet) achieved only 11.34% accuracy using the RCA-agent, and all models scored 0% on "Hard" tasks requiring all three root cause elements
+**Why it matters for us / gap it leaves**: The research reveals that LLMs exhibit "reasoning laziness" (preferring shorter steps), struggle with non-natural language tokens (like GUIDs and error codes), and require higher error tolerance to effectively use execution feedback in agentic workflows
+
 - [ ] An AIOps / RCA survey (e.g. "A Survey of AIOps for Failure Management")
 - [ ] One paper on **log-based** anomaly detection (e.g. DeepLog)
 - [ ] One paper on **trace-based** RCA / microservice fault localization
 - [ ] One paper on **metric** anomaly detection (e.g. time-series change-point)
-
-### Summary template (copy per paper)
-```
-Title / venue / year:
-Problem:
-Method (1-2 lines):
-Data used:
-Result:
-Why it matters for us / gap it leaves:
-```
 
 ## 3. Gap & our angle (novelty brainstorm — pick in M5)
 1. **Heuristic + LLM hybrid** that uses cheap statistical triage first and only calls the LLM on hard cases (cut cost/latency vs the pure-agent baseline).
