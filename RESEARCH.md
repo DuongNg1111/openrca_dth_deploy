@@ -30,7 +30,7 @@
 **Result**: The survey establishes a detailed definition of AIOps tasks, identifies specific LLM-based approaches suitable for different subtasks, and outlines the current challenges and future directions for the domain.
 **Why it matters for us / gap it leaves**: This work is critical because there was previously no comprehensive survey discussing the differences between LLM-based AIOps and traditional methods. It serves as a foundational guide for further development and application of LLMs to ensure high availability and reliability in large-scale distributed systems.
 
-- One paper on **log-based** anomaly detection
+- [ ] One paper on **log-based** anomaly detection
 **Title / venue / year**: DeepLog: Anomaly Detection and Diagnosis from System Logs through Deep Learning / CCS’17 (ACM Conference on Computer and Communications Security) / 2017.
 **Problem**: As systems become more complex, traditional anomaly detection methods (such as PCA or invariant mining) are no longer effective at handling the massive volumes of unstructured, concurrent log data produced by modern applications. Existing methods often operate offline, require manual rules, or cannot effectively model the long-term dependencies in log sequences.
 **Method (1-2 lines)**: DeepLog uses a Long Short-Term Memory (LSTM) neural network to model system logs as a natural language sequence, allowing it to automatically learn normal patterns and detect deviations in both execution paths and parameter values in real-time.
@@ -38,7 +38,7 @@
 **Result**: DeepLog achieved nearly 100% detection accuracy on HDFS logs while training on less than 1% of normal data. It significantly outperformed traditional methods like PCA and Invariant Mining, reaching F-measures of 96% to 98% across different datasets while maintaining a low prediction cost of roughly 1 millisecond per log entry.
 **Why it matters for us / gap it leaves**: It is a pioneering general-purpose framework that provides online, log-entry level detection and supports automated workflow construction for diagnosis, even in systems with interleaved logs from concurrent tasks. However, the paper notes a gap in integrating data from multiple heterogeneous systems (e.g., combining database logs with disk logs) for more comprehensive diagnosis, which remains a goal for future work.
 
-- One paper on **trace-based** RCA / microservice fault localization
+- [ ] One paper on **trace-based** RCA / microservice fault localization
 **Title / venue / year**: MicroRCA: Root Cause Localization of Performance Issues in Microservices / Published in a conference (Communication Dans Un Congrès) / 2020.
 **Problem**: Diagnosing performance issues in microservice architectures is highly challenging due to technological heterogeneity, the vast number of microservices, and frequent updates made to both software features and the underlying infrastructure.
 **Method (1-2 lines)**: MicroRCA utilizes an attributed graph to model how anomalies propagate between services and hosts, allowing it to correlate application performance symptoms with real-time system resource usage without requiring any application-level instrumentation.
@@ -46,7 +46,7 @@
 **Result**: The experimental results indicate that MicroRCA is capable of accurately identifying the root causes of performance issues in complex microservice environments.
 **Why it matters for us / gap it leaves**: This work is important because it offers a way to perform real-time root cause localization without the need for developers to modify their code for monitoring, which significantly reduces operational overhead. (Note: The provided sources do not explicitly detail the specific gaps or limitations left by this research.)
 
-- One paper on **metric** anomaly detection
+- [ ] One paper on **metric** anomaly detection
 **Title / venue / year**: RobustTAD: Robust Time Series Anomaly Detection for Multivariate Metrics
 Problem: Detect anomalies from large-scale multivariate system metrics in cloud services, where noisy telemetry and changing workloads make threshold-based methods unreliable.
 **Method**: Learns temporal patterns and correlations among multiple metrics using a deep neural network, then detects anomalies based on deviations from learned normal behavior. Designed to be robust against noise and missing values in production monitoring data.
