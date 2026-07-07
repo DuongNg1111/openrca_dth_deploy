@@ -66,7 +66,7 @@ Problem: Detect anomalies from large-scale multivariate system metrics in cloud 
 3. **Domain-transfer framing** of microservice RCA as a logistics fulfillment pipeline (order -> warehouse -> shipment -> tracking) and measure if domain priors help.
 
 ## 4. Glossary (metric / log / trace) — fill during M2/M3
-## 4. Glossary (metric / log / trace)
+
 
 - **Metric / KPI**
   - **Definition:** A metric is a numerical measurement of system performance. A KPI (Key Performance Indicator) is a metric used to evaluate whether a system achieves its objectives.
