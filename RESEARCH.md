@@ -95,9 +95,7 @@
 2. **Trace-graph-aware retrieval** that walks the service dependency graph to localize the failing logistics service faster.
 3. **Domain-transfer framing** of microservice RCA as a logistics fulfillment pipeline (order -> warehouse -> shipment -> tracking) and measure if domain priors help.
 
-## 4. Glossary (metric / log / trace) — fill during M2/M3
-
-
+## 4. Glossary (metric / log / trace)
 - **Metric / KPI**
   - **Definition:** A metric is a numerical measurement of system performance. A KPI (Key Performance Indicator) is a metric used to evaluate whether a system achieves its objectives.
   - **Example:** CPU usage = 85%, average response time = 150 ms.
@@ -113,6 +111,3 @@
 - **Root Cause Component**
   - **Definition:** The system component responsible for the root cause of a failure.
   - **Example:** Database service exhausted its connection pool, causing request failures.
-
-
-Test by Thanh
