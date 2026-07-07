@@ -15,7 +15,7 @@
 - Our system targets the **Market** system, framed as **Logistics / Delivery Platform RCA**.
 
 ## 2. Reading list (each member reads >=2, writes a 5-line summary below)
-- [ ] OpenRCA paper (everyone) — https://openreview.net/forum?id=M4qNIzQYpd
+- 1/ OpenRCA paper (everyone) — https://openreview.net/forum?id=M4qNIzQYpd
 
   **- Title / venue / year: OpenRCA**: Can Large Language Models Locate the Root Cause of Software Failures? / ICLR / 2025
 
@@ -28,7 +28,7 @@
   **- Result**: Current models struggle significantly; the best-performing model (Claude 3.5 Sonnet) achieved only 11.34% accuracy using the RCA-agent, and all models scored 0% on "Hard" tasks requiring all three root cause elements
   
   **- Why it matters for us / gap it leaves**: The research reveals that LLMs exhibit "reasoning laziness" (preferring shorter steps), struggle with non-natural language tokens (like GUIDs and error codes), and require higher error tolerance to effectively use execution feedback in agentic workflows
-- [ ] An AIOps / RCA survey
+- 2/ An AIOps / RCA survey:
   
   **- Title / venue / year**: A Survey of AIOps for Failure Management in the Era of Large Language Models / arXiv (cs.SE) / 2024.
   
@@ -42,7 +42,7 @@
 
   **- Why it matters for us / gap it leaves**: This work is critical because there was previously no comprehensive survey discussing the differences between LLM-based AIOps and traditional methods. It serves as a foundational guide for further development and application of LLMs to ensure high availability and reliability in large-scale distributed systems.
 
-- [ ] One paper on **log-based** anomaly detection
+- 3/ One paper on **log-based** anomaly detection
 
   **- Title / venue / year**: DeepLog: Anomaly Detection and Diagnosis from System Logs through Deep Learning / CCS’17 (ACM Conference on Computer and Communications Security) / 2017.
   
@@ -56,9 +56,12 @@
   
   **- Why it matters for us / gap it leaves**: It is a pioneering general-purpose framework that provides online, log-entry level detection and supports automated workflow construction for diagnosis, even in systems with interleaved logs from concurrent tasks. However, the paper notes a gap in integrating data from multiple heterogeneous systems (e.g., combining database logs with disk logs) for more comprehensive diagnosis, which remains a goal for future work.
 
-- [ ] One paper on **trace-based** RCA / microservice fault localization
+- 4/ One paper on **trace-based** RCA / microservice fault localization
+  
   **- Title / venue / year**: MicroRCA: Root Cause Localization of Performance Issues in Microservices / Published in a conference (Communication Dans Un Congrès) / 2020.
+  
   **- Problem**: Diagnosing performance issues in microservice architectures is highly challenging due to technological heterogeneity, the vast number of microservices, and frequent updates made to both software features and the underlying infrastructure.
+  
   **- Method (1-2 lines)**: MicroRCA utilizes an attributed graph to model how anomalies propagate between services and hosts, allowing it to correlate application performance symptoms with real-time system resource usage without requiring any application-level instrumentation.
 
   **- Data used**: The approach was evaluated by injecting common faults and anomalies into a microservice benchmark running within a Kubernetes cluster.
@@ -67,7 +70,7 @@
 
   **- Why it matters for us / gap it leaves**: This work is important because it offers a way to perform real-time root cause localization without the need for developers to modify their code for monitoring, which significantly reduces operational overhead. (Note: The provided sources do not explicitly detail the specific gaps or limitations left by this research.)
 
-- [ ] One paper on **metric** anomaly detection
+- 5/ One paper on **metric** anomaly detection
   
   **- Title / venue / year**: RobustTAD: Robust Time Series Anomaly Detection for Multivariate Metrics
   
