@@ -3,80 +3,99 @@
 We aim for a short workshop-style paper. Each milestone already produced a piece of it.
 
 ## Suggested outline → which milestone feeds it
-1. **Abstract / Intro** 
+**1.Abstract / Intro** 
+
+**Abstract / Introduction**
+
 **Abstract**
-•	Background: Failure management in modern microservice architectures has become increasingly complex due to the explosion of heterogeneous telemetry data, including metrics, logs, and traces.
-•	Problem & Gap: Although Large Language Models (LLMs) offer a promising avenue for automated AIOps, recent state-of-the-art research (OpenRCA, 2025) reveals a severe performance bottleneck. Even the most capable models (e.g., Claude 3.5 Sonnet) coupled with program-synthesis agents achieve a mere 11.34% accuracy on real-world incidents. This failure is driven by "reasoning laziness" in multi-step tasks and an inability to process non-natural language tokens like GUIDs and error codes.
-•	Proposed Method: In this work, we propose [Your Method Name, e.g., SmartRCA], an advanced multi-agent framework designed to bridge this 11% gap. We introduce two core novelties: (1) a Strict Reasoning Guardrail that mitigates LLM cognitive shortcuts, and (2) a Telemetry Context Enricher that translates low-level technical tokens into semantic, LLM-friendly context.
-•	Results: Extensive evaluation on the Market dataset demonstrates that our framework significantly outperforms existing baselines, particularly on high-difficulty root cause localization tasks.
+
+•	**Background:** Modern large-scale software applications are built like a massive puzzle using hundreds of smaller, connected services (called microservices). When a system crashes, it automatically generates a massive wave of warning data. This data comes in three types: system health charts (metrics), historical text diaries (logs), and data tracking paths (traces). 
+
+•	**The Problem:** Using Artificial Intelligence (AI) to investigate these crashes automatically is highly desired. However, recent 2025 research revealed a harsh reality: even the smartest AI models (like Claude 3.5) only achieve an 11.34% accuracy rate when analyzing real production incidents. This happens because AI gets "cognitively lazy" (it takes mental shortcuts instead of looking deeper) and gets completely confused by messy computer codes like long hexadecimal numbers and system IDs. 
+
+•	**Our Solution (The DTH Model)**: To fix this, we created an advanced AI framework that acts like a Digital Detective Team. Our system introduces two vital defenses: 
+
++**Strict Reasoning Guardrails**: A rulebook that stops the AI from guessing by forcing it into a strict, step-by-step verification process. 
+
++**Telemetry Context Enricher**: A translator that turns cryptic computer codes into plain, human-readable explanations before the AI reads them. 
+
+•	**Results:** Testing proves our method successfully breaks past the 11.34% barrier, making AI much better at solving complex system failures. 
+
 **Introduction**
-•	Motivation: High availability and reliability are critical for large-scale distributed cloud systems. However, manual Root Cause Analysis (RCA) is highly time-consuming, leading to a high Mean Time to Resolution (MTTR).
-•	Evolution of AIOps: The field has transitioned from traditional statistical and single-modal machine learning models (e.g., DeepLog for logs, RobustTAD for metrics) toward LLM-driven multi-modal data fusion.
-•	The 11% Performance Gap: We analyze why existing code-driven RCA agents fail in production. The primary bottleneck lies in the cognitive gap between understanding natural language and reasoning over raw, interleaved telemetry data. LLMs exhibit "reasoning laziness," opting for shorter, incomplete diagnostic steps.
-•	Our Angle: We present a novel orchestration layer that enforces structured execution feedback loops and context enrichment, tackling the core limitations highlighted by recent benchmarks.
 
-2. **Related Work** 
-**2.1 Traditional & Single-Modal AIOps**
-•	Log-based Anomaly Detection: Pioneering frameworks like DeepLog (2017) utilize Long Short-Term Memory (LSTM) networks to model system logs as natural language sequences. While effective at detecting execution path deviations in real-time, they operate in isolation and ignore infrastructure-level hardware metrics.
-•	Metric-based Anomaly Detection: Systems like RobustTAD leverage deep neural networks to learn temporal patterns across multivariate time series. They excel at identifying resource bottlenecks (e.g., CPU/Memory surges) under noisy workloads but lack the semantic capacity to explain why the anomaly occurred.
-•	Trace-based Fault Localization: Approaches like MicroRCA (2020) construct attributed graphs to model anomaly propagation between microservices and hosts without requiring application-level instrumentation.
-**2.2 LLM-based AIOps**
-•	Following the comprehensive taxonomy from recent AIOps surveys (2024), Large Language Models have redefined failure management by providing cross-platform generality and cross-task flexibility, moving beyond rigid, rule-based traditional systems.
-**2.3 LLM Agents for Code-driven RCA**
-•	The OpenRCA (2025) framework introduced a goal-driven benchmark where agents use program synthesis (Python) to programmatically query telemetry data, bypassing context window limitations. This serves as the direct baseline for our proposed improvements.
+•	**The Danger of Crashes**: When popular websites crash, companies lose massive amounts of money every minute. Relying on human engineers to dig through billions of data rows takes too long. We need automated Root Cause Analysis (RCA)—an AI that acts as a digital doctor to find the sickness instantly.
 
-3. **Problem & Data** 
-**3.1 OpenRCA Task Definition**
-The multi-modal Root Cause Analysis task is formulated as follows:
-•	Input: An incident time window $T = [t_{\text{start}}, t_{\text{end}}]$ and a massive, heterogeneous telemetry dataset $\mathcal{D} = \{\mathcal{M}, \mathcal{L}, \mathcal{T}\}$, where $\mathcal{M}$, $\mathcal{L}$, and $\mathcal{T}$ represent metrics, logs, and traces, respectively.
-•	Output: A root cause triplet $Y = (C, E, X)$, where:
-o	$C \in \mathcal{C}$ is the faulty component (e.g., payment-service).
-o	$E \in \mathcal{E}$ is the root cause element (e.g., Database Connection Pool Exhaustion).
-o	$X$ is a human-readable text explanation detailing the failure propagation chain.
-**3.2 Market Dataset Statistics**
-Our empirical evaluation focuses heavily on the Market partition of the OpenRCA benchmark:
-•	System Nature: A complex, production-grade e-commerce application built on a microservice architecture (comprising services such as Frontend, Cart, Inventory, and Shipping).
-•	Data Scale: The dataset contains gigabytes of raw telemetry data, including high-frequency KPI metrics, interleaved concurrent logs, and end-to-end distributed transaction traces.
-**3.3 Failure Taxonomy**
-Incidents within the Market dataset are classified into three major operational categories:
-•	Infrastructure/Resource Faults: CPU throttling, Out-Of-Memory (OOM) kills, and network packet loss.
-•	Application/Logic Faults: Code bugs triggering HTTP 500 errors, infinite loops, and database connection timeouts.
-•	Dependency/Cascading Faults: Downstream service latencies propagating upstream, causing widespread system degradation.
+•	**Old Tools vs. Modern AI**: Older automated tools acted like hyper-specialized doctors. Some could only check the computer’s hardware heartbeat, while others could only read error messages. Today, we use Large Language Models (LLMs) to act as general practitioners that can inspect all data types at the same time. 
 
-4. **Method** 
-**4.1 Pipeline Architecture Overview**
-The proposed pipeline flows as follows:
-$$\text{Raw Telemetry Data} \rightarrow \text{Telemetry Parser \& Abstractor} \rightarrow \text{Multi-Agent RCA Orchestrator} \rightarrow \text{Root Cause Triplet } Y(C, E, X)$$
-**4.2 Module Specifications & Our Novelty**
-•	Novelty 1: Strict Chain-of-Thought (CoT) Guardrails: To counteract "reasoning laziness," the agent is forced into a deterministic three-phase cognitive loop: (1) Anomaly Symptom Extraction, (2) Hypothesis Graph Construction, and (3) Empirical Code Verification.
-•	Novelty 2: Telemetry Token Enricher (Semantic Translation): Before telemetry strings are fed into the LLM, this module automatically resolves abstract hashes, GUIDs, and hexadecimal error codes into human-readable semantic definitions via a specialized lookup layer.
-•	Novelty 3: Enhanced Execution Feedback Loop: We implement a robust self-correction prompt mechanism. If the agent's synthesized Python code execution fails or returns null results, the system feeds the runtime traceback error back into a debugging layer, allowing the agent to dynamically rewrite the queries.
+•	**The Laziness Bottleneck**: Even though modern AI is smart, raw computer data is too messy. When given raw files, the AI gets lazy, skims the data, and misses the true root cause. Our project directly tackles these flaws by forcing the AI to slow down, think step-by-step, and read translated data.
 
-5. **Experiments** 
-**5.1 Experimental Setup**
-•	Backbone Models: Evaluated using state-of-the-art LLMs including GPT-4o and Claude 3.5 Sonnet.
-•	Evaluation Metrics: Exact Match Accuracy for the Faulty Component ($C$) and Root Cause Element ($E$), alongside semantic overlap metrics (BLEU/ROUGE) for the Explanation ($X$).
-**5.2 Main Results**
-Method	Backbone	Component Acc (%)	Element Acc (%)	Overall (Hard Tasks) Acc (%)
-OpenRCA Baseline	Claude 3.5 Sonnet	~20.00%	~15.00%	11.34%
-OpenRCA Baseline	GPT-4o	~18.00%	~12.00%	<10.00%
-Our Proposed Method	Claude 3.5 Sonnet	[Your Target %]	[Your Target %]	[Your Target % (>11.34%)]
-**5.3 Ablation Studies**
-To verify the distinct contribution of each module, we perform three ablation variations:
-•	Full Pipeline: Incorporates all proposed novelties.
-•	w/o Strict CoT: Removes the reasoning guardrails to measure the impact of LLM "laziness."
-•	w/o Token Enricher: Feeds raw GUIDs and error codes directly to the LLM to assess performance drop under non-natural language stress.
-**5.4 Error Analysis**
-We categorize remaining failure modes of our system, which primarily occur during:
-•	Data Sparsity Cases: Missing or uncollected log blocks during critical system crashes, leaving insufficient empirical proof for the agent to verify its hypothesis.
+**2. Related Work**
 
-6. **Conclusion & Limitations** — what worked, what's next.
-**Conclusion**
-•	This paper successfully addresses the 11.34% performance bottleneck identified in LLM-based post-deployment root cause analysis.
-•	By enforcing structured reasoning guardrails and implementing a telemetry token semantic enricher, our framework significantly increases localization accuracy on the complex Market dataset, providing a viable path toward fully automated corporate AIOps.
-**Limitations & Future Work**
-•	Limitations: The multi-agent execution loop incurs relatively high token costs and inference latency due to the multi-turn code synthesis and debugging cycles.
-•	Future Work: Future research will focus on knowledge distillation to fine-tune smaller, open-source models (e.g., Llama-3-8B) specialized in telemetry database querying, reducing operational costs while preserving reasoning accuracy.
+We can group traditional tools based on how they examine a "crime scene" (a system crash): 
+
+•	**The Log Readers:** These tools treat system logs like a text-based storybook to flag unexpected error messages. Limitation: They only read text; they cannot notice if the computer's "blood pressure" (CPU/Memory) is skyrocketing. 
+
+•	**The Chart Watchers:** These focus strictly on numerical graphs, watching for sudden spikes in hardware usage. Limitation: They know the machine is "sick" (overloaded), but they cannot explain why. 
+
+•	**The Path Trackers:** These tools build maps to see how a slowdown travels from one service container to another. 
+
+•	**The Code-Driven Approach (OpenRCA 2025):** Raw system data is too massive to fit into an AI's short-term memory. A recent framework called OpenRCA fixed this by giving the AI a code interpreter. Instead of reading massive files directly, the AI writes Python code to filter and search the data. This is the foundation we are building upon.
+
+**3. Problem & Data**
+
+**What Evidence Does the Detective Get?**
+
+When an application crashes, the system hands a "Box of Evidence" to our AI, containing: 
+
+•	**The Crime Time Window**: The exact timeframe of the crash (e.g., "The app crashed between 10:00 AM and 10:15 AM. Only look at data within this 15-minute window"). 
+
+•	**The Clues Left at the Scene:**
+
+o	**Metrics (The Vital Signs)**: Numerical charts showing hardware status (e.g., CPU spiking to 100%). 
+
+o	**Logs (The Diary)**: Text messages showing what the system was thinking right before it died (e.g., "Error: Cannot connect to database"). 
+
+o	**Traces (The Footprints)**: A security camera map tracking a user's journey (e.g., User clicks 'Buy'  moves to Cart  gets stuck at Payment).
+
+**The Detective's Final Case Report**
+
+After digging through the evidence, the AI must deliver a final verdict answering exactly three things: 
+
+1.	**The Culprit (Faulty Component)**: Which exact service caused the chain reaction? (e.g., payment-service). 
+
+2.	**The Sickness (Root Cause Element)**: What technical bug killed that service? (e.g., Database Connection Pool Exhaustion — meaning it ran out of available slots to talk to the database).
+
+3.	**The Case Narrative (Explanation)**: A plain English paragraph explaining the domino effect so human managers can easily understand what happened.
+
+4. **Method**
+
+To cure the AI's "laziness" and "confusion," we add three user-friendly features to our team: 
+
+•	**Feature 1**: Mandatory 3-Step Reasoning (Curing Laziness): We lock the AI inside a strict rulebook. It must: (1) Extract strange symptoms, (2) Sketch a theory of which service is hurting which, and (3) Write and run Python code to physically check if the data supports the theory. No guessing allowed. 
+
+•	**Feature 2**: The Translation Layer (Curing Confusion): Instead of blinding the AI with raw computer gibberish, this module pre-scans the data. It automatically swaps out cryptic tokens like **ERR_0x7F_CONN** with easy text like *[Network Timeout: Connection refused by database server].*
+
+•	**Feature 3**: Never Giving Up (Self-Repair Loop): If the AI writes a Python script to search the data and the script crashes because of a coding mistake, our system doesn't stop. It shows the error to the AI and prompts: "Your code failed on line 4. Fix it and try again." The AI loops and repairs its own code until it successfully gets the data.
+
+**5. Experiments**
+
+•	**The Setup**: We use the brains of top-tier AI models (GPT-4o and Claude 3.5 Sonnet) to power our detective team and test them on an e-commerce platform dataset. 
+
+•	**Target Metrics**: We score the AI based on whether it correctly points out the culprit service and the exact root cause. 
+
+•	**Expected Results**: Since our system is currently in the design phase, our scores are marked as TBD (To Be Determined). Our main objective in the next step is to successfully beat the old 11.34% baseline score from previous papers. 
+
+•	**Testing by Turning Features Off (Ablation Studies)**: To prove our features actually work, we will try turning off the "Translator" or the "Strict Rules" one by one to see how badly the AI's score drops without them.
+
+**6. Conclusion & Limitations**
+
+•	**Conclusion**: This paper presents a clear path to help AI break past the 11.34% performance wall. By forcing the AI to think step-by-step and translating dry machine codes into simple words, we aim to double the accuracy of automated system repairs. 
+
+•	**Limitations**: Because our AI agents need to talk back and forth, write code, and fix their own errors in multiple rounds, the system might take a few minutes to run and cost more in AI platform fees. 
+
+•	**Future Work**: Once this phase proves successful, the next step is to transfer this system onto smaller, free, open-source AI models (like Llama-3). This will allow companies to run our tool inside their own systems completely for free, making it faster and much cheaper. 
+
+
 
 ## Our novelty candidates (pick & defend one)
 1. **Heuristic + LLM hybrid** that uses cheap statistical triage first and only calls the LLM on hard cases (cut cost/latency vs the pure-agent baseline).
