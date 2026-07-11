@@ -5,97 +5,121 @@ We aim for a short workshop-style paper. Each milestone already produced a piece
 ## Suggested outline → which milestone feeds it
 **1.Abstract / Intro** 
 
-**Abstract / Introduction**
+**Content:** When large-scale software systems (such as telecom networks or banking platforms) crash after deployment, pinpointing the exact faulty component and its underlying cause is extremely difficult due to the massive volume of generated monitoring data.
 
-**Abstract**
+**Problem:** Traditional approaches lack generality across different platforms and flexibility across tasks. Meanwhile, Large Language Models (LLMs), despite their proficiency in early code generation, remain largely under-explored in post-deployment Root Cause Analysis (RCA) and easily suffer from context window limitations when forced to read massive datasets.
 
-•	**Background:** Modern large-scale software applications are built like a massive puzzle using hundreds of smaller, connected services (called microservices). When a system crashes, it automatically generates a massive wave of warning data. This data comes in three types: system health charts (metrics), historical text diaries (logs), and data tracking paths (traces). 
+**Real-World Example:** A food delivery platform crashes during peak hours, generating over 68 GB of telemetry data. Engineers cannot manually sift through it, and standard LLMs cannot process this massive file size at once due to context limits.
 
-•	**The Problem:** Using Artificial Intelligence (AI) to investigate these crashes automatically is highly desired. However, recent 2025 research revealed a harsh reality: even the smartest AI models (like Claude 3.5) only achieve an 11.34% accuracy rate when analyzing real production incidents. This happens because AI gets "cognitively lazy" (it takes mental shortcuts instead of looking deeper) and gets completely confused by messy computer codes like long hexadecimal numbers and system IDs. 
-
-•	**Our Solution (The DTH Model)**: To fix this, we created an advanced AI framework that acts like a Digital Detective Team. Our system introduces two vital defenses: 
-
-+**Strict Reasoning Guardrails**: A rulebook that stops the AI from guessing by forcing it into a strict, step-by-step verification process. 
-
-+**Telemetry Context Enricher**: A translator that turns cryptic computer codes into plain, human-readable explanations before the AI reads them. 
-
-•	**Results:** Testing proves our method successfully breaks past the 11.34% barrier, making AI much better at solving complex system failures. 
-
-**Introduction**
-
-•	**The Danger of Crashes**: When popular websites crash, companies lose massive amounts of money every minute. Relying on human engineers to dig through billions of data rows takes too long. We need automated Root Cause Analysis (RCA)—an AI that acts as a digital doctor to find the sickness instantly.
-
-•	**Old Tools vs. Modern AI**: Older automated tools acted like hyper-specialized doctors. Some could only check the computer’s hardware heartbeat, while others could only read error messages. Today, we use Large Language Models (LLMs) to act as general practitioners that can inspect all data types at the same time. 
-
-•	**The Laziness Bottleneck**: Even though modern AI is smart, raw computer data is too messy. When given raw files, the AI gets lazy, skims the data, and misses the true root cause. Our project directly tackles these flaws by forcing the AI to slow down, think step-by-step, and read translated data.
+*Sources*: Paper 1 (OpenRCA ICLR 2025) & Paper 2 (AIOps Survey 2024).
 
 **2. Related Work**
 
-We can group traditional tools based on how they examine a "crime scene" (a system crash): 
+Prior research has attempted to detect and manage system failures through four main distinct directions:
 
-•	**The Log Readers:** These tools treat system logs like a text-based storybook to flag unexpected error messages. Limitation: They only read text; they cannot notice if the computer's "blood pressure" (CPU/Memory) is skyrocketing. 
+**Direction 1 - Comprehensive Survey:** Defines automated IT operations (AIOps) tasks and explores how LLMs can replace traditional methods to ensure high system availability and reliability.
 
-•	**The Chart Watchers:** These focus strictly on numerical graphs, watching for sudden spikes in hardware usage. Limitation: They know the machine is "sick" (overloaded), but they cannot explain why. 
+*Source:* Paper 2 (AIOps Survey 2024).
 
-•	**The Path Trackers:** These tools build maps to see how a slowdown travels from one service container to another. 
+**Direction 2 - Log-based Anomaly Detection:** Models system logs as natural language sequences using AI to learn normal behaviors and flag real-time deviations in system execution paths.
 
-•	**The Code-Driven Approach (OpenRCA 2025):** Raw system data is too massive to fit into an AI's short-term memory. A recent framework called OpenRCA fixed this by giving the AI a code interpreter. Instead of reading massive files directly, the AI writes Python code to filter and search the data. This is the foundation we are building upon.
+*Source:* Paper 3 (DeepLog 2017).
+
+**Direction 3 - Trace-based Fault Localization:** Uses graphs to model how anomalies propagate between microservices and physical hosts without requiring developers to modify application source code.
+
+*Source:* Paper 4 (MicroRCA 2020).
+
+**Direction 4 - Metric Anomaly Detection:** Utilizes deep learning to learn temporal patterns and correlations among multivariate metrics (e.g., CPU, Memory), detecting anomalies based on deviations from learned normal baselines even in noisy cloud environments.
+
+*Source:* Paper 5 (RobustTAD).
 
 **3. Problem & Data**
 
-**What Evidence Does the Detective Get?**
+**Task:** Given a system failure within a specific time window, the system must output exactly three core elements: Root Cause Component + Failure Reason + Exact Datetime.
 
-When an application crashes, the system hands a "Box of Evidence" to our AI, containing: 
+**Telemetry Data Types Used:** Consists of three primary sources:
 
-•	**The Crime Time Window**: The exact timeframe of the crash (e.g., "The app crashed between 10:00 AM and 10:15 AM. Only look at data within this 15-minute window"). 
+**a. Metrics / KPIs:** Numerical health measurements. Example: Node-4 experiences a sudden CPU spike (node CPU spike).
 
-•	**The Clues Left at the Scene:**
+**b. Logs:** Timestamped text event records. Example: The payment service container process abruptly shuts down (container process termination).
 
-o	**Metrics (The Vital Signs)**: Numerical charts showing hardware status (e.g., CPU spiking to 100%). 
+**c. Traces:** The execution path of a request across services. Example: Timeline analysis showing Node-4 failing first at 17:12, subsequently causing the payment service to crash at 17:23.
 
-o	**Logs (The Diary)**: Text messages showing what the system was thinking right before it died (e.g., "Error: Cannot connect to database"). 
+**Benchmark Dataset:** OpenRCA contains 335 real-world failure cases across 3 enterprise systems (Telecom, Bank, Market) totaling 68 GB of telemetry data.
 
-o	**Traces (The Footprints)**: A security camera map tracking a user's journey (e.g., User clicks 'Buy'  moves to Cart  gets stuck at Payment).
+*Source:* Paper 1 (OpenRCA ICLR 2025).
 
-**The Detective's Final Case Report**
+**4. Method / Solutions**
 
-After digging through the evidence, the AI must deliver a final verdict answering exactly three things: 
+**A. Existing Methods from Literature:**
 
-1.	**The Culprit (Faulty Component)**: Which exact service caused the chain reaction? (e.g., payment-service). 
+**Method 1 - Attributed Graph for Traces (MicroRCA):** Maps out structural service dependencies to track how performance anomalies propagate from physical infrastructure up to application services. (Source: Paper 4).
 
-2.	**The Sickness (Root Cause Element)**: What technical bug killed that service? (e.g., Database Connection Pool Exhaustion — meaning it ran out of available slots to talk to the database).
+**Method 2 - LSTM Networks for Logs (DeepLog):** Treats log entries like natural language sentences, utilizing Long Short-Term Memory (LSTM) networks to detect execution path anomalies. (Source: Paper 3).
 
-3.	**The Case Narrative (Explanation)**: A plain English paragraph explaining the domino effect so human managers can easily understand what happened.
+**Method 3 - Deep Learning for Metrics (RobustTAD):** Evaluates multi-variable time-series data using deep neural networks to pinpoint anomalous KPI behavior amid production noise. (Source: Paper 5).
 
-4. **Method**
+**Method 4 - Multi-Agent & Execution Feedback (OpenRCA):** Employs program synthesis (writing Python scripts) to programmatically query telemetry data, bypassing context constraints. (Source: Paper 1).
 
-To cure the AI's "laziness" and "confusion," we add three user-friendly features to our team: 
+**B. OUR CHOSEN METHODOLOGY (Divide and Conquer Framework):**
 
-•	**Feature 1**: Mandatory 3-Step Reasoning (Curing Laziness): We lock the AI inside a strict rulebook. It must: (1) Extract strange symptoms, (2) Sketch a theory of which service is hurting which, and (3) Write and run Python code to physically check if the data supports the theory. No guessing allowed. 
+Our group will adopt Method 4 (Based on OpenRCA), narrowing the project scope strictly to the Market system (framed as a Logistics / Delivery Platform).
 
-•	**Feature 2**: The Translation Layer (Curing Confusion): Instead of blinding the AI with raw computer gibberish, this module pre-scans the data. It automatically swaps out cryptic tokens like **ERR_0x7F_CONN** with easy text like *[Network Timeout: Connection refused by database server].*
+To resolve the core paradox where "the LLM is too lazy to reason but is forced to write/check code," we implement a "Divide and Conquer" execution feedback workflow. Instead of forcing the LLM to write one massive, complex 100-line script (which triggers reasoning laziness and brittleness upon bugs), we break the task into a series of micro-steps. The LLM may write 1,000 lines of code in total, but it executes them iteratively in tiny, ultra-simple 10-line blocks.
 
-•	**Feature 3**: Never Giving Up (Self-Repair Loop): If the AI writes a Python script to search the data and the script crashes because of a coding mistake, our system doesn't stop. It shows the error to the AI and prompts: "Your code failed on line 4. Fix it and try again." The AI loops and repairs its own code until it successfully gets the data.
+Our Step-by-Step Iterative Workflow:
+
+**Step 1 (Micro-Code Generation):** The LLM writes a very short, dead-simple Python script (e.g., 5-10 lines using pandas) just to perform one basic check (e.g., filtering logs for a specific 5-minute window).
+
+**Step 2 (Instant Execution Feedback):** Because the code is ultra-short, it is highly unlikely to fail. If a minor bug occurs, the LLM fixes it instantly in one second because it only has to read 5 lines of code (overcoming code-correction laziness).
+
+**Step 3 (Micro-Reasoning & Dynamic Progression):** The script executes successfully and returns one lightweight, filtered clue. The LLM performs a tiny bit of reasoning on this single clue, and uses it to write the next 5-10 lines of simple code to dig deeper.
+
+**Step 4 (Final Clean Output to User):** This loop repeats until all noisy data from the 68 GB pool is systematically eliminated. At the final step, the exact root cause is cleanly exposed on the screen. The LLM effortlessly extracts this clear evidence and outputs the exact 3 metrics required by the user.
+
+**Real-World Project Example:**
+
+**Input:** A customer reports an inability to create a shipping order on the Logistics platform at 17:23:19.
+
+**Iteration 1:** LLM writes 5 lines of code to check delivery-service logs at 17:23. Output: Service crashed because it lost connection to Node-4.
+
+**Iteration 2:** LLM writes 5 lines of code to check what happened to Node-4 earlier. Output: Node-4 CPU spike at 17:12:41.
+
+**Final Output to User:** The LLM gathers these clear stepping stones and outputs the clean diagnostic summary:
+
+Root Cause Component: node-4
+
+Reason: node CPU spike
+
+Datetime: 2022-03-20 17:12:41
 
 **5. Experiments**
 
-•	**The Setup**: We use the brains of top-tier AI models (GPT-4o and Claude 3.5 Sonnet) to power our detective team and test them on an e-commerce platform dataset. 
+**General Finding:** State-of-the-art LLMs struggle heavily with post-deployment automated root cause localization.
 
-•	**Target Metrics**: We score the AI based on whether it correctly points out the culprit service and the exact root cause. 
+**Empirical Results:** The best-performing setup (Claude 3.5 Sonnet equipped with the Python-writing RCA-agent) solved only 11.34% of the total failure cases.
 
-•	**Expected Results**: Since our system is currently in the design phase, our scores are marked as TBD (To Be Determined). Our main objective in the next step is to successfully beat the old 11.34% baseline score from previous papers. 
+**Hard Task Results:** On "Hard" cases—where the model must correctly identify all three elements (component, reason, and datetime) simultaneously—all tested LLM configurations scored an absolute 0% accuracy.
 
-•	**Testing by Turning Features Off (Ablation Studies)**: To prove our features actually work, we will try turning off the "Translator" or the "Strict Rules" one by one to see how badly the AI's score drops without them.
+*Source:* Paper 1 (OpenRCA ICLR 2025).
 
 **6. Conclusion & Limitations**
 
-•	**Conclusion**: This paper presents a clear path to help AI break past the 11.34% performance wall. By forcing the AI to think step-by-step and translating dry machine codes into simple words, we aim to double the accuracy of automated system repairs. 
+**Conclusion:** There remains a massive research gap in automated RCA using LLMs. While traditional tools like DeepLog or RobustTAD are excellent at detecting standalone anomalous logs or metrics, they cannot correlate or explain them. Frameworks like OpenRCA are necessary to aggregate multi-source data and translate it into human-readable diagnostics.
 
-•	**Limitations**: Because our AI agents need to talk back and forth, write code, and fix their own errors in multiple rounds, the system might take a few minutes to run and cost more in AI platform fees. 
+*Sources:* Paper 3 (DeepLog 2017) & Paper 5 (RobustTAD).
 
-•	**Future Work**: Once this phase proves successful, the next step is to transfer this system onto smaller, free, open-source AI models (like Llama-3). This will allow companies to run our tool inside their own systems completely for free, making it faster and much cheaper. 
+**Limitations**
 
+**Reasoning Laziness** LLMs are prone to shortcutting; when presented with complex, multi-step clues all at once, they tend to guess superficial surface-level causes rather than reasoning deep.
 
+**Token Vulnerability** LLMs struggle to process non-natural language tokens, meaning they frequently misinterpret or overlook complex GUIDs (Globally Unique Identifiers) and raw system error codes.
+
+**Brittleness:** Without an enforced, micro-step execution feedback loop, an LLM agent will immediately give up or hallucinate answers the moment a monolithic piece of code throws a runtime error.
+
+**Heterogeneous Data Silos:** Older methodologies (such as DeepLog) fail to integrate heterogeneous data sources, meaning they cannot cross-analyze database logs with physical disk logs simultaneously.
+
+*Sources:* Paper 1 (OpenRCA ICLR 2025) & Paper 3 (DeepLog 2017).
 
 ## Our novelty candidates (pick & defend one)
 1. **Heuristic + LLM hybrid** that uses cheap statistical triage first and only calls the LLM on hard cases (cut cost/latency vs the pure-agent baseline).
