@@ -3,80 +3,149 @@
 We aim for a short workshop-style paper. Each milestone already produced a piece of it.
 
 ## Suggested outline → which milestone feeds it
-1. **Abstract / Intro** 
-**Abstract**
-•	Background: Failure management in modern microservice architectures has become increasingly complex due to the explosion of heterogeneous telemetry data, including metrics, logs, and traces.
-•	Problem & Gap: Although Large Language Models (LLMs) offer a promising avenue for automated AIOps, recent state-of-the-art research (OpenRCA, 2025) reveals a severe performance bottleneck. Even the most capable models (e.g., Claude 3.5 Sonnet) coupled with program-synthesis agents achieve a mere 11.34% accuracy on real-world incidents. This failure is driven by "reasoning laziness" in multi-step tasks and an inability to process non-natural language tokens like GUIDs and error codes.
-•	Proposed Method: In this work, we propose [Your Method Name, e.g., SmartRCA], an advanced multi-agent framework designed to bridge this 11% gap. We introduce two core novelties: (1) a Strict Reasoning Guardrail that mitigates LLM cognitive shortcuts, and (2) a Telemetry Context Enricher that translates low-level technical tokens into semantic, LLM-friendly context.
-•	Results: Extensive evaluation on the Market dataset demonstrates that our framework significantly outperforms existing baselines, particularly on high-difficulty root cause localization tasks.
-**Introduction**
-•	Motivation: High availability and reliability are critical for large-scale distributed cloud systems. However, manual Root Cause Analysis (RCA) is highly time-consuming, leading to a high Mean Time to Resolution (MTTR).
-•	Evolution of AIOps: The field has transitioned from traditional statistical and single-modal machine learning models (e.g., DeepLog for logs, RobustTAD for metrics) toward LLM-driven multi-modal data fusion.
-•	The 11% Performance Gap: We analyze why existing code-driven RCA agents fail in production. The primary bottleneck lies in the cognitive gap between understanding natural language and reasoning over raw, interleaved telemetry data. LLMs exhibit "reasoning laziness," opting for shorter, incomplete diagnostic steps.
-•	Our Angle: We present a novel orchestration layer that enforces structured execution feedback loops and context enrichment, tackling the core limitations highlighted by recent benchmarks.
 
-2. **Related Work** 
-**2.1 Traditional & Single-Modal AIOps**
-•	Log-based Anomaly Detection: Pioneering frameworks like DeepLog (2017) utilize Long Short-Term Memory (LSTM) networks to model system logs as natural language sequences. While effective at detecting execution path deviations in real-time, they operate in isolation and ignore infrastructure-level hardware metrics.
-•	Metric-based Anomaly Detection: Systems like RobustTAD leverage deep neural networks to learn temporal patterns across multivariate time series. They excel at identifying resource bottlenecks (e.g., CPU/Memory surges) under noisy workloads but lack the semantic capacity to explain why the anomaly occurred.
-•	Trace-based Fault Localization: Approaches like MicroRCA (2020) construct attributed graphs to model anomaly propagation between microservices and hosts without requiring application-level instrumentation.
-**2.2 LLM-based AIOps**
-•	Following the comprehensive taxonomy from recent AIOps surveys (2024), Large Language Models have redefined failure management by providing cross-platform generality and cross-task flexibility, moving beyond rigid, rule-based traditional systems.
-**2.3 LLM Agents for Code-driven RCA**
-•	The OpenRCA (2025) framework introduced a goal-driven benchmark where agents use program synthesis (Python) to programmatically query telemetry data, bypassing context window limitations. This serves as the direct baseline for our proposed improvements.
+| **Paper**   | **Title**                                                                                  | **Main Contribution**                                                                                                                                                                                        | **How We Use It in Our Project**                                                                                                                          |
+|-------------|--------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Paper 1** | OpenRCA: Can Large Language Models Locate the Root Cause of Software Failures? (ICLR 2025) | Introduces OpenRCA, a system that uses LLMs and Python programs to find the root cause of software failures by checking metrics, logs, and traces. It also provides a benchmark with 335 real failure cases. | This is the main paper for our project. We use its workflow and output format to build our own RCA system on the Market dataset.                          |
+| **Paper 2** | A Survey of AIOps for Failure Management in the Era of Large Language Models (2024)        | Reviews how LLMs can help with failure management and compares them with traditional AIOps methods. It also explains current challenges and future research.                                                 | We use this paper to explain why LLMs are useful for failure management and why better RCA methods are needed.                                            |
+| **Paper 3** | DeepLog: Anomaly Detection and Diagnosis from System Logs through Deep Learning (2017)     | Uses an LSTM model to learn normal log patterns and detect unusual log events in real time.                                                                                                                  | We use this paper as an example of log-based anomaly detection. It shows that using only logs is not enough for complete RCA.                             |
+| **Paper 4** | MicroRCA: Root Cause Localization of Performance Issues in Microservices (2020)            | Uses service connections and system data to find where performance problems start in microservices.                                                                                                          | We use this paper to explain trace-based root cause analysis. It focuses on finding the faulty service but does not combine different types of telemetry. |
+| **Paper 5** | RobustTAD: Robust Time Series Anomaly Detection for Multivariate Metrics                   | Uses deep learning to find unusual changes in system metrics like CPU, memory, and network usage.                                                                                                            | We use this paper as an example of metric-based anomaly detection. It can find abnormal metrics but cannot explain the root cause by itself.              |
 
-3. **Problem & Data** 
-**3.1 OpenRCA Task Definition**
-The multi-modal Root Cause Analysis task is formulated as follows:
-•	Input: An incident time window $T = [t_{\text{start}}, t_{\text{end}}]$ and a massive, heterogeneous telemetry dataset $\mathcal{D} = \{\mathcal{M}, \mathcal{L}, \mathcal{T}\}$, where $\mathcal{M}$, $\mathcal{L}$, and $\mathcal{T}$ represent metrics, logs, and traces, respectively.
-•	Output: A root cause triplet $Y = (C, E, X)$, where:
-o	$C \in \mathcal{C}$ is the faulty component (e.g., payment-service).
-o	$E \in \mathcal{E}$ is the root cause element (e.g., Database Connection Pool Exhaustion).
-o	$X$ is a human-readable text explanation detailing the failure propagation chain.
-**3.2 Market Dataset Statistics**
-Our empirical evaluation focuses heavily on the Market partition of the OpenRCA benchmark:
-•	System Nature: A complex, production-grade e-commerce application built on a microservice architecture (comprising services such as Frontend, Cart, Inventory, and Shipping).
-•	Data Scale: The dataset contains gigabytes of raw telemetry data, including high-frequency KPI metrics, interleaved concurrent logs, and end-to-end distributed transaction traces.
-**3.3 Failure Taxonomy**
-Incidents within the Market dataset are classified into three major operational categories:
-•	Infrastructure/Resource Faults: CPU throttling, Out-Of-Memory (OOM) kills, and network packet loss.
-•	Application/Logic Faults: Code bugs triggering HTTP 500 errors, infinite loops, and database connection timeouts.
-•	Dependency/Cascading Faults: Downstream service latencies propagating upstream, causing widespread system degradation.
+**1. Abstract / Introduction**
 
-4. **Method** 
-**4.1 Pipeline Architecture Overview**
-The proposed pipeline flows as follows:
-$$\text{Raw Telemetry Data} \rightarrow \text{Telemetry Parser \& Abstractor} \rightarrow \text{Multi-Agent RCA Orchestrator} \rightarrow \text{Root Cause Triplet } Y(C, E, X)$$
-**4.2 Module Specifications & Our Novelty**
-•	Novelty 1: Strict Chain-of-Thought (CoT) Guardrails: To counteract "reasoning laziness," the agent is forced into a deterministic three-phase cognitive loop: (1) Anomaly Symptom Extraction, (2) Hypothesis Graph Construction, and (3) Empirical Code Verification.
-•	Novelty 2: Telemetry Token Enricher (Semantic Translation): Before telemetry strings are fed into the LLM, this module automatically resolves abstract hashes, GUIDs, and hexadecimal error codes into human-readable semantic definitions via a specialized lookup layer.
-•	Novelty 3: Enhanced Execution Feedback Loop: We implement a robust self-correction prompt mechanism. If the agent's synthesized Python code execution fails or returns null results, the system feeds the runtime traceback error back into a debugging layer, allowing the agent to dynamically rewrite the queries.
+**Background & Problem Statement**
 
-5. **Experiments** 
-**5.1 Experimental Setup**
-•	Backbone Models: Evaluated using state-of-the-art LLMs including GPT-4o and Claude 3.5 Sonnet.
-•	Evaluation Metrics: Exact Match Accuracy for the Faulty Component ($C$) and Root Cause Element ($E$), alongside semantic overlap metrics (BLEU/ROUGE) for the Explanation ($X$).
-**5.2 Main Results**
-Method	Backbone	Component Acc (%)	Element Acc (%)	Overall (Hard Tasks) Acc (%)
-OpenRCA Baseline	Claude 3.5 Sonnet	~20.00%	~15.00%	11.34%
-OpenRCA Baseline	GPT-4o	~18.00%	~12.00%	<10.00%
-Our Proposed Method	Claude 3.5 Sonnet	[Your Target %]	[Your Target %]	[Your Target % (>11.34%)]
-**5.3 Ablation Studies**
-To verify the distinct contribution of each module, we perform three ablation variations:
-•	Full Pipeline: Incorporates all proposed novelties.
-•	w/o Strict CoT: Removes the reasoning guardrails to measure the impact of LLM "laziness."
-•	w/o Token Enricher: Feeds raw GUIDs and error codes directly to the LLM to assess performance drop under non-natural language stress.
-**5.4 Error Analysis**
-We categorize remaining failure modes of our system, which primarily occur during:
-•	Data Sparsity Cases: Missing or uncollected log blocks during critical system crashes, leaving insufficient empirical proof for the agent to verify its hypothesis.
+Large-scale software systems continuously generate massive telemetry data (metrics, logs, and traces). When failures occur, Root Cause Analysis (RCA) becomes highly challenging because engineers must manually investigate heterogeneous telemetry collected from multiple system components. Traditional AIOps techniques are typically designed for individual tasks and therefore have limited generalization across platforms. Although Large Language Models (LLMs) have demonstrated promising capabilities in software engineering, they cannot directly analyze massive operational datasets due to context window limitations.
 
-6. **Conclusion & Limitations** — what worked, what's next.
+*Source*: Paper 1 – OpenRCA; Paper 2 – AIOps Survey
+
+**Real-world Motivation**
+
+For example, a logistics platform may fail during peak business hours, generating gigabytes of monitoring data. Engineers cannot manually inspect every log, metric, and trace, while an LLM cannot process the entire dataset simultaneously. Therefore, an automated framework is required to progressively investigate telemetry data and identify the underlying root cause.
+
+*Source:* Paper 1 – OpenRCA
+
+**Research Objective**
+
+This project adopts the OpenRCA framework as the foundation for implementing a simplified prototype for automated Root Cause Analysis. The implementation focuses on the Market benchmark and aims to identify the Root Cause Component, Failure Reason, and Exact Datetime from heterogeneous telemetry data.
+
+**2. Related Work**
+
+**2.1 AIOps Frameworks**
+
+LLM-based failure management offers greater flexibility across different operational tasks than conventional AIOps methods, although reliable deployment in production environments remains an open challenge.
+
+*Source:* Paper 2 – AIOps Survey
+
+**2.2 Log-based Anomaly Detection**
+
+DeepLog applies LSTM networks to learn normal log sequences and detect anomalies. However, it only analyzes logs and cannot utilize metrics or traces.
+
+*Source:* Paper 3 – DeepLog
+
+**2.3 Trace-based Root Cause Localization**
+
+MicroRCA models service dependencies using attributed graphs to localize fault propagation across microservices. Its primary focus is localization rather than heterogeneous telemetry integration.
+
+*Source:* Paper 4 – MicroRCA
+
+**2.4 Metric-based Anomaly Detection**
+
+RobustTAD uses deep learning to detect anomalies from multivariate KPIs such as CPU and memory utilization. It identifies abnormal metrics but cannot explain the responsible component or failure reason.
+
+*Source:* Paper 5 – RobustTAD
+
+**Research Gap**
+
+Previous methods analyze logs, metrics, or traces independently. OpenRCA addresses this limitation by integrating heterogeneous telemetry through program synthesis and execution feedback. Therefore, this project adopts the OpenRCA framework as the basis for implementing an LLM-assisted RCA prototype on the Market benchmark.
+
+*Source:* Paper 1, Paper 3, Paper 4, Paper 5
+
+**3. Problem & Data**
+
+**Problem Definition**
+
+The RCA system must identify three outputs: Root Cause Component, Failure Reason, and Exact Datetime. Unlike anomaly detection, RCA explains where, why, and when a failure originated.
+
+*Source:* Paper 1 – OpenRCA
+
+**Telemetry Data**
+
+• Metrics: numerical KPIs (CPU, memory, disk, etc.).
+• Logs: timestamped textual system events and errors.
+• Traces: request propagation across distributed services.
+
+*Source:* Paper 1, Paper 3, Paper 4, Paper 5
+
+**Benchmark Dataset**
+
+The OpenRCA benchmark contains 335 real-world failures across Telecom, Banking, and Market systems with over 68 GB of telemetry data. This project focuses on the Market benchmark.
+
+*Source:* Paper 1 – OpenRCA
+
+**4. Methodology**
+
+**4.1 Existing vs. Agentic Methods**
+
+Traditional approaches analyze only one telemetry source. OpenRCA instead employs an RCA-agent that repeatedly generates a Python program, executes it to retrieve telemetry evidence, analyzes the returned results, and continues the investigation until sufficient evidence has been collected.
+
+*Source:* Paper 1, Paper 3, Paper 4, Paper 5
+
+**4.2 Our Chosen Methodology**
+
+Our project adopts the iterative investigation workflow proposed by OpenRCA. For implementation simplicity, the prototype focuses on the Market dataset while preserving the same evidence collection process.
+
+Workflow:
+
+| **Step** | **Details** |
+|----------|-------------|
+| **1. Receive User Query** | The user submits a failure report in natural language.<br><br>**Example:** *"Cannot create shipping order at 17:23:19."* |
+| **2. Initialize AI Agents** | The system sends the user query to the LLM. The LLM initializes four specialized AI agents: **Log Agent**, **Metric Agent**, **Trace Agent**, and **Reasoning Agent**, each with a predefined role. |
+| **3. Generate Lightweight Python Scripts** | The Log, Metric, and Trace Agents each generate a lightweight Python script (5–10 lines). Each script performs one small investigation task to retrieve the telemetry relevant to the reported incident. |
+| **4. Execute the Investigation** | The generated Python scripts are executed by the system to retrieve the relevant Logs, Metrics, and Traces from the telemetry dataset. |
+| **5. Analyze Individual Evidence** | Each analysis agent analyzes its retrieved telemetry, extracts important findings, and summarizes the evidence. |
+| **6. Evidence Aggregation** | The Log, Metric, and Trace Agents send their summarized findings to the Reasoning Agent. |
+| **7. Reasoning & Decision** | • **Validation:** Evaluates whether the collected evidence is sufficient to identify the root cause.<br><br>• **Conflict Resolution:** Resolves discrepancies between evidence types by prioritizing the most reliable evidence.<br><br>• **Targeted Refinement:** If the evidence is insufficient, the Reasoning Agent assigns a targeted follow-up investigation to the appropriate analysis agent(s), ensuring an efficient iterative investigation. |
+| **8. Final Output** | Once sufficient evidence is collected, the Reasoning Agent outputs:<br>1. Root Cause Component<br>2. Failure Reason<br>3. Exact Datetime. |
+
+**5. Experiments**
+
+**Findings & Baseline Performance**
+
+OpenRCA evaluates 335 real-world failures. Claude 3.5 Sonnet achieved the highest overall accuracy of 11.34%, indicating that automated RCA remains highly challenging.
+
+*Source:* Paper 1 – OpenRCA
+
+**Hard Case Evaluation**
+
+All evaluated LLMs achieved 0% accuracy on hard cases requiring simultaneous identification of component, reason, and timestamp.
+
+*Source:* Paper 1 – OpenRCA
+
+**Discussion**
+
+These findings demonstrate the necessity of iterative evidence retrieval for RCA despite the remaining reasoning limitations of current LLMs.
+
+*Source:* Paper 1 – OpenRCA
+
+**6. Conclusion & Limitations**
+
 **Conclusion**
-•	This paper successfully addresses the 11.34% performance bottleneck identified in LLM-based post-deployment root cause analysis.
-•	By enforcing structured reasoning guardrails and implementing a telemetry token semantic enricher, our framework significantly increases localization accuracy on the complex Market dataset, providing a viable path toward fully automated corporate AIOps.
-**Limitations & Future Work**
-•	Limitations: The multi-agent execution loop incurs relatively high token costs and inference latency due to the multi-turn code synthesis and debugging cycles.
-•	Future Work: Future research will focus on knowledge distillation to fine-tune smaller, open-source models (e.g., Llama-3-8B) specialized in telemetry database querying, reducing operational costs while preserving reasoning accuracy.
+
+Traditional methods analyze logs, metrics, and traces independently. OpenRCA integrates heterogeneous telemetry within a unified LLM-assisted RCA framework. Accordingly, this project adopts OpenRCA as the foundation for implementing and evaluating an RCA prototype on the Market dataset.
+
+*Source:* Paper 1, Paper 3, Paper 4, Paper 5
+
+**Limitations**
+
+• Low localization accuracy.
+
+• Context window limitations.
+
+• Challenges in integrating heterogeneous telemetry.
+
+*Source:* Paper 1, Paper 2, Paper 3, Paper 4, Paper 5
 
 ## Our novelty candidates (pick & defend one)
 1. **Heuristic + LLM hybrid** that uses cheap statistical triage first and only calls the LLM on hard cases (cut cost/latency vs the pure-agent baseline).
