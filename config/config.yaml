@@ -3,7 +3,7 @@
 
 system: "Market"          # OpenRCA system: Telecom | Bank | Market
 data_root: "data"             # where the dataset lives (gitignored)
-use_mock: false                # true = run on built-in mock telemetry (no dataset needed)
+use_mock: true                # true = run on built-in mock telemetry (no dataset needed)
 default_date: "2021-03-25"
 top_k: 1                      # how many root-cause candidates to output
 
