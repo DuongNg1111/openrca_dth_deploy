@@ -8,8 +8,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
-from pathlib import Path
-import pandas as pd
 
 
 @dataclass
@@ -63,75 +61,10 @@ class Prediction:
 @dataclass
 class RawQuery:
     issue_key: str
-    incident_description: str
-    environment: str
-    affected_system: str
-    incident_time: datetime
-    reporter: str
-    reporter_email: str
-    status: str
-    created: str
-
-@dataclass
-class ValidationResult:
-    is_valid: bool
-    errors: list[str] = field(default_factory=list)
-
-@dataclass
-class ParsedQuery:
-
-    issue_key: str
-    environment: str
-    incident_description: str
-    affected_system: str
-    incident_time: datetime
-    time_window: TimeWindow
-    keywords: list[str] = field(default_factory=list)
-
-@dataclass
-class TelemetryMetadata:
-    folder: Path
-    files: list[Path]
-    count: int
-
-
-@dataclass
-class MetadataIndex:
-    date: str
-    metric: TelemetryMetadata
-    log: TelemetryMetadata
-    trace: TelemetryMetadata
-    total_files: int
-
-
-@dataclass
-class PreprocessedTelemetry:
-    dataset: str
-    metrics: dict[str, pd.DataFrame]
-    logs: dict[str, pd.DataFrame]
-    traces: dict[str, pd.DataFrame]
-
-@dataclass
-class InvestigationContext:
-    issue_key: str
-    dataset: str
-    service: str
-    incident_time: datetime
-    time_window: TimeWindow
-    metrics: dict[str, pd.DataFrame]
-    logs: dict[str, pd.DataFrame]
-    traces: dict[str, pd.DataFrame]
-    cmdb_links: dict[str, dict[str, list[str]]] = field(default_factory=dict)
-    trace_links: dict[str, dict] = field(default_factory=dict)
-
-@dataclass
-class RawQuery:
-    issue_key: str
 
     incident_description: str
     additional_information: str
 
-    environment: str
     affected_system: str
     incident_time: str
 
@@ -146,48 +79,11 @@ class ValidationResult:
 
 @dataclass
 class ParsedQuery:
-
     issue_key: str
-    environment: str
+
     incident_description: str
     affected_system: str
-    incident_time: datetime
+    incident_time: datetime | str
     additional_information: str
-    time_window: TimeWindow
+
     keywords: list[str] = field(default_factory=list)
-
-@dataclass
-class TelemetryMetadata:
-    folder: Path
-    files: list[Path]
-    count: int
-
-
-@dataclass
-class MetadataIndex:
-    date: str
-    metric: TelemetryMetadata
-    log: TelemetryMetadata
-    trace: TelemetryMetadata
-    total_files: int
-
-
-@dataclass
-class PreprocessedTelemetry:
-    dataset: str
-    metrics: dict[str, pd.DataFrame]
-    logs: dict[str, pd.DataFrame]
-    traces: dict[str, pd.DataFrame]
-
-@dataclass
-class InvestigationContext:
-    issue_key: str
-    dataset: str
-    service: str
-    incident_time: datetime
-    time_window: TimeWindow
-    metrics: dict[str, pd.DataFrame]
-    logs: dict[str, pd.DataFrame]
-    traces: dict[str, pd.DataFrame]
-    cmdb_links: dict[str, dict[str, list[str]]] = field(default_factory=dict)
-    trace_links: dict[str, dict] = field(default_factory=dict)
