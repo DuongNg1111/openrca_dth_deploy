@@ -95,12 +95,21 @@
 2. **Trace-graph-aware retrieval** that walks the service dependency graph to localize the failing logistics service faster.
 3. **Domain-transfer framing** of microservice RCA as a logistics fulfillment pipeline (order -> warehouse -> shipment -> tracking) and measure if domain priors help.
 
-## 4. Glossary (metric / log / trace) — fill during M2/M3
+## 4. Glossary (Metric / KPI / Log / Trace)
 
+### Metric / KPI
 
-- **Metric / KPI**
-  - **Definition:** A metric is a numerical measurement of system performance. A KPI (Key Performance Indicator) is a metric used to evaluate whether a system achieves its objectives.
-  - **Example:** CPU usage = 85%, average response time = 150 ms.
+**Definition:**
+A metric is a numerical measurement used to monitor the performance or health of a system. A KPI (Key Performance Indicator) is a metric used to evaluate whether the system meets its expected objectives.
+
+**Example (from dataset):**
+- Timestamp: 1647767561
+- Level: node
+- Component: node-4
+- Reason: node CPU spike
+- Datetime: 2022-03-20 17:12:41
+
+This event shows that **node-4** experienced a **CPU spike**, indicating abnormal resource utilization. Such performance indicators can be used as metrics to detect system anomalies.
 
 ---
 
@@ -131,6 +140,18 @@ A trace records the complete path of a request through multiple services in a di
 
 Although the dataset does not contain **trace_id** or **span_id**, these related events could belong to the same failure scenario. In a tracing system, the entire request path would be represented as a **trace**, while each service execution along the path would be a **span**.
 
-- **Root Cause Component**
-  - **Definition:** The system component responsible for the root cause of a failure.
-  - **Example:** Database service exhausted its connection pool, causing request failures.
+---
+
+### Root Cause Component
+
+**Definition:**
+The root cause component is the system component responsible for the original failure that causes other components to fail.
+
+**Example (from dataset):**
+- Timestamp: 1647767561
+- Level: node
+- Component: node-4
+- Reason: node CPU spike
+- Datetime: 2022-03-20 17:12:41
+
+If services running on **node-4** later experience failures, such as **paymentservice** with **container process termination** at **2022-03-20 17:23:19**, then **node-4** can be identified as the root cause component because the infrastructure problem occurred before the service failure.
