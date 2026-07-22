@@ -52,8 +52,6 @@ class Prediction:
     candidates: list[RootCauseCandidate] = field(default_factory=list)
 
     def to_openrca_json(self) -> dict[str, dict[str, str]]:
-        """Serialize to OpenRCA's expected prediction format."""
-
         out: dict[str, dict[str, str]] = {}
 
         for i, c in enumerate(self.candidates, start=1):
@@ -97,6 +95,7 @@ class ParsedQuery:
     affected_system: str
     incident_time: datetime | str
     additional_information: str = ""
+    time_window: TimeWindow | None = None
 
     keywords: list[str] = field(default_factory=list)
 
@@ -111,11 +110,9 @@ class TelemetryMetadata:
 @dataclass
 class MetadataIndex:
     date: str
-
     metric: TelemetryMetadata
     log: TelemetryMetadata
     trace: TelemetryMetadata
-
     total_files: int
 
 

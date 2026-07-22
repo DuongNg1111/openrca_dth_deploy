@@ -17,7 +17,6 @@ print(f"Status              : {query.status}")
 print(f"Created             : {query.created}")
 
 
-
 print("\nDescription:")
 print("-" * 60)
 print(query.incident_description)
