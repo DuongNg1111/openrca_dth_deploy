@@ -57,3 +57,17 @@ class Prediction:
                 "root cause reason": c.reason,
             }
         return out
+
+@dataclass
+class RawQuery:
+    issue_key: str
+
+    summary: str
+    description: str
+
+    affected_system: str
+    incident_time: str
+
+    reporter: str
+    status: str
+    created: str

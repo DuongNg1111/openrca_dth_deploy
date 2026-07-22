@@ -5,6 +5,7 @@ TODO(DEV 1): implement real loaders for dataset/Market/telemetry/{date}/.
 """
 from __future__ import annotations
 
+
 import random
 from datetime import datetime, timedelta
 
@@ -13,44 +14,69 @@ MOCK_KPIS = ['cpu', 'memory', 'disk_io_read', 'latency']
 SIGNATURE_KPI = "disk_io_read"
 ROOT_CAUSE_COMPONENT = "order-service"
 
-
-def load_mock(window=None, seed: int = 7) -> dict:
-    """Deterministic mock telemetry with ONE injected anomaly (change-point in the last third).
-
-    Returns: {"metric": [ {timestamp, component, kpi, value}, ... ], "log": [...], "trace": [...] }.
-    """
-    rng = random.Random(seed)
-    start = window.start if window else datetime(2021, 3, 25, 9, 0, 0)
-    points = 30
-    spike_from = points * 2 // 3
-    metric = []
-    for step in range(points):
-        ts = start + timedelta(minutes=step)
-        for comp in MOCK_COMPONENTS:
-            for kpi in MOCK_KPIS:
-                value = 20 + 5 * rng.random()  # quiet baseline
-                if comp == ROOT_CAUSE_COMPONENT and kpi == SIGNATURE_KPI and step >= spike_from:
-                    value += 80 + 10 * rng.random()  # injected failure
-                metric.append(
-                    {"timestamp": ts, "component": comp, "kpi": kpi, "value": round(value, 2)}
-                )
-    log = [
-        {"timestamp": start + timedelta(minutes=spike_from), "component": ROOT_CAUSE_COMPONENT,
-         "level": "ERROR", "message": "demo error for logistics root cause"}
-    ]
-    trace = [{"timestamp": start, "service": c, "duration_ms": 10} for c in MOCK_COMPONENTS]
-    return {"metric": metric, "log": log, "trace": trace}
-
-
+from pathlib import Path
+import pandas as pd
 def load(system: str, window, data_root: str) -> dict:
-    """TODO(DEV 1): read REAL OpenRCA telemetry for `system` within `window`.
+    """Read REAL OpenRCA telemetry."""
 
-    Steps:
-      1. Resolve dataset/{system}/telemetry/{date}.
-      2. Read metric/, log/, trace/ (CSV/JSON) with pandas.
-      3. Filter rows to [window.start, window.end].
-      4. Return the same dict shape as load_mock().
-    """
-    raise NotImplementedError(
-        "DEV 1: implement real telemetry loading — see docs/05_pipeline_and_modules.md"
+    import pandas as pd
+    from pathlib import Path
+
+    # =========================
+    # Step 1: Resolve dataset path
+    # =========================
+
+    date_folder = window.start.strftime("%Y_%m_%d")
+
+    telemetry_path = (
+        Path(data_root)
+        / system
+        / "telemetry"
+        / date_folder
     )
+
+    print("Telemetry path:", telemetry_path)
+
+
+    # =========================
+    # Step 2: Read metric sample
+    # =========================
+
+    metric_path = telemetry_path / "metric"
+
+    metric_files = list(metric_path.glob("*.csv"))
+
+    print("\nMetric files:")
+    for file in metric_files:
+        print("-", file.name)
+
+
+    # Chỉ đọc 3 dòng đầu mỗi file để kiểm tra
+    metric_samples = []
+
+    for file in metric_files:
+        print("\nReading:", file.name)
+
+        df = pd.read_csv(
+            file,
+            nrows=3
+        )
+
+        print("Columns:", df.columns.tolist())
+        print(df)
+
+        metric_samples.append(df)
+
+
+    # Gộp sample lại (chỉ vài dòng)
+    metric = pd.concat(
+        metric_samples,
+        ignore_index=True
+    )
+
+
+    return {
+        "metric": metric,
+        "log": [],
+        "trace": []
+    }
