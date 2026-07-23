@@ -112,6 +112,3 @@ def parse_query(
     )
 
     return parsed
-       
-
-    return parsed
