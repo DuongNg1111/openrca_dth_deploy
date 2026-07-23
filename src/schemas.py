@@ -64,7 +64,8 @@ class RawQuery:
 
     incident_description: str
     additional_information: str
-
+    
+    environment: str
     affected_system: str
     incident_time: str
 
@@ -80,7 +81,7 @@ class ValidationResult:
 @dataclass
 class ParsedQuery:
     issue_key: str
-
+    environment: str
     incident_description: str
     affected_system: str
     incident_time: datetime | str

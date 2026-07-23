@@ -82,62 +82,34 @@ def _parse_incident_time(
     return dt, window
 
 
-
 def parse_query(
     raw_query: RawQuery
 ) -> ParsedQuery:
     """
-    Convert RawQuery from Jira
-    into ParsedQuery.
-
-    Pipeline:
-
-        Jira
-          |
-          v
-       RawQuery
-          |
-          v
-     ParsedQuery
+    Convert RawQuery from Jira into ParsedQuery.
     """
 
     incident_dt, window = _parse_incident_time(
-    raw_query.incident_time
-)
-
-
-    combined_text = " ".join(
-    [
-        raw_query.incident_description or "",
-        raw_query.affected_system or "",
-    ]
-)
-
-
-    keywords = _extract_keywords(
-        combined_text
+        raw_query.incident_time
     )
 
+    combined_text = " ".join([
+        raw_query.incident_description or "",
+        raw_query.affected_system or "",
+    ])
+
+    keywords = _extract_keywords(combined_text)
 
     parsed = ParsedQuery(
-
         issue_key=raw_query.issue_key,
-
         environment=raw_query.environment,
-
-        incident_description=
-            raw_query.incident_description,
-
-        affected_system=
-            raw_query.affected_system,
-
+        incident_description=raw_query.incident_description,
+        affected_system=raw_query.affected_system,
         incident_time=incident_dt,
-
         keywords=keywords,
-
         time_window=window,
         additional_information=raw_query.additional_information,
-)
-
+    )
 
     return parsed
+       

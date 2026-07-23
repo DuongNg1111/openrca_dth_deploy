@@ -4,6 +4,8 @@ issue_key = input("Enter Jira Issue Key: ")
 
 query = receive_query(issue_key)
 
+assert query is not None
+
 print("\n========== RAW QUERY ==========\n")
 
 print(f"Issue Key           : {query.issue_key}")

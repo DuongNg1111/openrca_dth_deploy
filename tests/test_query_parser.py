@@ -13,6 +13,7 @@ print("=" * 40)
 
 print("Issue Key            :", parsed.issue_key)
 print("Incident Description :", parsed.incident_description)
+print("Environment          :", parsed.environment)
 print("Affected System      :", parsed.affected_system)
 print("Incident Time        :", parsed.incident_time)
 print("Additional Info      :", parsed.additional_information)
