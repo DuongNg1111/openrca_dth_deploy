@@ -137,7 +137,6 @@ class InvestigationContext:
     metrics: dict[str, pd.DataFrame]
     logs: dict[str, pd.DataFrame]
     traces: dict[str, pd.DataFrame]
-
     cmdb_links: dict[str, dict[str, list[str]]] = field(
         default_factory=dict
     )
