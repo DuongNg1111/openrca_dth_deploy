@@ -53,13 +53,13 @@ def main():
     print("==============================")
 
     config = {
-    "system": "Market",
-    "data_root": "D:/"
+        "system": "Market",
+        "data_root": "data",
 }
 
     data_source = connect_data_source(
-    parsed_query,
-    config
+        parsed_query,
+        config
 )
     print("\nTELEMETRY RESULT:")
 
