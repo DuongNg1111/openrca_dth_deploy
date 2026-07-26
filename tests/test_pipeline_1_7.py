@@ -187,8 +187,6 @@ def main():
             f"{name:<25}: {len(df)} rows"
         )
 
-
-
     print("\n==============================")
     print(" PIPELINE STEP 1-7 COMPLETED ")
     print("==============================")

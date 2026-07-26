@@ -169,7 +169,28 @@ def main():
 
     )
 
+    print("\nMETRIC SERVICE SAMPLE")
+    print(
+        preprocessed.metrics["metric_service"]
+        ["service"]
+        .head()
+    )
 
+
+    print("\nTRACE CMDB SAMPLE")
+    print(
+        preprocessed.traces["trace_span"]
+        ["cmdb_id"]
+        .head()
+    )
+
+
+    print("\nLOG CMDB SAMPLE")
+    print(
+        preprocessed.logs["log_service"]
+        ["cmdb_id"]
+        .head()
+    )
 
     # =====================================================
     # MEMORY CHECK

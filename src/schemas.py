@@ -102,19 +102,27 @@ class TelemetryMetadata:
 @dataclass
 class MetadataIndex:
     date: str
-
     metric: TelemetryMetadata
     log: TelemetryMetadata
     trace: TelemetryMetadata
-
     total_files: int
 
 
 @dataclass
 class PreprocessedTelemetry:
-
     metrics: dict[str, pd.DataFrame]
-
     logs: dict[str, pd.DataFrame]
-
     traces: dict[str, pd.DataFrame]
+
+@dataclass
+class InvestigationContext:
+    time_window: TimeWindow | None
+    metrics: dict[str, pd.DataFrame]
+    logs: dict[str, pd.DataFrame]
+    traces: dict[str, pd.DataFrame]
+    cmdb_links: dict[str, dict[str, list[str]]] = field(
+        default_factory=dict
+    )
+    trace_links: dict[str, dict] = field(
+        default_factory=dict
+    )
