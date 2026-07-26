@@ -84,12 +84,9 @@ def main():
 
 
 
-    data_source = connect_data_source(
-
+    data_source, dataset_folder = connect_data_source(
         parsed_query,
-
         config
-
     )
 
 
@@ -154,9 +151,9 @@ def main():
 
     preprocessed_data = preprocess(
         metadata,
-        parsed_query
+        parsed_query,
+        dataset_folder
     )
-
 
     print("\nPREPROCESS RESULT:")
 

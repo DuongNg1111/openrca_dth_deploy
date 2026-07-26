@@ -110,6 +110,7 @@ class MetadataIndex:
 
 @dataclass
 class PreprocessedTelemetry:
+    dataset: str
     metrics: dict[str, pd.DataFrame]
     logs: dict[str, pd.DataFrame]
     traces: dict[str, pd.DataFrame]

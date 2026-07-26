@@ -237,7 +237,10 @@ def preprocess_traces(metadata, window):
 # STEP 7 MAIN
 # =====================================================
 
-def preprocess(metadata, parsed_query):
+def preprocess(
+    metadata,
+    parsed_query,
+):
 
     print("\n==============================")
     print(" STEP 7: PREPROCESS TELEMETRY ")
@@ -278,17 +281,16 @@ def preprocess(metadata, parsed_query):
         window
     )
 
+    print("DEBUG METRIC FOLDER:", metadata.metric.folder)
+    dataset_folder = metadata.metric.folder.parent.parent.parent.name
 
-    result = PreprocessedTelemetry(
+    return PreprocessedTelemetry(
+        dataset=dataset_folder,
         metrics=metrics,
         logs=logs,
         traces=traces
     )
+print("\n==============================")
+print(" STEP 7 COMPLETED ")
+print("==============================")
 
-
-    print("\n==============================")
-    print(" STEP 7 COMPLETED ")
-    print("==============================")
-
-
-    return result

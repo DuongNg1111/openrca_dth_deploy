@@ -220,52 +220,56 @@ def main():
     parsed_query,
 )
 
-    for service, contexts in contexts.items():
+    for service, context in contexts.items():
 
-        print(f"\nSERVICE: {contexts.service}")
+        print(f"\nSERVICE: {context.service}")
 
         print(
-            "Incident Time :",
-            contexts.incident_time
+            "Dataset       :",
+            context.dataset
         )
 
         print(
+            "Incident Time :",
+            context.incident_time
+        )
+        print(
             "Time Window   :",
-            f"{contexts.time_window.start} -> {contexts.time_window.end}"
+            f"{context.time_window.start} -> {context.time_window.end}"
         )
 
         print()
 
         print(
             "Metric Files:",
-            list(contexts.metrics.keys())
+            list(context.metrics.keys())
         )
 
         print(
             "Log Files:",
-            list(contexts.logs.keys())
+            list(context.logs.keys())
         )
 
         print(
             "Trace Files:",
-            list(contexts.traces.keys())
+            list(context.traces.keys())
         )
 
         print()
 
         print(
             "Metric Rows:",
-            sum(len(df) for df in contexts.metrics.values())
+            sum(len(df) for df in context.metrics.values())
         )
 
         print(
             "Log Rows:",
-            sum(len(df) for df in contexts.logs.values())
+            sum(len(df) for df in context.logs.values())
         )
 
         print(
             "Trace Rows:",
-            sum(len(df) for df in contexts.traces.values())
+            sum(len(df) for df in context.traces.values())
         )
 
     print("\n==============================")
