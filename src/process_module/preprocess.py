@@ -4,154 +4,291 @@ from src.schemas import PreprocessedTelemetry
 
 
 # =====================================================
-# STEP 7.1 Handle Missing Values
+# STEP 7.1 Build Investigation Window
 # =====================================================
 
-def handle_missing_values(df: pd.DataFrame) -> pd.DataFrame:
+def build_investigation_window(parsed_query):
     """
-    Remove rows where all values are missing.
+    Create 30 minutes investigation window.
+
+    Example:
+        Incident:
+        09:30
+
+        Window:
+        09:15 - 09:45
     """
-    return df.dropna(how="all")
+
+    incident_time = parsed_query.incident_time
+
+    start = incident_time - pd.Timedelta(minutes=15)
+
+    end = incident_time + pd.Timedelta(minutes=15)
+
+    return {
+        "start": start,
+        "end": end
+    }
+
 
 
 # =====================================================
 # STEP 7.2 Normalize Timestamp
 # =====================================================
 
-def normalize_timestamp(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Normalize timestamp columns to pandas datetime.
-
-    Rules
-    -----
-    - 10 digits -> Unix seconds
-    - 13 digits -> Unix milliseconds
-    """
+def normalize_timestamp(df):
 
     df = df.copy()
 
-    timestamp_candidates = [
-        "timestamp",
-        "time",
-        "datetime",
-        "start_time",
-        "end_time",
-    ]
+    if "timestamp" not in df.columns:
+        return df
 
-    for col in timestamp_candidates:
 
-        if col not in df.columns:
-            continue
+    sample = df["timestamp"].dropna()
 
-        # lấy giá trị đầu tiên không NULL
-        sample = df[col].dropna()
+    if sample.empty:
+        return df
 
-        if sample.empty:
-            continue
 
-        try:
-            sample = str(int(float(sample.iloc[0])))
-        except (ValueError, TypeError):
-            continue
+    value = str(int(sample.iloc[0]))
 
-        if len(sample) == 10:
-            unit = "s"
 
-        elif len(sample) == 13:
-            unit = "ms"
+    if len(value) == 10:
+        unit = "s"
 
-        else:
-            # nếu timestamp không đúng chuẩn --> convert và báo NaT
-            unit = "s"
+    elif len(value) == 13:
+        unit = "ms"
 
-        df[col] = pd.to_datetime(
-            df[col],
+    else:
+        unit = None
+
+
+    if unit:
+
+        df["timestamp"] = pd.to_datetime(
+            df["timestamp"],
             unit=unit,
-            errors="coerce",
+            errors="coerce"
         )
 
-    return df
-
-# =====================================================
-# STEP 7.3 Normalize Data Types
-# =====================================================
-
-def normalize_data_types(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Normalize dataframe dtypes.
-
-    Currently pandas infers most dtypes automatically when
-    reading CSV files. Timestamp columns have already been
-    normalized in Step 7.2, therefore no additional processing
-    is required here.
-    """
 
     return df
+
+
+
+# =====================================================
+# STEP 7.3 Filter Investigation Window
+# =====================================================
+
+def filter_time_window(df, window):
+
+    if "timestamp" not in df.columns:
+        return df
+
+
+    df = df[
+        (df["timestamp"] >= window["start"])
+        &
+        (df["timestamp"] <= window["end"])
+    ]
+
+
+    return df
+
 
 
 # =====================================================
 # STEP 7.4 Remove Invalid Records
 # =====================================================
 
-def remove_invalid_records(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Remove invalid records from telemetry dataframe.
-
-    Rules
-    -----
-    1. Remove duplicate rows.
-    2. Remove records with negative duration.
-    3. Keep rows with missing timestamps.
-       They will naturally be excluded when building the
-       investigation time window in Step 9.
-    """
+def clean_dataframe(df):
 
     df = df.copy()
 
-    # -------------------------------------------------
-    # Remove duplicate rows
-    # -------------------------------------------------
+
+    # Remove completely empty rows
+
+    df = df.dropna(
+        how="all"
+    )
+
+
+    # Remove duplicates
+
     df = df.drop_duplicates()
 
-    # -------------------------------------------------
-    # Remove negative duration (Trace only)
-    # -------------------------------------------------
+
+    # Trace duration cannot be negative
+
     if "duration" in df.columns:
 
         df = df[
-            (df["duration"].isna()) |
+            (df["duration"].isna())
+            |
             (df["duration"] >= 0)
         ]
 
+
     return df.reset_index(drop=True)
 
+
+
 # =====================================================
-# STEP 7.5: Build PreprocessedTelemetry
+# STEP 7.5 Process One Table
 # =====================================================
 
-def preprocess(metadata):
-    """
-    STEP 7
-    Data Preprocessing
+def preprocess_table(file, window):
 
-    Returns
-    -------
-    PreprocessedTelemetry
-        Cleaned metrics, logs and traces.
-    """
+    print(
+        "Processing:",
+        file.name
+    )
 
-    print("\nStarting preprocessing...\n")
 
-    metrics = preprocess_metrics(metadata)
+    df = pd.read_csv(file)
 
-    logs = preprocess_logs(metadata)
 
-    traces = preprocess_traces(metadata)
+    df = normalize_timestamp(df)
 
-    print("\nPreprocessing completed.\n")
 
-    return PreprocessedTelemetry(
+    df = filter_time_window(
+        df,
+        window
+    )
+
+
+    df = clean_dataframe(df)
+
+
+    print(
+        "Rows after preprocess:",
+        len(df)
+    )
+
+
+    return df
+
+
+
+# =====================================================
+# STEP 7.6 Process Metrics
+# =====================================================
+
+def preprocess_metrics(metadata, window):
+
+    metrics = {}
+
+
+    for file in metadata.metric.files:
+
+        metrics[file.stem] = preprocess_table(
+            file,
+            window
+        )
+
+
+    return metrics
+
+
+
+# =====================================================
+# STEP 7.7 Process Logs
+# =====================================================
+
+def preprocess_logs(metadata, window):
+
+    logs = {}
+
+
+    for file in metadata.log.files:
+
+        logs[file.stem] = preprocess_table(
+            file,
+            window
+        )
+
+
+    return logs
+
+
+
+# =====================================================
+# STEP 7.8 Process Traces
+# =====================================================
+
+def preprocess_traces(metadata, window):
+
+    traces = {}
+
+
+    for file in metadata.trace.files:
+
+        traces[file.stem] = preprocess_table(
+            file,
+            window
+        )
+
+
+    return traces
+
+
+
+# =====================================================
+# STEP 7 MAIN
+# =====================================================
+
+def preprocess(metadata, parsed_query):
+
+    print("\n==============================")
+    print(" STEP 7: PREPROCESS TELEMETRY ")
+    print("==============================")
+
+
+    window = build_investigation_window(
+        parsed_query
+    )
+
+
+    print("\nIncident Time:")
+    print(parsed_query.incident_time)
+
+
+    print("\nInvestigation Window:")
+    print(
+        window["start"],
+        "->",
+        window["end"]
+    )
+
+
+    metrics = preprocess_metrics(
+        metadata,
+        window
+    )
+
+
+    logs = preprocess_logs(
+        metadata,
+        window
+    )
+
+
+    traces = preprocess_traces(
+        metadata,
+        window
+    )
+
+
+    result = PreprocessedTelemetry(
         metrics=metrics,
         logs=logs,
-        traces=traces,
+        traces=traces
     )
+
+
+    print("\n==============================")
+    print(" STEP 7 COMPLETED ")
+    print("==============================")
+
+
+    return result

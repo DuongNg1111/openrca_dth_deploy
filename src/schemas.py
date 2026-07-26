@@ -82,13 +82,14 @@ class ValidationResult:
 
 @dataclass
 class ParsedQuery:
+
     issue_key: str
     environment: str
     incident_description: str
     affected_system: str
-    incident_time: datetime | str
+    incident_time: datetime
     additional_information: str
-
+    time_window: TimeWindow
     keywords: list[str] = field(default_factory=list)
 
 @dataclass
