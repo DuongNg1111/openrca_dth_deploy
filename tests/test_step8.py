@@ -1,280 +1,461 @@
 from dataclasses import asdict
+import pandas as pd
 
 from src.jira.receive_query import receive_query
+
 from src.input_module.validate_query import validate_query
 from src.input_module.query_parser import parse_query
 from src.input_module.telemetry_loader import connect_data_source
 from src.input_module.metadata_loader import load_metadata
+
 from src.process_module.preprocess import preprocess
 from src.process_module.link_telemetry import build_service_links
-from src.process_module.evidence_builder import build_investigation_context
+from src.process_module.evidence_builder import (
+    build_investigation_context
+)
 
+from src.database.ready_call_db import (
+    store_ready_call_data
+)
+
+from src.database.ready_call_query import (
+    get_case,
+    get_ready_call_data
+)
+
+
+# =====================================================
+# Helper
+# =====================================================
+
+def print_title(title):
+
+    print("\n" + "=" * 40)
+    print(title)
+    print("=" * 40)
+
+
+
+def format_datetime(value):
+
+    try:
+        return pd.to_datetime(value).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+
+    except Exception:
+        return value
+
+
+
+# =====================================================
+# MAIN PIPELINE
+# =====================================================
 
 def main():
+
 
     # =====================================================
     # STEP 1
     # =====================================================
 
-    print("\n==============================")
-    print(" STEP 1: RECEIVE USER QUERY ")
-    print("==============================")
+    print_title(
+        "STEP 1: RECEIVE USER QUERY"
+    )
 
-    issue_key = input("Enter Jira Issue Key: ")
 
-    raw_query = receive_query(issue_key)
+    issue_key = input(
+        "Enter Jira Issue Key: "
+    )
 
-    print("\nRAW QUERY:")
 
-    for key, value in asdict(raw_query).items():
-        print(f"{key:<25}: {value}")
+    raw_query = receive_query(
+        issue_key
+    )
+
+
+    print("\nRaw Query")
+
+
+    raw_data = asdict(raw_query)
+
+
+    for key, value in raw_data.items():
+
+
+        if key in [
+            "incident_time",
+            "created"
+        ]:
+
+            value = format_datetime(value)
+
+
+        print(
+            f"{key:<25}: {value}"
+        )
+
+
 
     # =====================================================
     # STEP 2
     # =====================================================
 
-    print("\n==============================")
-    print(" STEP 2: VALIDATE QUERY ")
-    print("==============================")
+    print_title(
+        "STEP 2: VALIDATE QUERY"
+    )
 
-    validated = validate_query(raw_query)
+
+    validated = validate_query(
+        raw_query
+    )
+
 
     if not validated.is_valid:
-        print(validated.errors)
+
+        print(
+            "Validation Failed"
+        )
+
+        print(
+            validated.errors
+        )
+
         return
 
-    print(validated)
+
+    print(
+        "Validation Passed"
+    )
+
+
 
     # =====================================================
     # STEP 3
     # =====================================================
 
-    print("\n==============================")
-    print(" STEP 3: PARSE QUERY ")
-    print("==============================")
+    print_title(
+        "STEP 3: PARSE QUERY"
+    )
 
-    parsed_query = parse_query(raw_query)
 
-    for key, value in asdict(parsed_query).items():
-        print(f"{key:<25}: {value}")
+    parsed_query = parse_query(
+        raw_query
+    )
+
+
+    print("\nParsed Information")
+
+
+    print(
+        f"Keywords : {parsed_query.keywords}"
+    )
+
+
+    print(
+        "\nInvestigation Window"
+    )
+
+
+    print(
+        f"Start : {parsed_query.time_window.start.strftime('%Y-%m-%d %H:%M:%S')}"
+    )
+
+
+    print(
+        f"End   : {parsed_query.time_window.end.strftime('%Y-%m-%d %H:%M:%S')}"
+    )
+
+
 
     # =====================================================
     # STEP 4-5
     # =====================================================
 
-    print("\n==============================")
-    print(" STEP 4-5: LOAD TELEMETRY ")
-    print("==============================")
+    print_title(
+        "STEP 4-5: LOAD TELEMETRY"
+    )
+
 
     config = {
+
         "system": "Market",
+
         "data_root": "D:/"
+
     }
+
 
     data_source = connect_data_source(
         parsed_query,
         config
     )
 
-    print(data_source)
+
+    print(
+        f"Data Source: {data_source}"
+    )
+
+
 
     # =====================================================
     # STEP 6
     # =====================================================
 
-    print("\n==============================")
-    print(" STEP 6: LOAD METADATA ")
-    print("==============================")
+    print_title(
+        "STEP 6: LOAD METADATA"
+    )
+
 
     metadata = load_metadata(
         data_source,
         parsed_query
     )
 
-    print("Date Folder :", metadata.date)
-    print("Metric Files:", metadata.metric.count)
-    print("Log Files   :", metadata.log.count)
-    print("Trace Files :", metadata.trace.count)
-    print("Total Files :", metadata.total_files)
+
+    print(
+        f"Date Folder : {metadata.date}"
+    )
+
+    print(
+        f"Metric Files: {metadata.metric.count}"
+    )
+
+    print(
+        f"Log Files   : {metadata.log.count}"
+    )
+
+    print(
+        f"Trace Files : {metadata.trace.count}"
+    )
+
+    print(
+        f"Total Files : {metadata.total_files}"
+    )
+
+
 
     # =====================================================
     # STEP 7
     # =====================================================
 
-    print("\n==============================")
-    print(" STEP 7: PREPROCESS ")
-    print("==============================")
+    print_title(
+        "STEP 7: PREPROCESS"
+    )
+
 
     preprocessed = preprocess(
         metadata,
         parsed_query
     )
 
-    print("\nSTEP 7 COMPLETED")
 
-    # from src.process_module.service_mapper import normalize_service_name
-
-    # print("\n==============================")
-    # print(" STEP 8 DEBUG ")
-    # print("==============================")
-
-    # # -----------------------------
-    # # Metric services
-    # # -----------------------------
-    # metric_services = set()
-
-    # for df in preprocessed.metrics.values():
-
-    #     if "service" in df.columns:
-
-    #         metric_services.update(
-    #             df["service"]
-    #             .dropna()
-    #             .apply(normalize_service_name)
-    #             .unique()
-    #         )
-
-    # # -----------------------------
-    # # Log services
-    # # -----------------------------
-    # log_services = set()
-
-    # for df in preprocessed.logs.values():
-
-    #     if "cmdb_id" in df.columns:
-
-    #         log_services.update(
-    #             df["cmdb_id"]
-    #             .dropna()
-    #             .apply(normalize_service_name)
-    #             .unique()
-    #         )
-
-    # # -----------------------------
-    # # Trace services
-    # # -----------------------------
-    # trace_services = set()
-
-    # for df in preprocessed.traces.values():
-
-    #     if "cmdb_id" in df.columns:
-
-    #         trace_services.update(
-    #             df["cmdb_id"]
-    #             .dropna()
-    #             .apply(normalize_service_name)
-    #             .unique()
-    #         )
-
-    # print("\nMetric Services")
-    # print(sorted(metric_services))
-
-    # print("\nLog Services")
-    # print(sorted(log_services))
-
-    # print("\nTrace Services")
-    # print(sorted(trace_services))
 
     # =====================================================
-    # STEP 8.2
+    # STEP 8
     # =====================================================
 
-    print("\n==============================")
-    print(" STEP 8.2 SERVICE MAPPING ")
-    print("==============================")
+    print_title(
+        "STEP 8: BUILD INVESTIGATION CONTEXT"
+    )
+
 
     service_links = build_service_links(
         preprocessed
     )
 
-    for service, links in service_links.items():
-
-        print(f"\nSERVICE: {service}")
-
-        print(
-            "Metrics:",
-            sorted(links["metrics"])
-        )
-
-        print(
-            "Logs:",
-            sorted(links["logs"])
-        )
-
-        print(
-            "Traces:",
-            sorted(links["traces"])
-        )
-
-    # =====================================================
-    # STEP 8.3
-    # =====================================================
-
-    print("\n==============================")
-    print(" STEP 8.3 BUILD EVIDENCE BUNDLE ")
-    print("==============================")
 
     contexts = build_investigation_context(
-    preprocessed,
-    service_links,
-    parsed_query,
-)
+        preprocessed,
+        service_links,
+        parsed_query
+    )
 
-    for service, context in contexts.items():
+    from src.agents.log_agent import LogAgent
+    from src.agents.metric_agent import MetricAgent
+    from src.agents.trace_agent import TraceAgent
+    from src.agents.reasoning_agent import ReasoningAgent
 
-        print(f"\nSERVICE: {context.service}")
+
+    print("\n========================================")
+    print("STEP 9: AGENT TEST")
+    print("========================================")
+
+
+    # chọn 1 service để test trước
+
+    context = contexts["shippingservice"]
+
+
+    log_result = LogAgent().analyze(
+        context
+    )
+
+
+    metric_result = MetricAgent().analyze(
+        context
+    )
+
+
+    trace_result = TraceAgent().analyze(
+        context
+    )
+
+
+    evidence = [
+
+        log_result,
+        metric_result,
+        trace_result
+
+    ]
+
+
+    final_result = ReasoningAgent().analyze(
+        evidence
+    )
+
+
+    print("\nLog Agent:")
+    print(log_result)
+
+
+    print("\nMetric Agent:")
+    print(metric_result)
+
+
+    print("\nTrace Agent:")
+    print(trace_result)
+
+
+    print("\nReasoning Agent:")
+    print(final_result)
+
+    print(
+        f"Contexts Built: {len(contexts)}"
+    )
+
+
+
+    ready_db = store_ready_call_data(
+        parsed_query,
+        preprocessed,
+        contexts
+    )
+
+
+    print(
+        f"\nCases Stored    : {len(ready_db['cases'])}"
+    )
+
+
+    print(
+        f"Services Stored : {len(ready_db['services'])}"
+    )
+
+
+
+    case = ready_db["cases"][0]
+
+
+    print("\nCase Information")
+
+
+    print(
+        f"Issue Key   : {case.issue_key}"
+    )
+
+    print(
+        f"Environment : {case.environment}"
+    )
+
+    print(
+        f"Dataset     : {case.dataset}"
+    )
+
+    print(
+        f"Incident    : {case.incident_time.strftime('%Y-%m-%d %H:%M:%S')}"
+    )
+
+
+
+    # =====================================================
+    # Query Result
+    # =====================================================
+
+
+    case = get_case(
+        parsed_query.issue_key
+    )
+
+
+    records = get_ready_call_data(
+        parsed_query.issue_key
+    )
+
+
+    print("\nQuery Result")
+
+
+    print(
+        f"Issue Key          : {case.issue_key}"
+    )
+
+
+    print(
+        f"Dataset            : {case.dataset}"
+    )
+
+
+    print(
+        f"Environment        : {case.environment}"
+    )
+
+
+    print(
+        f"Contexts Returned  : {len(records)}"
+    )
+
+
+    for record in records:
+
+        print("-" * 40)
+
 
         print(
-            "Dataset       :",
-            context.dataset
+            f"Service      : {record.service}"
         )
+
 
         print(
-            "Incident Time :",
-            context.incident_time
-        )
-        print(
-            "Time Window   :",
-            f"{context.time_window.start} -> {context.time_window.end}"
+            f"Metric Files : {record.metric_files}"
         )
 
-        print()
 
         print(
-            "Metric Files:",
-            list(context.metrics.keys())
+            f"Log Files    : {record.log_files}"
         )
+
 
         print(
-            "Log Files:",
-            list(context.logs.keys())
+            f"Trace Files  : {record.trace_files}"
         )
 
-        print(
-            "Trace Files:",
-            list(context.traces.keys())
-        )
 
-        print()
+    print("-" * 40)
 
-        print(
-            "Metric Rows:",
-            sum(len(df) for df in context.metrics.values())
-        )
 
-        print(
-            "Log Rows:",
-            sum(len(df) for df in context.logs.values())
-        )
 
-        print(
-            "Trace Rows:",
-            sum(len(df) for df in context.traces.values())
-        )
+    # =====================================================
+    # COMPLETED
+    # =====================================================
 
-    print("\n==============================")
-    print(" PIPELINE STEP 1-8 COMPLETED ")
-    print("==============================")
+    print_title(
+        "PIPELINE COMPLETED"
+    )
+
+
 
 if __name__ == "__main__":
-        main()
+
+    main()

@@ -117,13 +117,13 @@ class PreprocessedTelemetry:
 
 @dataclass
 class InvestigationContext:
-    time_window: TimeWindow | None
+    issue_key: str
+    dataset: str
+    service: str
+    incident_time: datetime
+    time_window: TimeWindow
     metrics: dict[str, pd.DataFrame]
     logs: dict[str, pd.DataFrame]
     traces: dict[str, pd.DataFrame]
-    cmdb_links: dict[str, dict[str, list[str]]] = field(
-        default_factory=dict
-    )
-    trace_links: dict[str, dict] = field(
-        default_factory=dict
-    )
+    cmdb_links: dict[str, dict[str, list[str]]] = field(default_factory=dict)
+    trace_links: dict[str, dict] = field(default_factory=dict)

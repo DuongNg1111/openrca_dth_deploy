@@ -242,19 +242,12 @@ def preprocess(
     parsed_query,
 ):
 
-    print("\n==============================")
-    print(" STEP 7: PREPROCESS TELEMETRY ")
-    print("==============================")
-
-
     window = build_investigation_window(
         parsed_query
     )
 
-
     print("\nIncident Time:")
     print(parsed_query.incident_time)
-
 
     print("\nInvestigation Window:")
     print(
@@ -263,34 +256,26 @@ def preprocess(
         window["end"]
     )
 
-
     metrics = preprocess_metrics(
         metadata,
         window
     )
-
 
     logs = preprocess_logs(
         metadata,
         window
     )
 
-
     traces = preprocess_traces(
         metadata,
         window
     )
 
-    print("DEBUG METRIC FOLDER:", metadata.metric.folder)
     dataset_folder = metadata.metric.folder.parent.parent.parent.name
 
     return PreprocessedTelemetry(
         dataset=dataset_folder,
         metrics=metrics,
         logs=logs,
-        traces=traces
+        traces=traces,
     )
-print("\n==============================")
-print(" STEP 7 COMPLETED ")
-print("==============================")
-

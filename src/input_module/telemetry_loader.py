@@ -21,17 +21,14 @@ def connect_data_source(parsed_query, config):
         "Cloud B": "cloudbed-2",
     }
 
-
     dataset_folder = environment_map.get(
         parsed_query.environment
     )
-
 
     if dataset_folder is None:
         raise ValueError(
             f"Unknown environment: {parsed_query.environment}"
         )
-
 
     dataset_path = (
         Path(data_root)
@@ -39,7 +36,6 @@ def connect_data_source(parsed_query, config):
         / dataset_folder
         / "telemetry"
     )
-
 
     # =========================
     # Step 5.2 Verify Connection
@@ -50,19 +46,13 @@ def connect_data_source(parsed_query, config):
             f"Dataset not found: {dataset_path}"
         )
 
-
     # =========================
     # Step 5.3 Select Data Source
     # =========================
 
-    print("=" * 40)
-    print("DATA SOURCE")
-    print("=" * 40)
-
-    print("System      :", system)
-    print("Environment :", parsed_query.environment)
-    print("Dataset     :", dataset_folder)
-    print("Dataset Path:", dataset_path)
-
+    print(f"System      : {system}")
+    print(f"Environment : {parsed_query.environment}")
+    print(f"Dataset     : {dataset_folder}")
+    print(f"Dataset Path: {dataset_path}")
 
     return dataset_path
