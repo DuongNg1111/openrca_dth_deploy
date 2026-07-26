@@ -1,0 +1,6 @@
+timestamp,cmdb_id,span_id,trace_id,duration,type,status_code,operation_name,parent_span
+2022-03-20 09:45:00.023,currencyservice-2,55cf36dfb00754a4,ab0525bc5f137ca344173bc10eee4b97,112,telemetry,0,grpc.hipstershop.CurrencyService/Convert,b2ec50a178348f29
+2022-03-20 09:45:00.024,currencyservice-0,3877d39db0edb24b,ab0525bc5f137ca344173bc10eee4b97,87,telemetry,0,grpc.hipstershop.CurrencyService/Convert,f5f8099c2d0dacbc
+2022-03-20 09:45:00.026,currencyservice-1,20115cb8a2da4452,ab0525bc5f137ca344173bc10eee4b97,89,telemetry,0,grpc.hipstershop.CurrencyService/Convert,a73170056d1d8f76
+2022-03-20 09:45:00.010,frontend-1,be114f5b5af5f44b,ab0525bc5f137ca344173bc10eee4b97,2369,rpc,0,hipstershop.CurrencyService/GetSupportedCurrencies,d48ea0b4a06d3afc
+2022-03-20 09:45:00.012,frontend-1,c6f0bd3af1bf1b4e,ab0525bc5f137ca344173bc10eee4b97,1723,rpc,0,hipstershop.ProductCatalogService/ListProducts,d48ea0b4a06d3afc
