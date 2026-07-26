@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from src.schemas import TimeWindow
 
@@ -27,8 +27,13 @@ def parse_query(query: str, default_date: str = "2021-03-25"):
         eh, em = int(times[1][0]), int(times[1][1])
     elif len(times) == 1:
         sh, sm = int(times[0][0]), int(times[0][1])
-        eh, em = sh, min(59, sm + 30)
+        # eh, em = sh, min(59, sm + 30)
     else:
         sh, sm, eh, em = 9, 0, 9, 30
 
-    return TimeWindow(datetime(y, mo, d, sh, sm), datetime(y, mo, d, eh, em)), []
+    incident_time = datetime(y, mo, d, sh, sm)
+
+    window_start = incident_time - timedelta(minutes=15)
+    window_end = incident_time + timedelta(minutes=15)
+
+    return TimeWindow(window_start, window_end), []
