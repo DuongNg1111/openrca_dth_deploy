@@ -1,22 +1,20 @@
-from src.agents.base_agent import BaseAgent
+from src.process_module.agents.base_agent import BaseAgent
 
 
-
-class TraceAgent(BaseAgent):
+class LogAgent(BaseAgent):
 
 
     def __init__(self):
 
         super().__init__(
-            "Trace Agent"
+            "Log Agent"
         )
-
 
 
     def analyze(self, context):
 
 
-        traces = context.traces
+        logs = context.logs
 
 
         result = {
@@ -24,6 +22,8 @@ class TraceAgent(BaseAgent):
             "agent": self.name,
 
             "service": context.service,
+
+            "log_tables": list(logs.keys()),
 
             "evidence": [],
 
@@ -33,11 +33,11 @@ class TraceAgent(BaseAgent):
 
 
         # TODO:
-        # trace dependency analysis
+        # Analyze log messages
 
 
         result["summary"] = (
-            "Trace analysis pending"
+            "Log analysis pending"
         )
 
 

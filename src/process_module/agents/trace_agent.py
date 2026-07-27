@@ -1,22 +1,20 @@
-from src.agents.base_agent import BaseAgent
+from src.process_module.agents.base_agent import BaseAgent
 
 
-
-class MetricAgent(BaseAgent):
+class TraceAgent(BaseAgent):
 
 
     def __init__(self):
 
         super().__init__(
-            "Metric Agent"
+            "Trace Agent"
         )
-
 
 
     def analyze(self, context):
 
 
-        metrics = context.metrics
+        traces = context.traces
 
 
         result = {
@@ -24,6 +22,8 @@ class MetricAgent(BaseAgent):
             "agent": self.name,
 
             "service": context.service,
+
+            "trace_tables": list(traces.keys()),
 
             "evidence": [],
 
@@ -33,11 +33,11 @@ class MetricAgent(BaseAgent):
 
 
         # TODO:
-        # detect anomaly
+        # Analyze trace spans
 
 
         result["summary"] = (
-            "Metric analysis pending"
+            "Trace analysis pending"
         )
 
 

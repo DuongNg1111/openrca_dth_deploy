@@ -271,10 +271,10 @@ def main():
         parsed_query
     )
 
-    from src.agents.log_agent import LogAgent
-    from src.agents.metric_agent import MetricAgent
-    from src.agents.trace_agent import TraceAgent
-    from src.agents.reasoning_agent import ReasoningAgent
+    from src.process_module.agents.log_agent import LogAgent
+    from src.process_module.agents.metric_agent import MetricAgent
+    from src.process_module.agents.trace_agent import TraceAgent
+    from src.process_module.agents.reasoning_agent import ReasoningAgent
 
 
     print("\n========================================")

@@ -1,21 +1,20 @@
-from src.agents.base_agent import BaseAgent
+from src.process_module.agents.base_agent import BaseAgent
 
 
-
-class LogAgent(BaseAgent):
+class MetricAgent(BaseAgent):
 
 
     def __init__(self):
 
         super().__init__(
-            "Log Agent"
+            "Metric Agent"
         )
-
 
 
     def analyze(self, context):
 
-        logs = context.logs
+
+        metrics = context.metrics
 
 
         result = {
@@ -23,6 +22,8 @@ class LogAgent(BaseAgent):
             "agent": self.name,
 
             "service": context.service,
+
+            "metric_tables": list(metrics.keys()),
 
             "evidence": [],
 
@@ -32,11 +33,11 @@ class LogAgent(BaseAgent):
 
 
         # TODO:
-        # LLM sẽ phân tích log ở đây
+        # Detect metric anomalies
 
 
         result["summary"] = (
-            "Log analysis pending"
+            "Metric analysis pending"
         )
 
 
