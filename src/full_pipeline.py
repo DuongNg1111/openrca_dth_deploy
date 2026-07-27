@@ -23,7 +23,7 @@ from src.process_module.agents.trace_agent import TraceAgent
 from src.process_module.agents.reasoning_agent import ReasoningAgent
 
 
-def main():
+def run_pipeline(issue_key):
 
     # =====================================================
     # STEP 1
@@ -33,11 +33,11 @@ def main():
     print("STEP 1: RECEIVE USER QUERY")
     print("========================================")
 
-    issue_key = input("Enter Jira Issue Key: ")
+    
+    raw_query = receive_query(issue_key)
 
-    raw_query = receive_query(
-        issue_key
-    )
+    ...
+
 
     print("\nRaw Query")
 
@@ -265,4 +265,6 @@ def main():
 
 if __name__ == "__main__":
 
-    main()
+    issue_key = input("Enter Jira Issue Key: ")
+
+    run_pipeline(issue_key)
