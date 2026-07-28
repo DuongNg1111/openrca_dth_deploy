@@ -155,7 +155,7 @@ def insert_logs(
             (
                 investigation_id,
                 row["log_id"],
-                row["timestamp"],
+                int(row["timestamp"].timestamp() * 1000),
                 row["cmdb_id"],
                 row["log_name"],
                 row["value"]
@@ -217,7 +217,7 @@ def insert_traces(
         records.append(
             (
                 investigation_id,
-                row["timestamp"],
+                int(row["timestamp"].timestamp() * 1000),
                 row["cmdb_id"],
                 row["span_id"],
                 row["trace_id"],
