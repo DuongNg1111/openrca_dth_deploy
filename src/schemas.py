@@ -8,6 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
+from pathlib import Path
+import pandas as pd
 
 
 @dataclass
@@ -62,12 +64,56 @@ class Prediction:
 class RawQuery:
     issue_key: str
 
-    summary: str
-    description: str
+    incident_description: str
+    additional_information: str
 
+    environment: str
     affected_system: str
     incident_time: str
 
     reporter: str
     status: str
     created: str
+
+@dataclass
+class ValidationResult:
+    is_valid: bool
+    errors: list[str] = field(default_factory=list)
+
+@dataclass
+class ParsedQuery:
+    issue_key: str
+    environment: str
+    incident_description: str
+    affected_system: str
+    incident_time: datetime | str
+    additional_information: str
+
+    keywords: list[str] = field(default_factory=list)
+
+@dataclass
+class TelemetryMetadata:
+    folder: Path
+    files: list[Path]
+    count: int
+
+
+@dataclass
+class MetadataIndex:
+    date: str
+
+    metric: TelemetryMetadata
+    log: TelemetryMetadata
+    trace: TelemetryMetadata
+
+    total_files: int
+
+
+@dataclass
+class PreprocessedTelemetry:
+
+    metrics: dict[str, pd.DataFrame]
+
+    logs: dict[str, pd.DataFrame]
+
+    traces: dict[str, pd.DataFrame]
