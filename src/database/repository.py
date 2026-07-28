@@ -230,6 +230,11 @@ def insert_traces(
         )
 
 
+    print(records[:3])
+
+    print("Number of records:", len(records))
+    print("First record:", records[0])
+    
     cur.executemany(
         sql,
         records
@@ -240,8 +245,6 @@ def insert_traces(
 
     cur.close()
     conn.close()
-
-
 
 # =====================================================
 # EVIDENCE

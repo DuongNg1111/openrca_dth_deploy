@@ -212,6 +212,16 @@ def run_pipeline(issue_key):
     # =====================================================
     # STEP 8.5: SAVE METRICS
     # =====================================================
+    for name, df in preprocessed.traces.items():
+
+        print("\nTRACE FILE:", name)
+        print(df.columns.tolist())
+        print(df.head(3))
+
+        insert_traces(
+            investigation_id,
+            df
+        )
 
     print("\nSaving Metrics")
 
