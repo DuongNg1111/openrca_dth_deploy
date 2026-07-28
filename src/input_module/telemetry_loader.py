@@ -32,7 +32,6 @@ def connect_data_source(parsed_query, config):
 
     dataset_path = (
         Path(data_root)
-        / system
         / dataset_folder
         / "telemetry"
     )
