@@ -168,6 +168,56 @@ def preprocess_table(file, window):
 
     return df
 
+# =====================================================
+# Normalize Metric Schema
+# =====================================================
+
+def normalize_metric_schema(df):
+
+    # Already normalized format
+    if {
+        "timestamp",
+        "cmdb_id",
+        "kpi_name",
+        "value"
+    }.issubset(df.columns):
+
+        return df
+
+
+    # metric_service.csv
+    if "service" in df.columns:
+
+        rows = []
+
+        kpi_columns = [
+            "rr",
+            "sr",
+            "mrt",
+            "count",
+        ]
+
+
+        for _, row in df.iterrows():
+
+            for kpi in kpi_columns:
+
+                if kpi in row:
+
+                    rows.append(
+                        {
+                            "timestamp": row["timestamp"],
+                            "cmdb_id": row["service"],
+                            "kpi_name": kpi,
+                            "value": row[kpi],
+                        }
+                    )
+
+
+        return pd.DataFrame(rows)
+
+
+    return df
 
 
 # =====================================================
@@ -181,14 +231,21 @@ def preprocess_metrics(metadata, window):
 
     for file in metadata.metric.files:
 
-        metrics[file.stem] = preprocess_table(
+        df = preprocess_table(
             file,
             window
         )
 
 
-    return metrics
+        df = normalize_metric_schema(
+            df
+        )
 
+
+        metrics[file.stem] = df
+
+
+    return metrics
 
 
 # =====================================================
