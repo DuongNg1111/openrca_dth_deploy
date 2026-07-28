@@ -21,6 +21,12 @@ from src.process_module.agents.metric_agent import MetricAgent
 from src.process_module.agents.log_agent import LogAgent
 from src.process_module.agents.trace_agent import TraceAgent
 from src.process_module.agents.reasoning_agent import ReasoningAgent
+from src.database.repository import (
+    create_investigation,
+    insert_metrics,
+    insert_logs,
+    insert_traces,
+)
 
 
 def run_pipeline(issue_key):
@@ -179,6 +185,74 @@ def run_pipeline(issue_key):
     )
 
     print("Contexts Built :", len(contexts))
+
+    # =====================================================
+    # STEP 8.4: SAVE INVESTIGATION
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 8.4: SAVE INVESTIGATION")
+    print("========================================")
+
+    investigation_id = create_investigation(
+        issue_key=parsed_query.issue_key,
+        environment=parsed_query.environment,
+        dataset=preprocessed.dataset,
+        incident_time=parsed_query.incident_time,
+        window_start=parsed_query.time_window.start,
+        window_end=parsed_query.time_window.end,
+        incident_description=raw_query.incident_description,
+    )
+
+    print(
+        "Investigation ID:",
+        investigation_id
+    )
+
+    # =====================================================
+    # STEP 8.5: SAVE METRICS
+    # =====================================================
+
+    print("\nSaving Metrics")
+
+    for df in preprocessed.metrics.values():
+
+        insert_metrics(
+            investigation_id,
+            df
+        )
+
+    print("Metrics Saved")
+
+    # =====================================================
+    # STEP 8.6: SAVE LOGS
+    # =====================================================
+
+    print("\nSaving Logs")
+
+    for df in preprocessed.logs.values():
+
+        insert_logs(
+            investigation_id,
+            df
+        )
+
+    print("Logs Saved")
+
+    # =====================================================
+    # STEP 8.7: SAVE TRACES
+    # =====================================================
+
+    print("\nSaving Traces")
+
+    for df in preprocessed.traces.values():
+
+        insert_traces(
+            investigation_id,
+            df
+        )
+
+    print("Traces Saved")
 
     # =====================================================
     # STEP 9
