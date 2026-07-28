@@ -166,17 +166,44 @@ def run_pipeline(issue_key):
 
     print("\nPreprocess Completed")
 
-        # =====================================================
+    # =====================================================
     # STEP 8
     # =====================================================
 
     print("\n========================================")
-    print("STEP 8: BUILD INVESTIGATION CONTEXT")
+    print("STEP 8: BUILD READY-TO-CALL DATABASE")
     print("========================================")
+
+
+    # =====================================================
+    # STEP 8.1: BUILD SERVICE LINKS
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 8.1: BUILD SERVICE LINKS")
+    print("========================================")
+
 
     service_links = build_service_links(
         preprocessed
     )
+
+
+    print(
+        "Service Links Built:",
+        len(service_links)
+    )
+
+
+
+    # =====================================================
+    # STEP 8.2: BUILD INVESTIGATION CONTEXT
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 8.2: BUILD INVESTIGATION CONTEXT")
+    print("========================================")
+
 
     contexts = build_investigation_context(
         preprocessed,
@@ -184,7 +211,28 @@ def run_pipeline(issue_key):
         parsed_query,
     )
 
-    print("Contexts Built :", len(contexts))
+
+    print(
+        "Contexts Built:",
+        len(contexts)
+    )
+
+
+
+    # =====================================================
+    # STEP 8.3: PREPARE AGENT CONTEXT
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 8.3: PREPARE AGENT CONTEXT")
+    print("========================================")
+
+
+    print(
+        "Ready-To-Call Context Prepared"
+    )
+
+
 
     # =====================================================
     # STEP 8.4: SAVE INVESTIGATION
@@ -193,6 +241,7 @@ def run_pipeline(issue_key):
     print("\n========================================")
     print("STEP 8.4: SAVE INVESTIGATION")
     print("========================================")
+
 
     investigation_id = create_investigation(
         issue_key=parsed_query.issue_key,
@@ -204,26 +253,22 @@ def run_pipeline(issue_key):
         incident_description=raw_query.incident_description,
     )
 
+
     print(
         "Investigation ID:",
         investigation_id
     )
 
+
+
     # =====================================================
     # STEP 8.5: SAVE METRICS
     # =====================================================
-    for name, df in preprocessed.traces.items():
 
-        print("\nTRACE FILE:", name)
-        print(df.columns.tolist())
-        print(df.head(3))
+    print("\n========================================")
+    print("STEP 8.5: SAVE METRICS")
+    print("========================================")
 
-        insert_traces(
-            investigation_id,
-            df
-        )
-
-    print("\nSaving Metrics")
 
     for df in preprocessed.metrics.values():
 
@@ -232,13 +277,21 @@ def run_pipeline(issue_key):
             df
         )
 
-    print("Metrics Saved")
+
+    print(
+        "Metrics Saved"
+    )
+
+
 
     # =====================================================
     # STEP 8.6: SAVE LOGS
     # =====================================================
 
-    print("\nSaving Logs")
+    print("\n========================================")
+    print("STEP 8.6: SAVE LOGS")
+    # =====================================================
+
 
     for df in preprocessed.logs.values():
 
@@ -247,13 +300,21 @@ def run_pipeline(issue_key):
             df
         )
 
-    print("Logs Saved")
+
+    print(
+        "Logs Saved"
+    )
+
+
 
     # =====================================================
     # STEP 8.7: SAVE TRACES
     # =====================================================
 
-    print("\nSaving Traces")
+    print("\n========================================")
+    print("STEP 8.7: SAVE TRACES")
+    print("========================================")
+
 
     for df in preprocessed.traces.values():
 
@@ -262,8 +323,10 @@ def run_pipeline(issue_key):
             df
         )
 
-    print("Traces Saved")
 
+    print(
+        "Traces Saved"
+    )
     # =====================================================
     # STEP 9
     # =====================================================
