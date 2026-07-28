@@ -234,7 +234,14 @@ def insert_traces(
 
     print("Number of records:", len(records))
     print("First record:", records[0])
-    
+    for i, record in enumerate(records):
+        try:
+            int(record[7])   # status_code
+        except Exception:
+            print("Invalid record index:", i)
+            print(record)
+            raise
+
     cur.executemany(
         sql,
         records
