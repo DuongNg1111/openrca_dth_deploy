@@ -5,7 +5,7 @@ import os
 
 _DEFAULTS = {
     "system": "Market",
-    "data_root": "data",
+    "data_root": "/home/ubuntu/Market",
     "use_mock": True,
     "default_date": "2021-03-25",
     "top_k": 1,

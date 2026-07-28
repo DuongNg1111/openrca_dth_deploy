@@ -1,0 +1,6 @@
+timestamp,cmdb_id,kpi_name,value,service,rr,sr,mrt,count
+2022-03-20 09:45:00,node-6.adservice2-0,container_network_receive_packets_dropped.eth0,0.0,,,,,
+2022-03-20 09:46:00,node-6.adservice2-0,container_network_receive_packets_dropped.eth0,0.0,,,,,
+2022-03-20 09:47:00,node-6.adservice2-0,container_network_receive_packets_dropped.eth0,0.0,,,,,
+2022-03-20 09:48:00,node-6.adservice2-0,container_network_receive_packets_dropped.eth0,0.0,,,,,
+2022-03-20 09:49:00,node-6.adservice2-0,container_network_receive_packets_dropped.eth0,0.0,,,,,

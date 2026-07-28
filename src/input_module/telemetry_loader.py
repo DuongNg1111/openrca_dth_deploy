@@ -1,82 +1,57 @@
-"""INPUT module — load telemetry (metric / log / trace).
-
-For now this provides MOCK data so the whole pipeline runs out of the box.
-TODO(DEV 1): implement real loaders for dataset/Market/telemetry/{date}/.
-"""
-from __future__ import annotations
-
-
-import random
-from datetime import datetime, timedelta
-
-MOCK_COMPONENTS = ['frontend-gateway', 'order-service', 'shipment-service', 'tracking-service', 'warehouse-service', 'payment-service']
-MOCK_KPIS = ['cpu', 'memory', 'disk_io_read', 'latency']
-SIGNATURE_KPI = "disk_io_read"
-ROOT_CAUSE_COMPONENT = "order-service"
-
 from pathlib import Path
-import pandas as pd
-def load(system: str, window, data_root: str) -> dict:
-    """Read REAL OpenRCA telemetry."""
 
-    import pandas as pd
-    from pathlib import Path
+
+def connect_data_source(parsed_query, config):
+    """
+    Step 5
+    5.1 Connect Raw Database
+    5.2 Verify Connection
+    5.3 Select Data Source
+    """
+
+    system = config["system"]
+    data_root = config["data_root"]
 
     # =========================
-    # Step 1: Resolve dataset path
+    # Step 5.1 Connect Raw Database
     # =========================
 
-    date_folder = window.start.strftime("%Y_%m_%d")
+    environment_map = {
+        "Cloud A": "cloudbed-1",
+        "Cloud B": "cloudbed-2",
+    }
 
-    telemetry_path = (
-        Path(data_root)
-        / system
-        / "telemetry"
-        / date_folder
+    dataset_folder = environment_map.get(
+        parsed_query.environment
     )
 
-    print("Telemetry path:", telemetry_path)
-
-
-    # =========================
-    # Step 2: Read metric sample
-    # =========================
-
-    metric_path = telemetry_path / "metric"
-
-    metric_files = list(metric_path.glob("*.csv"))
-
-    print("\nMetric files:")
-    for file in metric_files:
-        print("-", file.name)
-
-
-    # Chỉ đọc 3 dòng đầu mỗi file để kiểm tra
-    metric_samples = []
-
-    for file in metric_files:
-        print("\nReading:", file.name)
-
-        df = pd.read_csv(
-            file,
-            nrows=3
+    if dataset_folder is None:
+        raise ValueError(
+            f"Unknown environment: {parsed_query.environment}"
         )
 
-        print("Columns:", df.columns.tolist())
-        print(df)
-
-        metric_samples.append(df)
-
-
-    # Gộp sample lại (chỉ vài dòng)
-    metric = pd.concat(
-        metric_samples,
-        ignore_index=True
+    dataset_path = (
+        Path(data_root)
+        / dataset_folder
+        / "telemetry"
     )
 
+    # =========================
+    # Step 5.2 Verify Connection
+    # =========================
 
-    return {
-        "metric": metric,
-        "log": [],
-        "trace": []
-    }
+    if not dataset_path.exists():
+        raise FileNotFoundError(
+            f"Dataset not found: {dataset_path}"
+        )
+
+    # =========================
+    # Step 5.3 Select Data Source
+    # =========================
+
+    print(f"System      : {system}")
+    print(f"Environment : {parsed_query.environment}")
+    print(f"Dataset     : {dataset_folder}")
+    print(f"Dataset Path: {dataset_path}")
+
+    return dataset_path

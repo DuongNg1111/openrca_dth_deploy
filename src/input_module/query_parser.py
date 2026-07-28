@@ -1,34 +1,160 @@
-"""INPUT module — turn a natural-language failure query into structured fields."""
+"""INPUT module - Parse Jira RawQuery into structured ParsedQuery."""
+
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from src.schemas import RawQuery, TimeWindow
 from datetime import datetime
 
-from src.schemas import TimeWindow
+# Extract datetime from Jira format:
+# 2022-03-20T20:30:00.000+0700
+_DATETIME = re.compile(
+    r"(\d{4})-(\d{2})-(\d{2})T"
+    r"(\d{2}):(\d{2}):(\d{2})"
+)
 
-_DATE = re.compile(r"(\d{4})[-/](\d{1,2})[-/](\d{1,2})")
-_TIME = re.compile(r"(\d{1,2}):(\d{2})")
 
-
-def parse_query(query: str, default_date: str = "2021-03-25"):
-    """Heuristic parser -> (TimeWindow, components_hint).
-
-    TODO(DEV 1): for messy queries, optionally add an LLM extraction step.
+@dataclass
+class ParsedQuery:
     """
-    m = _DATE.search(query)
-    if m:
-        y, mo, d = (int(x) for x in m.groups())
-    else:
-        y, mo, d = (int(x) for x in default_date.split("-"))
+    Structured query after parsing Jira issue.
+    """
+    issue_key: str
+    environment: str
+    incident_description: str
+    affected_system: str
+    incident_time: str
+    additional_information: str
+    keywords: list[str] = field(default_factory=list)
+    time_window: TimeWindow | None = None
 
-    times = _TIME.findall(query)
-    if len(times) >= 2:
-        sh, sm = int(times[0][0]), int(times[0][1])
-        eh, em = int(times[1][0]), int(times[1][1])
-    elif len(times) == 1:
-        sh, sm = int(times[0][0]), int(times[0][1])
-        eh, em = sh, min(59, sm + 30)
-    else:
-        sh, sm, eh, em = 9, 0, 9, 30
 
-    return TimeWindow(datetime(y, mo, d, sh, sm), datetime(y, mo, d, eh, em)), []
+def _extract_keywords(text: str) -> list[str]:
+    """
+    Simple keyword extraction.
+    """
+
+    words = re.findall(
+        r"[a-zA-Z]+",
+        text.lower()
+    )
+
+    stop_words = {
+        "the",
+        "a",
+        "an",
+        "at",
+        "to",
+        "and",
+        "of",
+        "in",
+        "is",
+        "was",
+    }
+
+    keywords = [
+        w
+        for w in words
+        if w not in stop_words
+    ]
+
+    return keywords
+
+
+def _parse_incident_time(
+    incident_time: str
+) -> tuple[datetime, TimeWindow]:
+
+    match = _DATETIME.search(incident_time)
+
+    if not match:
+        raise ValueError(
+            f"Invalid incident time: {incident_time}"
+        )
+
+    year, month, day, hour, minute, second = (
+        int(x)
+        for x in match.groups()
+    )
+
+    dt = datetime(
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+    )
+
+    window = TimeWindow(
+        start=dt - timedelta(minutes=15),
+        end=dt + timedelta(minutes=15),
+    )
+
+    return dt, window
+
+
+
+def parse_query(
+    raw_query: RawQuery
+) -> ParsedQuery:
+    """
+    Convert RawQuery from Jira
+    into ParsedQuery.
+
+    Pipeline:
+
+        Jira
+          |
+          v
+       RawQuery
+          |
+          v
+     ParsedQuery
+    """
+
+    incident_dt, window = _parse_incident_time(
+    raw_query.incident_time
+)
+
+
+    combined_text = " ".join(
+    [
+        raw_query.incident_description or "",
+        raw_query.additional_information or "",
+        raw_query.affected_system or "",
+    ]
+)
+
+
+    keywords = _extract_keywords(
+        combined_text
+    )
+
+
+    parsed = ParsedQuery(
+
+        issue_key=raw_query.issue_key,
+
+        environment=raw_query.environment,
+
+        incident_description=
+            raw_query.incident_description,
+
+        affected_system=
+            raw_query.affected_system,
+
+        incident_time=incident_dt,
+
+        additional_information=
+            raw_query.additional_information,
+
+        keywords=keywords,
+
+        time_window=window,
+)
+
+
+    return parsed

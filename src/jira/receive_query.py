@@ -12,8 +12,9 @@ def receive_query(issue_key: str) -> RawQuery:
     return RawQuery(
         issue_key=issue.key,
 
-        summary=issue.fields.summary,
-        description=issue.fields.description,
+        incident_description=issue.fields.summary,
+        additional_information=issue.fields.description,
+        environment=issue.fields.customfield_10206.value,
 
         affected_system=issue.fields.customfield_10140.value,
         incident_time=issue.fields.customfield_10173,
