@@ -116,7 +116,7 @@ def run_pipeline(issue_key):
 
     config = {
         "system": "Market",
-        "data_root": "D:/",
+        "data_root": "/home/ubuntu/Market",
     }
 
     data_source = connect_data_source(

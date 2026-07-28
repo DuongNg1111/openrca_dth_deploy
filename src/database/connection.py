@@ -5,7 +5,7 @@ def get_connection():
 
     conn = psycopg2.connect(
         host="localhost",
-        port=5433,
+        port=5432,
         database="openrca",
         user="postgres",
         password="DTH123"
