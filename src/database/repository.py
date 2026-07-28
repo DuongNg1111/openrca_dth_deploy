@@ -98,7 +98,7 @@ def insert_metrics(
         records.append(
             (
                 investigation_id,
-                row["timestamp"],
+                int(row["timestamp"].timestamp() * 1000),
                 row["cmdb_id"],
                 row["kpi_name"],
                 row["value"]
