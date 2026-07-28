@@ -223,24 +223,12 @@ def insert_traces(
                 row["trace_id"],
                 row["duration"],
                 row["type"],
-                row["status_code"],
+                str(row["status_code"]),
                 row["operation_name"],
                 row["parent_span"]
             )
         )
 
-
-    print(records[:3])
-
-    print("Number of records:", len(records))
-    print("First record:", records[0])
-    for i, record in enumerate(records):
-        try:
-            int(record[7])   # status_code
-        except Exception:
-            print("Invalid record index:", i)
-            print(record)
-            raise
 
     cur.executemany(
         sql,
@@ -252,7 +240,6 @@ def insert_traces(
 
     cur.close()
     conn.close()
-
 # =====================================================
 # EVIDENCE
 # =====================================================
