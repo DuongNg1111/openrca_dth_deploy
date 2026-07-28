@@ -8,7 +8,7 @@ def get_connection():
         port=5432,
         database="openrca",
         user="postgres",
-        password="DTH123"
+        password="duong123"
     )
 
     return conn
