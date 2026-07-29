@@ -11,10 +11,9 @@ from datetime import datetime
 # Extract datetime from Jira format:
 # 2022-03-20T20:30:00.000+0700
 _DATETIME = re.compile(
-    r"(\d{4})-(\d{2})-(\d{2})T"
+    r"(\d{4})-(\d{2})-(\d{2})[ T]"
     r"(\d{2}):(\d{2}):(\d{2})"
 )
-
 
 @dataclass
 class ParsedQuery:
