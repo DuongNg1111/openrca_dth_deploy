@@ -17,3 +17,38 @@ analyze(ctx: InputContext, top_k: int = 1) -> list[RootCauseCandidate]
 2. Read `detect.py` — understand the change-point z-score.
 3. M5 (novelty): improve detection (better stats, log/trace signals, or an LLM reasoner).
    Keep the `analyze()` contract stable so DEV 1/3 don't break.
+Job
+
+Validate evidence completeness before RCA.
+
+Input
+
+Parsed Query
+
+Metadata
+
+Telemetry
+
+Output
+
+ValidationResult
+
+Workflow
+
+Receive evidence
+
+↓
+
+Evaluate
+
+↓
+
+Complete ?
+
+↓
+
+Yes → Reasoner
+
+↓
+
+No → Return missing evidence

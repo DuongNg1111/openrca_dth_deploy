@@ -1,13 +1,26 @@
-"""OUTPUT module (DEV 3): candidates -> Prediction (+ optional report/plots)."""
-from __future__ import annotations
+"""
+Public APIs for the Output Module.
+"""
 
-from src.output_module.formatter import build_prediction, save_prediction
-from src.output_module.visualize import render_report
-from src.schemas import Prediction
+from .formatter import (
+    aggregate_evidence,
+    build_output,
+    build_dashboard_data,
+    build_summary,
+    save_prediction,
+)
 
-__all__ = ["build_output", "save_prediction", "render_report"]
+from .visualize import (
+    plot_component_kpi,
+    render_report,
+)
 
-
-def build_output(candidates) -> Prediction:
-    """Assemble the final OpenRCA-format Prediction."""
-    return build_prediction(candidates)
+__all__ = [
+    "aggregate_evidence",
+    "build_output",
+    "build_dashboard_data",
+    "build_summary",
+    "save_prediction",
+    "plot_component_kpi",
+    "render_report",
+]
