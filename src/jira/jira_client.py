@@ -52,7 +52,9 @@ def create_issue(
     environment,
     affected_system,
     incident_time,
-    additional_details=""
+    additional_details="",
+    reporter_name="",
+    reporter_email=""
 ):
     """
     Create a new Jira issue and return its issue key.
@@ -61,6 +63,12 @@ def create_issue(
     jira = connect_jira()
 
     description = f"""
+Reporter:
+{reporter_name}
+
+Email:
+{reporter_email}
+
 Environment:
 {environment}
 
@@ -75,6 +83,7 @@ Incident Description:
 """
 
     if additional_details.strip():
+
         description += f"""
 
 Additional Details:
@@ -82,12 +91,14 @@ Additional Details:
 """
 
     issue_dict = {
-        "project": {"key": "DEV"},          # <-- đổi thành project key của nhóm nếu khác
+        "project": {"key": "DEV"},
         "summary": incident_description[:100],
         "description": description,
-        "issuetype": {"name": "Task"}       # <-- hoặc "Bug" tùy project Jira
+        "issuetype": {"name": "Task"}
     }
 
-    issue = jira.create_issue(fields=issue_dict)
+    issue = jira.create_issue(
+        fields=issue_dict
+    )
 
     return issue.key

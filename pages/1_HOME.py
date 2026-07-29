@@ -1,7 +1,17 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Home", page_icon="🏠", layout="wide")
+from src.auth.google_auth import require_login
+
+
+st.set_page_config(
+    page_title="Home",
+    page_icon="🏠",
+    layout="wide"
+)
+
+
+require_login()
 
 # ==========================
 # PAGE TITLE

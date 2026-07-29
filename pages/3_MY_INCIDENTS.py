@@ -1,6 +1,11 @@
 import streamlit as st
 import pandas as pd
+import streamlit as st
 
+from src.auth.google_auth import require_login
+
+
+require_login()
 
 st.title("📋 My Incidents")
 
