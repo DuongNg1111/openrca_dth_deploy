@@ -29,7 +29,7 @@ from src.database.repository import (
 )
 
 
-def run_pipeline(issue_key):
+def run_pipeline(issue_key, run_agents=False):
 
     # =====================================================
     # STEP 1
@@ -348,6 +348,15 @@ def run_pipeline(issue_key):
     for service in selected_contexts.values():
 
         print("-", service.service)
+
+    if not run_agents:
+
+        print("\n========================================")
+        print("PIPELINE STOPPED BEFORE AGENTS")
+        print("READY FOR AGENT ANALYSIS")
+        print("========================================")
+
+        return selected_contexts
 
     # =====================================================
     # STEP 10
