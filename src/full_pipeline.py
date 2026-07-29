@@ -47,12 +47,16 @@ def run_pipeline(issue_key, run_agents=False):
 
     print("\nRaw Query")
 
-    for key, value in asdict(raw_query).items():
+    raw_data = asdict(raw_query)
+
+    for key, value in raw_data.items():
+
+        if key == "additional_information":
+            continue
 
         print(
             f"{key:<25}: {value}"
         )
-
     # =====================================================
     # STEP 2
     # =====================================================
@@ -423,4 +427,7 @@ if __name__ == "__main__":
 
     issue_key = input("Enter Jira Issue Key: ")
 
-    run_pipeline(issue_key)
+    run_pipeline(
+        issue_key,
+        run_agents=True
+    )
