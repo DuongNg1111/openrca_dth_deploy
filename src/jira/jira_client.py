@@ -46,3 +46,59 @@ def get_issue(issue_key: str):
     jira = connect_jira()
 
     return jira.issue(issue_key)
+
+def create_issue(
+    incident_description,
+    environment,
+    affected_system,
+    incident_time,
+    additional_details="",
+    reporter_name="",
+    reporter_email=""
+):
+    """
+    Create a new Jira issue and return its issue key.
+    """
+
+    jira = connect_jira()
+
+    description = f"""
+Reporter:
+{reporter_name}
+
+Email:
+{reporter_email}
+
+Environment:
+{environment}
+
+Incident Time:
+{incident_time}
+
+Affected System:
+{affected_system}
+
+Incident Description:
+{incident_description}
+"""
+
+    if additional_details.strip():
+
+        description += f"""
+
+Additional Details:
+{additional_details}
+"""
+
+    issue_dict = {
+        "project": {"key": "DEV"},
+        "summary": incident_description[:100],
+        "description": description,
+        "issuetype": {"name": "Task"}
+    }
+
+    issue = jira.create_issue(
+        fields=issue_dict
+    )
+
+    return issue.key

@@ -7,31 +7,49 @@ from src.schemas import (
 )
 
 
-def _get_date_folder(dataset_path: Path, incident_time: str) -> Path:
+def _get_date_folder(dataset_path: Path, incident_time) -> Path:
     """
-    Convert:
-
-        2022-03-20T20:30:00.000+0700
-
-    to:
-
-        telemetry/2022_03_20
+    Convert incident time to telemetry date folder.
     """
 
-    # Convert Jira timezone format +0700 -> +07:00
-    if incident_time[-5] in ["+", "-"] and incident_time[-4:].isdigit():
-        incident_time = (
-            incident_time[:-2]
-            + ":"
-            + incident_time[-2:]
+    if isinstance(incident_time, str):
+
+        # Convert Jira timezone +0700 -> +07:00
+        if (
+            incident_time[-5] in ["+", "-"]
+            and incident_time[-4:].isdigit()
+        ):
+
+            incident_time = (
+                incident_time[:-2]
+                + ":"
+                + incident_time[-2:]
+            )
+
+        dt = datetime.fromisoformat(
+            incident_time
         )
 
-    dt = datetime.fromisoformat(incident_time)
+    elif isinstance(incident_time, datetime):
 
-    folder = dataset_path / dt.strftime("%Y_%m_%d")
+        dt = incident_time
+
+    else:
+        raise TypeError(
+            f"Unsupported incident_time type: {type(incident_time)}"
+        )
+
+
+    folder = (
+        dataset_path
+        /
+        dt.strftime("%Y_%m_%d")
+    )
+
 
     if not folder.exists():
         raise FileNotFoundError(folder)
+
 
     return folder
 
