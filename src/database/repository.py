@@ -223,7 +223,7 @@ def insert_traces(
                 row["trace_id"],
                 row["duration"],
                 row["type"],
-                row["status_code"],
+                str(row["status_code"]),
                 row["operation_name"],
                 row["parent_span"]
             )
@@ -240,9 +240,6 @@ def insert_traces(
 
     cur.close()
     conn.close()
-
-
-
 # =====================================================
 # EVIDENCE
 # =====================================================
