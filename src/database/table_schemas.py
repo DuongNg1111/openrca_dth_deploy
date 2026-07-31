@@ -52,7 +52,7 @@ TABLE_SCHEMAS = {
 
             "investigation_id": "INTEGER",
 
-            "timestamp": "BIGINT",
+            "timestamp": "TIMESTAMP",
 
             "cmdb_id": "TEXT",
 
@@ -78,7 +78,7 @@ TABLE_SCHEMAS = {
 
             "log_id": "TEXT",
 
-            "timestamp": "BIGINT",
+            "timestamp": "TIMESTAMP",
 
             "cmdb_id": "TEXT",
 
@@ -102,7 +102,7 @@ TABLE_SCHEMAS = {
 
             "investigation_id": "INTEGER",
 
-            "timestamp": "BIGINT",
+            "timestamp": "TIMESTAMP",
 
             "cmdb_id": "TEXT",
 
