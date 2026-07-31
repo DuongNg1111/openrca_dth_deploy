@@ -30,6 +30,7 @@ class InvestigationContext:
 # STEP 8.3
 # ======================================================
 
+
 def build_investigation_context(
     telemetry,
     service_links,
@@ -61,10 +62,17 @@ def build_investigation_context(
             InvestigationContext(...),
     }
     """
+    print("==============================")
+    print("TELEMETRY METRIC KEYS")
+    print(telemetry.metrics.keys())
 
     contexts = {}
 
     for service, links in service_links.items():
+
+        print("==============================")
+        print("SERVICE:", service)
+        print("LINK METRICS:", links["metrics"])
 
         metric_dict = {}
 
