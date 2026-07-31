@@ -2,7 +2,7 @@
 # so the smoke test runs even before you `pip install -r requirements.txt`.
 
 system: "Market"          # OpenRCA system: Telecom | Bank | Market
-data_root: "data"             # where the dataset lives (gitignored)
+data_root: "/home/ubuntu/Market"           # where the dataset lives (gitignored)
 use_mock: false                # true = run on built-in mock telemetry (no dataset needed)
 default_date: "2021-03-25"
 top_k: 1                      # how many root-cause candidates to output
@@ -10,6 +10,6 @@ top_k: 1                      # how many root-cause candidates to output
 example_query: "On 2021-03-25 between 09:00 and 09:30 the delivery-tracking service showed elevated errors. Identify the root cause component and the root cause reason."
 
 llm:
-  source: "OpenAI"           # OpenAI | Anthropic | ...
-  model: "gpt-4o"
-  api_key_env: "OPENAI_API_KEY"   # read the key from this environment variable (never hard-code)
+  source: "Gemini"
+  model: "gemini-2.5-pro"
+  api_key_env: "GEMINI_API_KEY"
