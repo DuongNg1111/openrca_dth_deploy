@@ -102,9 +102,6 @@ def build_investigation_context(
                     telemetry.traces[trace_file]
                 )
 
-        print(service)
-        print(metric_dict.keys())
-
         contexts[service] = InvestigationContext(
             dataset=telemetry.dataset,
             service=service,
