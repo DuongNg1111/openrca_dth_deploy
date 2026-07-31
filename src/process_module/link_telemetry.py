@@ -32,7 +32,7 @@ def build_service_links(telemetry):
         print("METRIC:", name)
 
 
-        # Only use metric_service
+        # only service metric
         if name != "metric_service":
 
             print(
@@ -43,12 +43,12 @@ def build_service_links(telemetry):
             continue
 
 
-        if "service" not in df.columns:
+        if "cmdb_id" not in df.columns:
             continue
 
 
         services = (
-            df["service"]
+            df["cmdb_id"]
             .dropna()
             .unique()
         )
@@ -74,9 +74,7 @@ def build_service_links(telemetry):
             service_links[normalized]["metrics"].add(
                 name
             )
-
-
-
+            
     # =================================
     # 2. Logs
     # =================================
