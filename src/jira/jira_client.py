@@ -82,10 +82,18 @@ Incident Description:
 """
 
     issue_dict = {
-        "project": {"key": "DEV"},
-        "summary": incident_description[:100],
+        "project": {
+            "key": "DEV"
+        },
+        "summary": (
+            incident_description[:100]
+            if incident_description.strip()
+            else f"Incident Report - {incident_time}"
+        ),
         "description": description,
-        "issuetype": {"name": "Task"}
+        "issuetype": {
+            "name": "Task"
+        }
     }
 
     issue = jira.create_issue(
