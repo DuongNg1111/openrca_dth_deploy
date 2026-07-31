@@ -12,7 +12,9 @@ def create_investigation(
     incident_time,
     window_start,
     window_end,
-    incident_description
+    incident_description,
+    reporter,
+    reporter_email
 ):
 
     conn = get_connection()
@@ -20,7 +22,7 @@ def create_investigation(
 
 
     sql = """
-    INSERT INTO investigations
+        INSERT INTO investigations
     (
         issue_key,
         environment,
@@ -28,10 +30,12 @@ def create_investigation(
         incident_time,
         window_start,
         window_end,
-        incident_description
+        incident_description,
+        reporter,
+        reporter_email
     )
     VALUES
-    (%s,%s,%s,%s,%s,%s,%s)
+    (%s,%s,%s,%s,%s,%s,%s,%s,%s)
 
     RETURNING id;
     """
@@ -46,7 +50,9 @@ def create_investigation(
             incident_time,
             window_start,
             window_end,
-            incident_description
+            incident_description,
+            reporter,
+            reporter_email
         )
     )
 

@@ -227,7 +227,10 @@ def run_pipeline(issue_key, run_agents=False):
         window_start=parsed_query.time_window.start,
         window_end=parsed_query.time_window.end,
         incident_description=raw_query.incident_description,
+        reporter=raw_query.reporter,
+        reporter_email=raw_query.reporter_email,
     )
+
 
 
     print(

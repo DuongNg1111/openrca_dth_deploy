@@ -52,7 +52,6 @@ def create_issue(
     environment,
     affected_system,
     incident_time,
-    additional_details="",
     reporter_name="",
     reporter_email=""
 ):
@@ -80,14 +79,6 @@ Affected System:
 
 Incident Description:
 {incident_description}
-"""
-
-    if additional_details.strip():
-
-        description += f"""
-
-Additional Details:
-{additional_details}
 """
 
     issue_dict = {

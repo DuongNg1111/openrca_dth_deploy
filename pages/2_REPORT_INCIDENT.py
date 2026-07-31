@@ -46,14 +46,15 @@ with st.form(
     # Incident Description
     # ==========================
 
-    st.markdown("#### Incident Description *")
+    st.markdown("#### Incident Description")
+
     st.caption(
-        "Describe the incident in detail (e.g., what happened, when it occurred, error messages)."
+        "Please describe the incident in English if you have any details."
     )
 
     incident_description = st.text_area(
         label="",
-        placeholder="e.g., Can not create order.",
+        placeholder="e.g., Cannot find product AAA or payment service timeout.",
         height=180,
         label_visibility="collapsed"
     )
@@ -140,24 +141,6 @@ with st.form(
 
     st.write("")
 
-    # ==========================
-    # Additional Details
-    # ==========================
-
-    st.markdown("#### Additional Details")
-    st.caption(
-        "Provide any additional information that may help the investigation."
-    )
-
-    additional_details = st.text_area(
-        label="",
-        placeholder="e.g., Deployment version, error messages, affected users, or steps to reproduce.",
-        height=120,
-        label_visibility="collapsed"
-    )
-
-    st.write("")
-
     submitted = st.form_submit_button(
         "SUBMIT INCIDENT",
         use_container_width=True,
@@ -171,13 +154,7 @@ with st.form(
 
 if submitted:
 
-    if not incident_description.strip():
-
-        st.error(
-            "Please enter the incident description."
-        )
-
-    elif environment == "-- Select Environment --":
+    if environment == "-- Select Environment --":
 
         st.error(
             "Please select an environment."
@@ -196,7 +173,6 @@ if submitted:
             environment=environment,
             affected_system=affected_system,
             incident_time=incident_datetime,
-            additional_details=additional_details,
             reporter_name=st.user.name,
             reporter_email=st.user.email
         )

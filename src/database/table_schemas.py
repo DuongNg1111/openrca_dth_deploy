@@ -34,8 +34,12 @@ TABLE_SCHEMAS = {
 
             "window_end": "TIMESTAMP",
 
-            "incident_description": "TEXT"
+            "incident_description": "TEXT",
 
+            "reporter": "TEXT",
+
+            "reporter_email": "TEXT"
+            
         }
     },
 
