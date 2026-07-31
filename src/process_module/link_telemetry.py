@@ -1,7 +1,6 @@
 from src.process_module.service_mapper import normalize_service_name
 
 
-
 def _init_service_record():
     """
     Initialize service relationship.
@@ -17,33 +16,10 @@ def _init_service_record():
 
 def build_service_links(telemetry):
     """
-    STEP 8.2
-
-    Link metrics, logs and traces
-    by normalized service name.
-
-    This step only builds index.
-    It does NOT merge dataframe.
-
-    Return:
-
-    {
-        "adservice": {
-            "metrics": [
-                "metric_service"
-            ],
-            "logs": [
-                "log_proxy"
-            ],
-            "traces": [
-                "trace_span"
-            ]
-        }
-    }
+    Build service relationship index.
     """
 
     service_links = {}
-
 
 
     # =================================
@@ -52,12 +28,27 @@ def build_service_links(telemetry):
 
     for name, df in telemetry.metrics.items():
 
-        if "service" not in df.columns:
+        print("==============================")
+        print("METRIC:", name)
+
+
+        # only service metric
+        if name != "metric_service":
+
+            print(
+                "SKIPPED:",
+                name
+            )
+
+            continue
+
+
+        if "cmdb_id" not in df.columns:
             continue
 
 
         services = (
-            df["service"]
+            df["cmdb_id"]
             .dropna()
             .unique()
         )
@@ -83,9 +74,7 @@ def build_service_links(telemetry):
             service_links[normalized]["metrics"].add(
                 name
             )
-
-
-
+            
     # =================================
     # 2. Logs
     # =================================
@@ -183,7 +172,6 @@ def build_service_links(telemetry):
         relation["traces"] = sorted(
             list(relation["traces"])
         )
-
 
 
     return service_links

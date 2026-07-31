@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from src.schemas import RawQuery, TimeWindow
-from datetime import datetime
+from src.schemas import (
+    RawQuery,
+    ParsedQuery,
+    TimeWindow,
+)
 
 # Extract datetime from Jira format:
 # 2022-03-20T20:30:00.000+0700
@@ -14,21 +16,6 @@ _DATETIME = re.compile(
     r"(\d{4})-(\d{2})-(\d{2})[ T]"
     r"(\d{2}):(\d{2}):(\d{2})"
 )
-
-@dataclass
-class ParsedQuery:
-    """
-    Structured query after parsing Jira issue.
-    """
-    issue_key: str
-    environment: str
-    incident_description: str
-    affected_system: str
-    incident_time: str
-    additional_information: str
-    keywords: list[str] = field(default_factory=list)
-    time_window: TimeWindow | None = None
-
 
 def _extract_keywords(text: str) -> list[str]:
     """
@@ -122,7 +109,6 @@ def parse_query(
     combined_text = " ".join(
     [
         raw_query.incident_description or "",
-        raw_query.additional_information or "",
         raw_query.affected_system or "",
     ]
 )
@@ -146,9 +132,6 @@ def parse_query(
             raw_query.affected_system,
 
         incident_time=incident_dt,
-
-        additional_information=
-            raw_query.additional_information,
 
         keywords=keywords,
 

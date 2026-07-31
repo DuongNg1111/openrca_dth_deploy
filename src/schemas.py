@@ -63,15 +63,12 @@ class Prediction:
 @dataclass
 class RawQuery:
     issue_key: str
-
     incident_description: str
-    additional_information: str
-    
     environment: str
     affected_system: str
-    incident_time: str
-
+    incident_time: datetime
     reporter: str
+    reporter_email: str
     status: str
     created: str
 
@@ -88,7 +85,6 @@ class ParsedQuery:
     incident_description: str
     affected_system: str
     incident_time: datetime
-    additional_information: str
     time_window: TimeWindow
     keywords: list[str] = field(default_factory=list)
 
