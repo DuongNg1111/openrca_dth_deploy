@@ -378,6 +378,17 @@ def run_pipeline(issue_key, run_agents=False):
 
     reasoning_agent = ReasoningAgent()
 
+    print("==============================")
+    print("SELECTED CONTEXTS DEBUG")
+
+    for name, ctx in selected_contexts.items():
+        print("SERVICE:", name)
+        print("METRICS:", ctx.metrics.keys())
+        print("LOGS:", ctx.logs.keys())
+        print("TRACES:", ctx.traces.keys())
+
+
+
     for context in selected_contexts.values():
 
         print("\n----------------------------------------")
