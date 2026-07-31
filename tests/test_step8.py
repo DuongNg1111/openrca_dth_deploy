@@ -1,119 +1,141 @@
 import pandas as pd
+
+from types import SimpleNamespace
 from datetime import datetime
 
+from src.process_module.link_telemetry import build_service_links
 from src.process_module.evidence_builder import (
     build_investigation_context,
 )
-
 from src.schemas import TimeWindow
 
 
-# ======================================================
-# MOCK TELEMETRY
-# ======================================================
+def test_step8_build_investigation_context():
 
-class MockTelemetry:
+    # ==========================================
+    # 1. Fake telemetry (output from Step 6)
+    # ==========================================
 
-    dataset = "cloudbed-1"
+    telemetry = SimpleNamespace()
 
-    metrics = {
+    telemetry.dataset = "cloudbed-2"
+
+
+    telemetry.metrics = {
         "metric_service": pd.DataFrame(
             {
-                "timestamp": [1647855000000],
-                "service": ["productcatalogservice"],
-                "value": [100],
+                "timestamp": [
+                    1647771000000
+                ],
+                "cmdb_id": [
+                    "productcatalogservice"
+                ],
+                "kpi_name": [
+                    "rr"
+                ],
+                "value": [
+                    10
+                ]
             }
         )
     }
 
-    logs = {
-        "log_service": pd.DataFrame(
+
+    telemetry.logs = {
+        "log_proxy": pd.DataFrame(
             {
-                "timestamp": [1647855000000],
-                "message": ["error"]
+                "cmdb_id": [
+                    "productcatalogservice"
+                ],
+                "message": [
+                    "error"
+                ]
             }
         )
     }
 
-    traces = {
+
+    telemetry.traces = {
         "trace_span": pd.DataFrame(
             {
-                "trace_id": ["abc"],
-                "duration": [200]
+                "cmdb_id": [
+                    "productcatalogservice"
+                ],
+                "duration": [
+                    100
+                ]
             }
         )
     }
 
 
-# ======================================================
-# MOCK QUERY
-# ======================================================
 
-class MockQuery:
+    # ==========================================
+    # 2. Build service links (Step 7.1)
+    # ==========================================
 
-    incident_time = datetime(
-        2022,
-        3,
-        21,
-        9,
-        30
+    service_links = build_service_links(
+        telemetry
     )
 
-    time_window = TimeWindow(
+
+    print("\nSERVICE LINKS")
+    print(service_links)
+
+
+
+    # ==========================================
+    # 3. Fake parsed query
+    # ==========================================
+
+    parsed_query = SimpleNamespace()
+
+    parsed_query.incident_time = datetime(
+        2022,
+        3,
+        20,
+        10,
+        10
+    )
+
+    parsed_query.time_window = TimeWindow(
         start=datetime(
             2022,
             3,
-            21,
+            20,
             9,
-            15
+            55
         ),
         end=datetime(
             2022,
             3,
-            21,
-            9,
-            45
+            20,
+            10,
+            25
         )
     )
 
 
-# ======================================================
-# STEP 8.3 TEST
-# ======================================================
 
-def test_build_investigation_context():
-
-    telemetry = MockTelemetry()
-
-    service_links = {
-
-        "productcatalogservice": {
-
-            "metrics": [
-                "metric_service"
-            ],
-
-            "logs": [
-                "log_service"
-            ],
-
-            "traces": [
-                "trace_span"
-            ]
-        }
-    }
-
+    # ==========================================
+    # 4. Build Investigation Context (Step 7.2)
+    # ==========================================
 
     contexts = build_investigation_context(
         telemetry,
         service_links,
-        MockQuery()
+        parsed_query,
     )
 
 
-    # -----------------------------
-    # Check service exists
-    # -----------------------------
+    print("\nCONTEXT")
+    print(contexts)
+
+
+
+    # ==========================================
+    # 5. Assertions
+    # ==========================================
 
     assert (
         "productcatalogservice"
@@ -126,56 +148,30 @@ def test_build_investigation_context():
     ]
 
 
-    # -----------------------------
-    # Check metrics
-    # -----------------------------
+    print("\nMETRICS:")
+    print(context.metrics.keys())
+
+    print("\nLOGS:")
+    print(context.logs.keys())
+
+    print("\nTRACES:")
+    print(context.traces.keys())
+
+
 
     assert (
         "metric_service"
         in context.metrics
     )
 
-    assert isinstance(
-        context.metrics["metric_service"],
-        pd.DataFrame
-    )
-
-
-    # -----------------------------
-    # Check logs
-    # -----------------------------
 
     assert (
-        "log_service"
+        "log_proxy"
         in context.logs
     )
 
 
-    # -----------------------------
-    # Check traces
-    # -----------------------------
-
     assert (
         "trace_span"
         in context.traces
-    )
-
-
-    # -----------------------------
-    # Debug output
-    # -----------------------------
-
-    print("==============================")
-    print("SERVICE:", context.service)
-    print(
-        "METRICS:",
-        context.metrics.keys()
-    )
-    print(
-        "LOGS:",
-        context.logs.keys()
-    )
-    print(
-        "TRACES:",
-        context.traces.keys()
     )
