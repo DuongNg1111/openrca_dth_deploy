@@ -50,11 +50,24 @@ def build_service_links(telemetry):
     # 1. Metrics
     # =================================
 
+    print("\n==============================")
+    print("DEBUG METRICS")
+
     for name, df in telemetry.metrics.items():
 
+        print("==============================")
+        print("METRIC:", name)
+        print("COLUMNS:", df.columns.tolist())
+
         if "service" not in df.columns:
+            print(
+                "SKIPPED:",
+                name,
+                "because no service column"
+            )
             continue
 
+        print("PROCESSING:", name)
 
         services = (
             df["service"]
@@ -62,6 +75,10 @@ def build_service_links(telemetry):
             .unique()
         )
 
+        print(
+            "FOUND SERVICES:",
+            len(services)
+        )
 
         for service in services:
 
@@ -69,23 +86,34 @@ def build_service_links(telemetry):
                 service
             )
 
+            print(
+                "RAW SERVICE:",
+                service,
+                "=> NORMALIZED:",
+                normalized
+            )
 
             if normalized is None:
                 continue
-
 
             service_links.setdefault(
                 normalized,
                 _init_service_record()
             )
 
-
             service_links[normalized]["metrics"].add(
                 name
             )
 
+    print("\n==============================")
+    print("METRIC SERVICE LINKS RESULT")
 
-
+    for service, links in service_links.items():
+        print(
+            service,
+            "=>",
+            links["metrics"]
+        )
     # =================================
     # 2. Logs
     # =================================
