@@ -116,8 +116,6 @@ def receive_query(issue_key: str) -> RawQuery:
 
         incident_description=issue.fields.summary,
 
-        additional_information=description,
-
         environment=environment,
 
         affected_system=affected_system,
