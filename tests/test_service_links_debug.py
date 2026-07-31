@@ -1,4 +1,4 @@
-from src.process_module.service_links import build_service_links
+from src.process_module.link_telemetry import build_service_links
 from src.process_module.preprocess import preprocess_telemetry
 
 # tùy project của bà tên file load/preprocess khác nhau thì chỉnh import
