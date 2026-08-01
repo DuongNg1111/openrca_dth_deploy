@@ -3,7 +3,7 @@ import json
 
 from src.jira.receive_query import receive_query
 
-from src.input_module.validate_query import validate_query
+# from src.input_module.validate_query import validate_query
 from src.input_module.query_parser import parse_query
 from src.input_module.telemetry_loader import connect_data_source
 from src.input_module.metadata_loader import load_metadata
@@ -63,35 +63,7 @@ def run_pipeline(issue_key, run_agents=False):
     # =====================================================
 
     print("\n========================================")
-    print("STEP 2: VALIDATE QUERY")
-    print("========================================")
-
-    validation = validate_query(
-        raw_query
-    )
-
-    if not validation.is_valid:
-
-        print("\nValidation Failed")
-
-        for error in validation.errors:
-
-            print("-", error)
-
-        print("\n========================================")
-        print("PIPELINE STOPPED")
-        print("========================================")
-
-        return
-
-    print("Validation Passed")
-
-    # =====================================================
-    # STEP 3
-    # =====================================================
-
-    print("\n========================================")
-    print("STEP 3: PARSE QUERY")
+    print("STEP 2: PARSE QUERY")
     print("========================================")
 
     parsed_query = parse_query(
@@ -117,12 +89,12 @@ def run_pipeline(issue_key, run_agents=False):
         parsed_query.time_window.end,
     )
 
-    # =====================================================
-    # STEP 4-5
+        # =====================================================
+    # STEP 3
     # =====================================================
 
     print("\n========================================")
-    print("STEP 4-5: LOAD TELEMETRY")
+    print("STEP 3-4: LOAD TELEMETRY")
     print("========================================")
 
     from src.config import load_config
@@ -136,11 +108,11 @@ def run_pipeline(issue_key, run_agents=False):
     print("Data Source:", data_source)
 
     # =====================================================
-    # STEP 6
+    # STEP 5
     # =====================================================
 
     print("\n========================================")
-    print("STEP 6: LOAD METADATA")
+    print("STEP 5: LOAD METADATA")
     print("========================================")
 
     metadata = load_metadata(
@@ -155,11 +127,11 @@ def run_pipeline(issue_key, run_agents=False):
     print("Total Files :", metadata.total_files)
 
     # =====================================================
-    # STEP 7
+    # STEP 6
     # =====================================================
 
     print("\n========================================")
-    print("STEP 7: PREPROCESS")
+    print("STEP 6: PREPROCESS")
     print("========================================")
 
     preprocessed = preprocess(
@@ -170,20 +142,20 @@ def run_pipeline(issue_key, run_agents=False):
     print("\nPreprocess Completed")
 
     # =====================================================
-    # STEP 8
+    # STEP 7
     # =====================================================
 
     print("\n========================================")
-    print("STEP 8: BUILD READY-TO-CALL DATABASE")
+    print("STEP 7: BUILD READY-TO-CALL DATABASE")
     print("========================================")
 
 
     # =====================================================
-    # STEP 8.1: BUILD SERVICE LINKS
+    # STEP 7.1: BUILD SERVICE LINKS
     # =====================================================
 
     print("\n========================================")
-    print("STEP 8.1: BUILD SERVICE LINKS")
+    print("STEP 7.1: BUILD SERVICE LINKS")
     print("========================================")
 
 
@@ -200,11 +172,11 @@ def run_pipeline(issue_key, run_agents=False):
 
 
     # =====================================================
-    # STEP 8.2: BUILD INVESTIGATION CONTEXT
+    # STEP 7.2: BUILD INVESTIGATION CONTEXT
     # =====================================================
 
     print("\n========================================")
-    print("STEP 8.2: BUILD INVESTIGATION CONTEXT")
+    print("STEP 7.2: BUILD INVESTIGATION CONTEXT")
     print("========================================")
 
 
@@ -223,11 +195,11 @@ def run_pipeline(issue_key, run_agents=False):
 
 
     # =====================================================
-    # STEP 8.3: PREPARE AGENT CONTEXT
+    # STEP 7.3: PREPARE AGENT CONTEXT
     # =====================================================
 
     print("\n========================================")
-    print("STEP 8.3: PREPARE AGENT CONTEXT")
+    print("STEP 7.3: PREPARE AGENT CONTEXT")
     print("========================================")
 
 
@@ -238,11 +210,11 @@ def run_pipeline(issue_key, run_agents=False):
 
 
     # =====================================================
-    # STEP 8.4: SAVE INVESTIGATION
+    # STEP 7.4: SAVE INVESTIGATION
     # =====================================================
 
     print("\n========================================")
-    print("STEP 8.4: SAVE INVESTIGATION")
+    print("STEP 7.4: SAVE INVESTIGATION")
     print("========================================")
 
 
@@ -254,7 +226,10 @@ def run_pipeline(issue_key, run_agents=False):
         window_start=parsed_query.time_window.start,
         window_end=parsed_query.time_window.end,
         incident_description=raw_query.incident_description,
+        reporter=raw_query.reporter,
+        reporter_email=raw_query.reporter_email,
     )
+
 
 
     print(
@@ -265,11 +240,11 @@ def run_pipeline(issue_key, run_agents=False):
 
 
     # =====================================================
-    # STEP 8.5: SAVE METRICS
+    # STEP 7.5: SAVE METRICS
     # =====================================================
 
     print("\n========================================")
-    print("STEP 8.5: SAVE METRICS")
+    print("STEP 7.5: SAVE METRICS")
     print("========================================")
 
 
@@ -288,11 +263,11 @@ def run_pipeline(issue_key, run_agents=False):
 
 
     # =====================================================
-    # STEP 8.6: SAVE LOGS
+    # STEP 7.6: SAVE LOGS
     # =====================================================
 
     print("\n========================================")
-    print("STEP 8.6: SAVE LOGS")
+    print("STEP 7.6: SAVE LOGS")
     # =====================================================
 
 
@@ -311,11 +286,11 @@ def run_pipeline(issue_key, run_agents=False):
 
 
     # =====================================================
-    # STEP 8.7: SAVE TRACES
+    # STEP 7.7: SAVE TRACES
     # =====================================================
 
     print("\n========================================")
-    print("STEP 8.7: SAVE TRACES")
+    print("STEP 7.7: SAVE TRACES")
     print("========================================")
 
 
@@ -331,11 +306,11 @@ def run_pipeline(issue_key, run_agents=False):
         "Traces Saved"
     )
     # =====================================================
-    # STEP 9
+    # STEP 8
     # =====================================================
 
     print("\n========================================")
-    print("STEP 9: SERVICE SELECTION")
+    print("STEP 8: SERVICE SELECTION")
     print("========================================")
 
     selected_contexts = select_services(
@@ -362,11 +337,11 @@ def run_pipeline(issue_key, run_agents=False):
         return selected_contexts
 
     # =====================================================
-    # STEP 10
+    # STEP 9
     # =====================================================
 
     print("\n========================================")
-    print("STEP 10: MULTI-AGENT ANALYSIS")
+    print("STEP 9: MULTI-AGENT ANALYSIS")
     print("========================================")
 
     metric_agent = MetricAgent()
@@ -376,6 +351,17 @@ def run_pipeline(issue_key, run_agents=False):
     trace_agent = TraceAgent()
 
     reasoning_agent = ReasoningAgent()
+
+    print("==============================")
+    print("SELECTED CONTEXTS DEBUG")
+
+    for name, ctx in selected_contexts.items():
+        print("SERVICE:", name)
+        print("METRICS:", ctx.metrics.keys())
+        print("LOGS:", ctx.logs.keys())
+        print("TRACES:", ctx.traces.keys())
+
+
 
     for context in selected_contexts.values():
         print("\n----------------------------------------")

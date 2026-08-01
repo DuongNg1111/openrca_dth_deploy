@@ -52,7 +52,6 @@ def create_issue(
     environment,
     affected_system,
     incident_time,
-    additional_details="",
     reporter_name="",
     reporter_email=""
 ):
@@ -82,19 +81,19 @@ Incident Description:
 {incident_description}
 """
 
-    if additional_details.strip():
-
-        description += f"""
-
-Additional Details:
-{additional_details}
-"""
-
     issue_dict = {
-        "project": {"key": "DEV"},
-        "summary": incident_description[:100],
+        "project": {
+            "key": "DEV"
+        },
+        "summary": (
+            incident_description[:100]
+            if incident_description.strip()
+            else f"Incident Report - {incident_time}"
+        ),
         "description": description,
-        "issuetype": {"name": "Task"}
+        "issuetype": {
+            "name": "Task"
+        }
     }
 
     issue = jira.create_issue(

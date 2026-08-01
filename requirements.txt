@@ -7,6 +7,7 @@ matplotlib>=3.7
 # Streamlit Application
 streamlit>=1.40
 Authlib>=1.3.2
+httpx>=0.27
 
 # Jira Integration
 jira>=3.8

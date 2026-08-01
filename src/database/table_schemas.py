@@ -34,8 +34,12 @@ TABLE_SCHEMAS = {
 
             "window_end": "TIMESTAMP",
 
-            "incident_description": "TEXT"
+            "incident_description": "TEXT",
 
+            "reporter": "TEXT",
+
+            "reporter_email": "TEXT"
+            
         }
     },
 
@@ -52,7 +56,7 @@ TABLE_SCHEMAS = {
 
             "investigation_id": "INTEGER",
 
-            "timestamp": "BIGINT",
+            "timestamp": "TIMESTAMP",
 
             "cmdb_id": "TEXT",
 
@@ -78,7 +82,7 @@ TABLE_SCHEMAS = {
 
             "log_id": "TEXT",
 
-            "timestamp": "BIGINT",
+            "timestamp": "TIMESTAMP",
 
             "cmdb_id": "TEXT",
 
@@ -102,7 +106,7 @@ TABLE_SCHEMAS = {
 
             "investigation_id": "INTEGER",
 
-            "timestamp": "BIGINT",
+            "timestamp": "TIMESTAMP",
 
             "cmdb_id": "TEXT",
 

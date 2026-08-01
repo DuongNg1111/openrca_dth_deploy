@@ -1,37 +1,13 @@
-# from src.jira.jira_client import get_issue
-# from src.schemas import RawQuery
-
-
-# def receive_query(issue_key: str) -> RawQuery:
-#     """
-#     Read a Jira issue and convert it into a RawQuery object.
-#     """
-
-#     issue = get_issue(issue_key)
-
-#     return RawQuery(
-#         issue_key=issue.key,
-
-#         incident_description=issue.fields.summary,
-#         additional_information=issue.fields.description,
-#         environment=issue.fields.customfield_10206.value,
-
-#         affected_system=issue.fields.customfield_10140.value,
-#         incident_time=issue.fields.customfield_10173,
-
-#         reporter=issue.fields.reporter.displayName,
-#         status=issue.fields.status.name,
-#         created=issue.fields.created,
-# )
-
 from src.jira.jira_client import get_issue
 from src.schemas import RawQuery
 
 
 def extract_field(description: str, field_name: str):
     """
-    Extract value from Jira description.
+    Extract a field value from Jira description.
+
     Example:
+
     Environment:
     Cloud A
     """
@@ -51,20 +27,44 @@ def extract_field(description: str, field_name: str):
     return None
 
 
-
 def receive_query(issue_key: str) -> RawQuery:
     """
-    Read a Jira issue and convert it into a RawQuery object.
+    Read a Jira issue and convert it into RawQuery.
     """
 
     issue = get_issue(issue_key)
 
     description = issue.fields.description or ""
 
+    # =====================================
+    # Reporter Information
+    # =====================================
 
-    # ==============================
+    reporter = extract_field(
+        description,
+        "Reporter:"
+    )
+
+    if not reporter and getattr(issue.fields, "reporter", None):
+
+        reporter = issue.fields.reporter.displayName
+
+    reporter_email = extract_field(
+        description,
+        "Email:"
+    )
+
+    if (
+        not reporter_email
+        and getattr(issue.fields, "reporter", None)
+        and hasattr(issue.fields.reporter, "emailAddress")
+    ):
+
+        reporter_email = issue.fields.reporter.emailAddress
+
+    # =====================================
     # Environment
-    # ==============================
+    # =====================================
 
     if getattr(issue.fields, "customfield_10206", None):
 
@@ -77,10 +77,9 @@ def receive_query(issue_key: str) -> RawQuery:
             "Environment:"
         )
 
-
-    # ==============================
+    # =====================================
     # Affected System
-    # ==============================
+    # =====================================
 
     if getattr(issue.fields, "customfield_10140", None):
 
@@ -93,10 +92,9 @@ def receive_query(issue_key: str) -> RawQuery:
             "Affected System:"
         )
 
-
-    # ==============================
+    # =====================================
     # Incident Time
-    # ==============================
+    # =====================================
 
     if getattr(issue.fields, "customfield_10173", None):
 
@@ -109,6 +107,9 @@ def receive_query(issue_key: str) -> RawQuery:
             "Incident Time:"
         )
 
+    # =====================================
+    # Build RawQuery
+    # =====================================
 
     return RawQuery(
 
@@ -116,15 +117,15 @@ def receive_query(issue_key: str) -> RawQuery:
 
         incident_description=issue.fields.summary,
 
-        additional_information=description,
-
         environment=environment,
 
         affected_system=affected_system,
 
         incident_time=incident_time,
 
-        reporter=issue.fields.reporter.displayName,
+        reporter=reporter,
+
+        reporter_email=reporter_email,
 
         status=issue.fields.status.name,
 
