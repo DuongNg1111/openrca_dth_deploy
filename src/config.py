@@ -9,8 +9,8 @@ _DEFAULTS = {
     "system": "Market",
 
     "data_root": os.getenv(
-        "OPENRCA_DATA_ROOT",
-        "/home/ubuntu/Market"
+    "OPENRCA_DATA_ROOT",
+    "./data" # Hoặc đường dẫn tuyệt đối đến thư mục data, ví dụ: "/Users/mac/Documents/DA/Cuoi_Ky/Github/OpenRCA_DTH/data"
     ),
 
 

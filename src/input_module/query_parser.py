@@ -136,6 +136,7 @@ def parse_query(
         keywords=keywords,
 
         time_window=window,
+        additional_information=raw_query.additional_information,
 )
 
 

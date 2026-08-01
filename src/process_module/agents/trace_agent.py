@@ -1,35 +1,104 @@
 from __future__ import annotations
+import json
+from google import genai
+from google.genai import types
 from src.process_module.agents.base_agent import BaseAgent
 
 class TraceAgent(BaseAgent):
     def __init__(self):
         super().__init__("Trace Agent")
+        self.client = genai.Client()
 
-    def analyze(self, context):
+    def analyze(self, context) -> dict:
         traces = context.traces
-        evidence = []
+        raw_trace_evidence = []
         max_duration = 0
 
-        for name, df in traces.items():
-            if df.empty:
+        # 1. Trích xuất dữ liệu trace thô từ DataFrame giống logic cũ của bạn
+        for name, df in (traces.items() if traces else []):
+            if df is None or df.empty:
                 continue
 
             if "duration" in df.columns:
-                max_duration = max(max_duration, df["duration"].max() if not df["duration"].isna().all() else 0)
-                # Lọc các trace có duration cao bất thường
-                high_latency_spans = df[df["duration"] > df["duration"].quantile(0.95)] if len(df) > 1 else df
-                for _, row in high_latency_spans.head(3).iterrows():
-                    evidence.append({
+                valid_durations = df["duration"].dropna()
+                if not valid_durations.empty:
+                    max_duration = max(max_duration, valid_durations.max())
+
+                # Lọc các trace có duration cao bất thường (quantile 0.95 hoặc toàn bộ nếu ít)
+                high_latency_spans = df[df["duration"] > valid_durations.quantile(0.95)] if len(df) > 1 and not valid_durations.empty else df
+
+                for _, row in high_latency_spans.head(5).iterrows():
+                    raw_trace_evidence.append({
                         "trace_file": name,
-                        "span_info": str(row.to_dict())
+                        "span_info": {k: str(v) for k, v in row.to_dict().items()}
                     })
 
-        summary = f"Max trace duration observed: {max_duration} ms." if max_duration > 0 else "Trace analysis completed, no significant latency spikes."
+        summary_text = f"Max trace duration observed: {max_duration} ms." if max_duration > 0 else "Trace analysis completed, no significant latency spikes."
 
-        return {
-            "agent": self.name,
-            "service": context.service,
-            "trace_tables": list(traces.keys()),
-            "evidence": evidence,
-            "summary": summary
-        }
+        # 2. Nếu không tìm thấy trace data, trả về cấu trúc chuẩn rỗng
+        if not raw_trace_evidence:
+            return {
+                "agent": "Trace Agent",
+                "evidence_type": "trace",
+                "traces": [],
+                "summary": "Trace analysis completed, no data available.",
+                "confidence": 1.0
+            }
+
+        # 3. Sử dụng GenAI để phân tích và chuẩn hóa thành danh sách traces chuẩn schema
+        prompt = f"""
+        You are an SRE Distributed Tracing and Latency Expert. Analyze the following high-latency trace spans extracted for service '{context.service}' during the incident window.
+        Raw Trace Evidence: {json.dumps(raw_trace_evidence[:5], default=str)}
+        Max Duration Observed: {max_duration} ms
+
+        You MUST respond ONLY with a valid JSON object matching this exact structure:
+        {{
+            "agent": "Trace Agent",
+            "evidence_type": "trace",
+            "traces": [
+                {{
+                    "trace_id": "<extracted trace_id or fallback string>",
+                    "root_service": "<root or frontend service name>",
+                    "slow_service": "{context.service}",
+                    "latency_ms": {float(max_duration)},
+                    "normal_latency_ms": 100.0,
+                    "dependency": "<downstream dependency like database or redis>",
+                    "description": "<detailed professional explanation of the request flow bottleneck>"
+                }}
+            ],
+            "summary": "{summary_text}",
+            "confidence": 0.85
+        }}
+        """
+
+        try:
+            response = self.client.models.generate_content(
+                model='gemini-3.5-flash',
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.1,
+                    response_mime_type="application/json"
+                ),
+            )
+            return json.loads(response.text)
+
+        except Exception as e:
+            # Fallback nếu gọi AI lỗi nhưng vẫn giữ nguyên form chuẩn cấu trúc nhóm đề ra
+            fallback_traces = [
+                {
+                    "trace_id": "unknown_trace",
+                    "root_service": "frontend",
+                    "slow_service": context.service,
+                    "latency_ms": float(max_duration),
+                    "normal_latency_ms": float(max_duration) * 0.1 if max_duration > 0 else 100.0,
+                    "dependency": "unknown-dependency",
+                    "description": f"High latency span detected with duration {max_duration} ms. AI formatting failed: {str(e)}"
+                }
+            ]
+            return {
+                "agent": "Trace Agent",
+                "evidence_type": "trace",
+                "traces": fallback_traces,
+                "summary": summary_text,
+                "confidence": 0.6
+            }

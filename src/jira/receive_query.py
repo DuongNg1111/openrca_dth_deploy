@@ -125,9 +125,10 @@ def receive_query(issue_key: str) -> RawQuery:
 
         reporter=reporter,
 
-        reporter_email=reporter_email,
+        # reporter_email=reporter_email,
 
         status=issue.fields.status.name,
 
         created=issue.fields.created,
+        additional_information="",
     )
