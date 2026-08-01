@@ -7,59 +7,61 @@ from src.jira.jira_client import create_issue
 
 require_login()
 
+
 st.set_page_config(
     page_title="Report Incident Form",
     page_icon="🚨",
     layout="wide"
 )
 
+
+# =====================================================
+# HEADER
+# =====================================================
+
 st.markdown(
     """
-    <h1 style="
-        text-align:center;
-        margin-bottom:0;
-        padding-left:18px;
-    ">
-        REPORT INCIDENT FORM
-    </h1>
+    <style>
+    .incident-title {
+        background-color: #EAF4FF;
+        border: 1px solid #D9D9D9;
+        border-radius: 8px;
+        padding: 20px 24px;
+    }
 
-    <p style="
-        text-align:center;
-        font-style:italic;
-        color:gray;
-        margin-top:8px;
-    ">
-        Please provide the incident details using the form below.
-    </p>
+    .incident-title h1 {
+        color: #1F4E79;
+        margin: 0;
+        font-size: 32px;
+        font-weight: 700;
+        text-align: left;
+    }
 
-    <hr style="margin-top:25px; margin-bottom:30px;">
+    .incident-title p {
+        color: #666;
+        margin: 8px 0 0 0;
+        font-size: 16px;
+        font-style: italic;
+        text-align: left;
+    }
+    </style>
+
+    <div class="incident-title">
+        <h1>INCIDENT REPORT FORM</h1>
+        <p>Please provide the incident details using the form below.</p>
+    </div>
     """,
     unsafe_allow_html=True
 )
+
+# =====================================================
+# FORM
+# =====================================================
 
 with st.form(
     "incident_form",
     clear_on_submit=True
 ):
-
-    # ==========================
-    # Incident Description
-    # ==========================
-
-    st.markdown("#### Incident Description")
-
-    st.caption(
-        "Please describe the incident in English if you have any details."
-    )
-
-    incident_description = st.text_area(
-        label="",
-        placeholder="e.g., Cannot find product AAA or payment service timeout.",
-        height=180,
-        label_visibility="collapsed"
-    )
-
-    st.divider()
 
     # ==========================
     # Environment & Affected System
@@ -70,7 +72,10 @@ with st.form(
     with col1:
 
         st.markdown("### Environment *")
-        st.caption("Select the deployment environment.")
+
+        st.caption(
+            "Select the deployment environment."
+        )
 
         environment = st.selectbox(
             label="",
@@ -82,10 +87,14 @@ with st.form(
             label_visibility="collapsed"
         )
 
+
     with col2:
 
         st.markdown("### Affected System *")
-        st.caption("Select the affected business system.")
+
+        st.caption(
+            "Select the affected business system."
+        )
 
         affected_system = st.selectbox(
             label="",
@@ -106,7 +115,9 @@ with st.form(
             label_visibility="collapsed"
         )
 
+
     st.write("")
+
 
     # ==========================
     # Incident Date & Time
@@ -117,37 +128,95 @@ with st.form(
     with col1:
 
         st.markdown("### Incident Date *")
-        st.caption("Select the incident date.")
+
+        st.caption(
+            "Select the incident date."
+        )
 
         incident_date = st.date_input(
             label="",
             label_visibility="collapsed"
         )
 
+
     with col2:
 
         st.markdown("### Incident Time *")
-        st.caption("Select the incident time.")
+
+        st.caption(
+            "Select the incident time."
+        )
 
         incident_time = st.time_input(
             label="",
             label_visibility="collapsed"
         )
 
+
     incident_datetime = datetime.combine(
         incident_date,
         incident_time
     )
 
+
     st.write("")
 
-    submitted = st.form_submit_button(
-        "SUBMIT INCIDENT",
-        use_container_width=True,
-        type="primary"
+
+    # ==========================
+    # Incident Description (MOVED DOWN)
+    # ==========================
+
+    st.divider()
+
+    st.markdown("### Incident Description")
+
+    st.caption(
+        "Please describe the incident in English if you have any details."
+    )
+
+    incident_description = st.text_area(
+        label="",
+        placeholder="e.g., Cannot find product AAA or payment service timeout.",
+        height=180,
+        label_visibility="collapsed"
     )
 
 
+    st.write("")
+
+
+    # ==========================
+    # SUBMIT BUTTON
+    # ==========================
+
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stFormSubmitButton"] button {
+            background-color:#1F4E79;
+            color:white;
+            border-radius:8px;
+            padding:12px 45px;
+            font-size:25px;
+            font-weight:600;
+            border:none;
+        }
+
+        div[data-testid="stFormSubmitButton"] button:hover {
+            background-color:#163A5C;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+        
+    left, button_col = st.columns([4, 1])
+
+    with button_col:
+        submitted = st.form_submit_button(
+            "**SUBMIT INCIDENT**",
+            type="primary"
+        )
 # =====================================================
 # FORM VALIDATION
 # =====================================================
@@ -160,11 +229,13 @@ if submitted:
             "Please select an environment."
         )
 
+
     elif affected_system == "-- Select Affected System --":
 
         st.error(
             "Please select the affected system."
         )
+
 
     else:
 
@@ -176,7 +247,12 @@ if submitted:
             reporter_name=st.user.name,
             reporter_email=st.user.email
         )
-        st.success("✅ Incident submitted successfully!")
+
+
+        st.success(
+            "✅ Incident submitted successfully!"
+        )
+
 
         st.info(
             f"""
