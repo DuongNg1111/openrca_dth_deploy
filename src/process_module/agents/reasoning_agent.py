@@ -1,47 +1,76 @@
+from __future__ import annotations
+import json
+from google import genai
+from google.genai import types
 from src.process_module.agents.base_agent import BaseAgent
 
 class ReasoningAgent(BaseAgent):
-
-
     def __init__(self):
+        super().__init__("Reasoning Agent")
+        self.client = genai.Client()
 
-        super().__init__(
-            "Reasoning Agent"
-        )
+    def analyze(self, context, metric_result: dict, log_result: dict, trace_result: dict) -> dict:
+        # Lấy đúng các mảng dữ liệu đã chuẩn hóa từ 3 agent thành phần
+        metric_anomalies = metric_result.get('anomalies', [])
+        log_errors = log_result.get('errors', [])
+        trace_spans = trace_result.get('traces', [])
 
+        prompt = f"""
+        You are an expert Site Reliability Engineer (SRE) AI. Synthesize the findings from the specialized multi-agent telemetry below for service '{context.service}' to determine the definitive root cause (RCA) of the incident.
 
-    def analyze(
-        self,
-        metric_result,
-        log_result,
-        trace_result,
-    ):
+        [METRIC AGENT EVIDENCE]:
+        Summary: {metric_result.get('summary')}
+        Anomalies: {json.dumps(metric_anomalies, default=str)}
 
+        [LOG AGENT EVIDENCE]:
+        Summary: {log_result.get('summary')}
+        Errors: {json.dumps(log_errors, default=str)}
 
-        result = {
+        [TRACE AGENT EVIDENCE]:
+        Summary: {trace_result.get('summary')}
+        Traces: {json.dumps(trace_spans, default=str)}
 
-            "agent": self.name,
+        You MUST respond ONLY with a valid JSON object matching this exact structure:
+        {{
+            "component": "{context.service}",
+            "reason": "<Concise Root Cause Title>",
+            "confidence": 0.9,
+            "occurrence_time": "{context.incident_time}",
+            "metrics": {json.dumps(metric_anomalies, default=str)},
+            "logs": {json.dumps(log_errors, default=str)},
+            "traces": {json.dumps(trace_spans, default=str)},
+            "metric_summary": "{metric_result.get('summary', '')}",
+            "log_summary": "{log_result.get('summary', '')}",
+            "trace_summary": "{trace_result.get('summary', '')}",
+            "reasoning": "<Thorough, professional technical root cause analysis>"
+        }}
+        """
 
-            "root_cause": "Pending",
+        try:
+            response = self.client.models.generate_content(
+                model='gemini-3.5-flash',  # Hoặc gemini-2.0-flash tùy bạn cấu hình
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.1,
+                    response_mime_type="application/json"
+                ),
+            )
+            result_dict = json.loads(response.text)
+            # Đảm bảo luôn gán đúng occurrence_time từ context
+            result_dict["occurrence_time"] = context.incident_time
+            return result_dict
 
-            "confidence": 0,
-
-            "explanation": (
-                "Reasoning model not connected"
-            ),
-
-            "metric_summary": metric_result["summary"],
-
-            "log_summary": log_result["summary"],
-
-            "trace_summary": trace_result["summary"],
-
-        }
-
-
-        # TODO:
-        # Combine evidence from all agents
-        # Infer root cause using LLM
-
-
-        return result
+        except Exception as e:
+            return {
+                "component": context.service,
+                "reason": "Analysis Error",
+                "confidence": 0.0,
+                "occurrence_time": context.incident_time,
+                "metrics": metric_anomalies,
+                "logs": log_errors,
+                "traces": trace_spans,
+                "metric_summary": metric_result.get('summary', ''),
+                "log_summary": log_result.get('summary', ''),
+                "trace_summary": trace_result.get('summary', ''),
+                "reasoning": f"Failed to generate AI conclusion due to error: {str(e)}"
+            }

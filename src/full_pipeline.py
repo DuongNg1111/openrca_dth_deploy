@@ -1,4 +1,5 @@
 from dataclasses import asdict
+import json
 
 from src.jira.receive_query import receive_query
 
@@ -39,7 +40,7 @@ def run_pipeline(issue_key, run_agents=False):
     print("STEP 1: RECEIVE USER QUERY")
     print("========================================")
 
-    
+
     raw_query = receive_query(issue_key)
 
     ...
@@ -96,10 +97,8 @@ def run_pipeline(issue_key, run_agents=False):
     print("STEP 3-4: LOAD TELEMETRY")
     print("========================================")
 
-    config = {
-        "system": "Market",
-        "data_root": "/home/ubuntu/Market",
-    }
+    from src.config import load_config
+    config = load_config() # Gọi hàm load_config để lấy đúng data_root đã cấu hình trong config.py
 
     data_source = connect_data_source(
         parsed_query,
@@ -228,7 +227,7 @@ def run_pipeline(issue_key, run_agents=False):
         window_end=parsed_query.time_window.end,
         incident_description=raw_query.incident_description,
         reporter=raw_query.reporter,
-        reporter_email=raw_query.reporter_email,
+        reporter_email="",
     )
 
 
@@ -365,27 +364,20 @@ def run_pipeline(issue_key, run_agents=False):
 
 
     for context in selected_contexts.values():
-
         print("\n----------------------------------------")
         print("SERVICE :", context.service)
         print("----------------------------------------")
 
-        metric_result = metric_agent.analyze(
-            context
-        )
+        metric_result = metric_agent.analyze(context)
+        log_result = log_agent.analyze(context)
+        trace_result = trace_agent.analyze(context)
 
-        log_result = log_agent.analyze(
-            context
-        )
-
-        trace_result = trace_agent.analyze(
-            context
-        )
-
-        reasoning_result = reasoning_agent.analyze(
+        # Chỉ gọi 1 lần với đầy đủ context và kết quả 3 agent
+        final_output = reasoning_agent.analyze(
+            context,
             metric_result,
             log_result,
-            trace_result,
+            trace_result
         )
 
         print("\nMetric Agent")
@@ -397,8 +389,8 @@ def run_pipeline(issue_key, run_agents=False):
         print("\nTrace Agent")
         print(trace_result)
 
-        print("\nReasoning Agent")
-        print(reasoning_result)
+        print("\nFinal Output JSON format:")
+        print(json.dumps(final_output, indent=4, default=str))
 
     # =====================================================
     # FINISH
