@@ -3,18 +3,32 @@ import json
 from google import genai
 from google.genai import types
 from src.process_module.agents.base_agent import BaseAgent
+from src.config import load_config
 
 class LogAgent(BaseAgent):
     def __init__(self):
         super().__init__("Log Agent")
-        self.client = genai.Client()
+
+        # Load cấu hình từ config.py (đã bao gồm đọc .env và file yaml)
+        self.config = load_config()
+        llm_cfg = self.config.get("llm", {})
+
+        # Lấy api_key và model từ config trung tâm
+        api_key = llm_cfg.get("api_key")
+        self.model_name = llm_cfg.get("model", "gemini-3.5-flash")
+
+        # Khởi tạo client Gemini
+        if api_key:
+            self.client = genai.Client(api_key=api_key)
+        else:
+            self.client = genai.Client()
 
     def analyze(self, context) -> dict:
         logs = context.logs
         raw_error_logs = []
         error_count = 0
 
-        # 1. Trích xuất các dòng log lỗi từ DataFrame giống logic cũ của bạn
+        # 1. Trích xuất các dòng log lỗi từ DataFrame
         for name, df in (logs.items() if logs else []):
             if df is None or df.empty:
                 continue
@@ -67,7 +81,7 @@ class LogAgent(BaseAgent):
 
         try:
             response = self.client.models.generate_content(
-                model='gemini-3.5-flash',
+                model=self.model_name,  # Lấy linh hoạt tên model từ config.py
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.1,

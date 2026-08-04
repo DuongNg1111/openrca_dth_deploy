@@ -3,11 +3,25 @@ import json
 from google import genai
 from google.genai import types
 from src.process_module.agents.base_agent import BaseAgent
+from src.config import load_config  # Import hàm load_config trung tâm
 
 class MetricAgent(BaseAgent):
     def __init__(self):
         super().__init__("Metric Agent")
-        self.client = genai.Client()
+
+        # Load cấu hình từ config.py (đã bao gồm đọc .env và file yaml)
+        self.config = load_config()
+        llm_cfg = self.config.get("llm", {})
+
+        # Lấy api_key và model từ cấu hình chung
+        api_key = llm_cfg.get("api_key")
+        self.model_name = llm_cfg.get("model", "gemini-3.5-flash")
+
+        # Khởi tạo client Gemini với api_key (nếu có)
+        if api_key:
+            self.client = genai.Client(api_key=api_key)
+        else:
+            self.client = genai.Client()
 
     def analyze(self, context) -> dict:
         metrics = context.metrics
@@ -82,7 +96,7 @@ class MetricAgent(BaseAgent):
 
         try:
             response = self.client.models.generate_content(
-                model='gemini-3.5-flash',
+                model=self.model_name,  # Sử dụng tên model được cấu hình linh hoạt từ config.py
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.1,

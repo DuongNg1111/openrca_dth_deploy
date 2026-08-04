@@ -1,7 +1,18 @@
 """Central configuration loader."""
+
 from __future__ import annotations
+
 import os
 from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    load_dotenv(dotenv_path=env_path)
+
+except ImportError:
+    pass
 
 
 _DEFAULTS = {
@@ -9,10 +20,9 @@ _DEFAULTS = {
     "system": "Market",
 
     "data_root": os.getenv(
-    "OPENRCA_DATA_ROOT",
-    "./data" # Hoặc đường dẫn tuyệt đối đến thư mục data, ví dụ: "/Users/mac/Documents/DA/Cuoi_Ky/Github/OpenRCA_DTH/data"
+        "OPENRCA_DATA_ROOT",
+        "./data"
     ),
-
 
     "database": {
 
@@ -38,42 +48,58 @@ _DEFAULTS = {
             "postgres"
         ),
 
-        "password_env": "POSTGRES_PASSWORD"
-    },
+        "password": os.getenv(
+            "POSTGRES_PASSWORD",
+            ""
+        ),
 
+    },
 
     "jira": {
 
         "project_key": "DEV",
 
-        "url_env": "JIRA_URL",
+        "url": os.getenv(
+            "JIRA_URL",
+            ""
+        ),
 
-        "email_env": "JIRA_EMAIL",
+        "email": os.getenv(
+            "JIRA_EMAIL",
+            ""
+        ),
 
-        "token_env": "JIRA_API_TOKEN"
+        "token": os.getenv(
+            "JIRA_API_TOKEN",
+            ""
+        ),
+
     },
-
 
     "llm": {
 
-        "source": "Gemini",
+        "model": os.getenv(
+            "GEMINI_MODEL",
+            "gemini-3.5-flash"
+        ),
 
-        "model": "gemini-2.5-pro",
+        "api_key": os.getenv(
+            "GEMINI_API_KEY",
+            ""
+        ),
 
-        "api_key_env": "GEMINI_API_KEY"
     },
-
 
     "top_k": 1,
 
     "use_mock": False,
+
 }
 
 
 def load_config(path: str | None = None):
 
     cfg = dict(_DEFAULTS)
-
 
     if path is None:
 
@@ -84,7 +110,6 @@ def load_config(path: str | None = None):
             "config",
             "config.yaml"
         )
-
 
     try:
 
@@ -98,13 +123,10 @@ def load_config(path: str | None = None):
 
             data = yaml.safe_load(f) or {}
 
-
         cfg.update(data)
-
 
     except Exception:
 
         pass
-
 
     return cfg
