@@ -197,11 +197,12 @@ def insert_logs(
         log_id,
         timestamp,
         cmdb_id,
-        content
+        log_name,
+        value
     )
 
     VALUES
-    (%s,%s,%s,%s,%s)
+    (%s,%s,%s,%s,%s,%s)
     """
 
 
@@ -225,19 +226,13 @@ def insert_logs(
         records.append(
             (
                 investigation_id,
-                row.get(
-                    "log_id",
-                    ""
-                ),
+                row.get("log_id",""),
                 row["timestamp"],
-                row.get(
-                    "cmdb_id",
-                    ""
-                ),
+                row.get("cmdb_id",""),
+                row.get("log_name",""),
                 log_content
             )
         )
-
 
     cur.executemany(
         sql,
