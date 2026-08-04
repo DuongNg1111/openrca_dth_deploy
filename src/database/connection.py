@@ -1,21 +1,12 @@
-import os
 import psycopg2
 
-from dotenv import load_dotenv
-
 from src.config import load_config
-
-
-load_dotenv()
-
 
 
 def get_connection():
 
     cfg = load_config()
-
     db = cfg["database"]
-
 
     conn = psycopg2.connect(
 
@@ -27,20 +18,17 @@ def get_connection():
 
         user=db["user"],
 
-        password=os.getenv(
-            db["password_env"]
-        )
+        password=db["password"]
+
     )
 
-
     return conn
+
 
 if __name__ == "__main__":
 
     conn = get_connection()
 
-    print(
-        "Database connection: OK"
-    )
+    print("Database connection: OK")
 
     conn.close()

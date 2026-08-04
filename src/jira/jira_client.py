@@ -1,40 +1,25 @@
-# from jira import JIRA
-# from dotenv import load_dotenv
-# import os
-
-# load_dotenv()
-
-# JIRA_URL = os.getenv("JIRA_URL")
-# JIRA_EMAIL = os.getenv("JIRA_EMAIL")
-# JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
-
-
-# def connect_jira():
-#     """
-#     Connect to Jira Cloud.
-#     """
-#     jira = JIRA(
-#         server=JIRA_URL,
-#         basic_auth=(JIRA_EMAIL, JIRA_API_TOKEN)
-#     )
-
-#     return jira
-
 from jira import JIRA
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
+from src.config import load_config
 
-JIRA_URL = os.getenv("JIRA_URL")
-JIRA_EMAIL = os.getenv("JIRA_EMAIL")
-JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
+
+config = load_config()
+
+jira_cfg = config["jira"]
+
+JIRA_URL = jira_cfg["url"]
+JIRA_EMAIL = jira_cfg["email"]
+JIRA_API_TOKEN = jira_cfg["token"]
 
 
 def connect_jira():
+
     return JIRA(
         server=JIRA_URL,
-        basic_auth=(JIRA_EMAIL, JIRA_API_TOKEN)
+        basic_auth=(
+            JIRA_EMAIL,
+            JIRA_API_TOKEN
+        )
     )
 
 
@@ -46,6 +31,7 @@ def get_issue(issue_key: str):
     jira = connect_jira()
 
     return jira.issue(issue_key)
+
 
 def create_issue(
     incident_description,
@@ -83,7 +69,7 @@ Incident Description:
 
     issue_dict = {
         "project": {
-            "key": "DEV"
+            "key": jira_cfg["project_key"]
         },
         "summary": (
             incident_description[:100]
