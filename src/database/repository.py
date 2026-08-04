@@ -1,6 +1,28 @@
 from src.database.connection import get_connection
 import pandas as pd
 
+
+# =====================================================
+# Helper: Normalize Timestamp For PostgreSQL TIMESTAMP
+# =====================================================
+
+def ensure_datetime(df):
+
+    df = df.copy()
+
+    if "timestamp" in df.columns:
+
+        if not pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
+
+            df["timestamp"] = pd.to_datetime(
+                df["timestamp"],
+                errors="coerce"
+            )
+
+    return df
+
+
+
 # =====================================================
 # INVESTIGATION
 # =====================================================
@@ -23,21 +45,22 @@ def create_investigation(
 
     sql = """
         INSERT INTO investigations
-    (
-        issue_key,
-        environment,
-        dataset,
-        incident_time,
-        window_start,
-        window_end,
-        incident_description,
-        reporter,
-        reporter_email
-    )
-    VALUES
-    (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        (
+            issue_key,
+            environment,
+            dataset,
+            incident_time,
+            window_start,
+            window_end,
+            incident_description,
+            reporter,
+            reporter_email
+        )
 
-    RETURNING id;
+        VALUES
+        (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+
+        RETURNING id;
     """
 
 
@@ -82,12 +105,10 @@ def insert_metrics(
     conn = get_connection()
     cur = conn.cursor()
 
-    # Ép kiểu toàn bộ cột timestamp trong dataframe thành epoch milliseconds (kiểu int)
-    df = dataframe.copy()
-    if pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
-        df["timestamp"] = df["timestamp"].astype('int64') // 10**6
-    else:
-        df["timestamp"] = pd.to_datetime(df["timestamp"]).astype('int64') // 10**6
+
+    df = ensure_datetime(
+        dataframe
+    )
 
 
     sql = """
@@ -99,28 +120,41 @@ def insert_metrics(
         kpi_name,
         value
     )
-    VALUES (%s,%s,%s,%s,%s)
+
+    VALUES
+    (%s,%s,%s,%s,%s)
     """
+
+
     records = []
 
+
     for _, row in df.iterrows():
+
         records.append(
             (
                 investigation_id,
-                int(row["timestamp"]),  # Đảm bảo chắc chắn là kiểu int
+                row["timestamp"],
                 row["cmdb_id"],
                 row["kpi_name"],
                 row["value"]
             )
         )
 
+
     cur.executemany(
         sql,
         records
     )
+
+
     conn.commit()
+
     cur.close()
     conn.close()
+
+
+
 # =====================================================
 # RAW LOGS
 # =====================================================
@@ -129,21 +163,32 @@ def insert_logs(
     investigation_id,
     dataframe
 ):
+
     conn = get_connection()
     cur = conn.cursor()
 
-    df = dataframe.copy()
-    if not pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
-        df["timestamp"] = pd.to_datetime(df["timestamp"])
 
-    # Ép kiểu toàn bộ cột timestamp thành int64 milliseconds một lần duy nhất
-    df["timestamp"] = df["timestamp"].astype('int64') // 10**6
-    # Tự động tìm tên cột nội dung log nếu không có sẵn cột 'content'
+    df = ensure_datetime(
+        dataframe
+    )
+
+
     content_col = "content"
-    for candidate in ["content", "log", "message", "body", "text"]:
+
+    for candidate in [
+        "content",
+        "log",
+        "message",
+        "body",
+        "text"
+    ]:
+
         if candidate in df.columns:
+
             content_col = candidate
             break
+
+
 
     sql = """
     INSERT INTO investigation_logs
@@ -154,32 +199,58 @@ def insert_logs(
         cmdb_id,
         content
     )
-    VALUES (%s, %s, %s, %s, %s)
+
+    VALUES
+    (%s,%s,%s,%s,%s)
     """
 
+
     records = []
+
+
     for _, row in df.iterrows():
-        # Lấy nội dung an toàn, nếu không tìm thấy cột nào thì gán chuỗi rỗng
-        log_content = str(row[content_col]) if content_col in df.columns and pd.notna(row[content_col]) else ""
+
+        log_content = ""
+
+        if (
+            content_col in df.columns
+            and pd.notna(row[content_col])
+        ):
+
+            log_content = str(
+                row[content_col]
+            )
+
 
         records.append(
             (
                 investigation_id,
-                row.get("log_id",""),
-                int(row["timestamp"]),  # Đã là kiểu int được chuẩn hóa từ trước
-                row.get("cmdb_id",""),
+                row.get(
+                    "log_id",
+                    ""
+                ),
+                row["timestamp"],
+                row.get(
+                    "cmdb_id",
+                    ""
+                ),
                 log_content
             )
         )
+
 
     cur.executemany(
         sql,
         records
     )
 
+
     conn.commit()
+
     cur.close()
     conn.close()
+
+
 
 # =====================================================
 # RAW TRACE
@@ -192,12 +263,12 @@ def insert_traces(
 
     conn = get_connection()
     cur = conn.cursor()
-  # Ép kiểu toàn bộ cột timestamp trong dataframe thành epoch milliseconds (kiểu int)
-    df = dataframe.copy()
-    if pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
-        df["timestamp"] = df["timestamp"].astype('int64') // 10**6
-    else:
-        df["timestamp"] = pd.to_datetime(df["timestamp"]).astype('int64') // 10**6
+
+
+    df = ensure_datetime(
+        dataframe
+    )
+
 
     sql = """
     INSERT INTO investigation_traces
@@ -220,25 +291,42 @@ def insert_traces(
 
 
     records = []
+
+
     for _, row in df.iterrows():
 
-        # Xử lý an toàn cho status_code để tránh lỗi nếu dữ liệu trống hoặc không phải số
+
         raw_status = row["status_code"]
+
+
         try:
-            status_code_val = int(float(raw_status)) if pd.notna(raw_status) else 0
-        except (ValueError, TypeError):
+
+            status_code_val = (
+                int(float(raw_status))
+                if pd.notna(raw_status)
+                else 0
+            )
+
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
             status_code_val = 0
+
+
 
         records.append(
             (
                 investigation_id,
-                int(row["timestamp"]),
+                row["timestamp"],
                 row["cmdb_id"],
                 row["span_id"],
                 row["trace_id"],
                 row["duration"],
                 row["type"],
-                status_code_val,  # Sử dụng giá trị đã ép kiểu integer an toàn
+                status_code_val,
                 row["operation_name"],
                 row["parent_span"]
             )
@@ -255,6 +343,9 @@ def insert_traces(
 
     cur.close()
     conn.close()
+
+
+
 # =====================================================
 # EVIDENCE
 # =====================================================
@@ -280,7 +371,9 @@ def insert_evidence(
         description,
         score
     )
-    VALUES (%s,%s,%s,%s,%s)
+
+    VALUES
+    (%s,%s,%s,%s,%s)
     """
 
 
@@ -326,7 +419,9 @@ def save_rca_result(
         confidence,
         explanation
     )
-    VALUES (%s,%s,%s,%s)
+
+    VALUES
+    (%s,%s,%s,%s)
     """
 
 
