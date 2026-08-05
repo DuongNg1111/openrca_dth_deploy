@@ -221,6 +221,7 @@ def run_pipeline(issue_key, run_agents=False):
     investigation_id = create_investigation(
         issue_key=parsed_query.issue_key,
         environment=parsed_query.environment,
+        affected_system=parsed_query.affected_system,
         dataset=preprocessed.dataset,
         incident_time=parsed_query.incident_time,
         window_start=parsed_query.time_window.start,
