@@ -97,22 +97,27 @@ def load_config():
 
     config["jira"] = {
 
-        "url": os.getenv(
-            "JIRA_URL",
-            ""
-        ),
+    "url": os.getenv(
+        "JIRA_URL",
+        ""
+    ),
 
-        "email": os.getenv(
-            "JIRA_EMAIL",
-            ""
-        ),
+    "email": os.getenv(
+        "JIRA_EMAIL",
+        ""
+    ),
 
-        "token": os.getenv(
-            "JIRA_API_TOKEN",
-            ""
-        ),
+    "token": os.getenv(
+        "JIRA_API_TOKEN",
+        ""
+    ),
 
-    }
+    "project_key": os.getenv(
+        "JIRA_PROJECT_KEY",
+        ""
+    ),
+
+}
 
 
     # ---------------------------------------------

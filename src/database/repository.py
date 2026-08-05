@@ -23,6 +23,7 @@ def ensure_datetime(df):
 
 
 
+
 # =====================================================
 # INVESTIGATION
 # =====================================================
@@ -30,6 +31,7 @@ def ensure_datetime(df):
 def create_investigation(
     issue_key,
     environment,
+    affected_system,
     dataset,
     incident_time,
     window_start,
@@ -48,6 +50,7 @@ def create_investigation(
         (
             issue_key,
             environment,
+            affected_system,
             dataset,
             incident_time,
             window_start,
@@ -58,7 +61,7 @@ def create_investigation(
         )
 
         VALUES
-        (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
 
         RETURNING id;
     """
@@ -69,6 +72,7 @@ def create_investigation(
         (
             issue_key,
             environment,
+            affected_system,
             dataset,
             incident_time,
             window_start,
@@ -90,9 +94,6 @@ def create_investigation(
 
 
     return investigation_id
-
-
-
 # =====================================================
 # RAW METRICS
 # =====================================================
@@ -454,12 +455,14 @@ def get_user_incidents(
             id,
             issue_key,
             environment,
+            affected_system,
+            created_at,
             incident_time,
             incident_description,
             status
         FROM investigations
-        WHERE reporter_email = %s
-        ORDER BY incident_time DESC;
+        WHERE reporter_email=%s
+        ORDER BY created_at DESC;
     """
 
     df = pd.read_sql(

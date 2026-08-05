@@ -252,6 +252,7 @@ if submitted:
         investigation_id = create_investigation(
         issue_key=issue_key,
         environment=environment,
+        affected_system=affected_system,
         dataset="",
         incident_time=incident_datetime,
         window_start=None,

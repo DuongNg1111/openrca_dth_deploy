@@ -2,8 +2,25 @@ import streamlit as st
 import pandas as pd
 
 from src.auth.google_auth import require_login
+from src.database.repository import (
+    get_user_incidents,
+    get_incident_detail
+)
+
+
+# ==========================
+# PAGE CONFIG
+# ==========================
+
+st.set_page_config(
+    page_title="My Incidents",
+    page_icon="📋",
+    layout="wide"
+)
+
 
 require_login()
+
 
 # ==========================
 # SESSION
@@ -13,39 +30,15 @@ if "selected_ticket" not in st.session_state:
     st.session_state.selected_ticket = None
 
 
+
 # ==========================
-# INCIDENT DATA (TEMP)
+# LOAD DATA
 # ==========================
 
-incidents = pd.DataFrame(
-    {
-        "Ticket": [
-            "RCA-001",
-            "RCA-002",
-            "RCA-003",
-        ],
-        "Date": [
-            "2026-07-28 15:42",
-            "2026-07-28 14:10",
-            "2026-07-27 18:25",
-        ],
-        "Affected System": [
-            "productcatalogservice",
-            "checkoutservice",
-            "paymentservice",
-        ],
-        "Status": [
-            "Created",
-            "Processing",
-            "Done",
-        ],
-        "Description": [
-            "Product page is unavailable.",
-            "Checkout is very slow.",
-            "Payment failed for multiple users.",
-        ],
-    }
+incidents = get_user_incidents(
+    st.user.email
 )
+
 
 
 # ==========================================================
@@ -53,6 +46,7 @@ incidents = pd.DataFrame(
 # ==========================================================
 
 if st.session_state.selected_ticket is None:
+
 
     st.title("📋 My Incidents")
 
@@ -62,39 +56,89 @@ if st.session_state.selected_ticket is None:
 
     st.divider()
 
+
+
+    if incidents.empty:
+
+        st.info(
+            "No incidents found."
+        )
+
+        st.stop()
+
+
+
     # ==========================
     # FILTER
     # ==========================
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4 = st.columns(
+        4,
+        gap="small"
+    )
+
+
+    # --------------------------
+    # STATUS
+    # --------------------------
 
     with col1:
+
         status_filter = st.selectbox(
             "Status",
             [
                 "All",
                 "Created",
                 "Processing",
-                "Done",
+                "Completed"
             ]
         )
+
+
+    # --------------------------
+    # AFFECTED SYSTEM
+    # --------------------------
 
     with col2:
-        system_filter = st.selectbox(
-            "Affected System",
-            [
-                "All",
-                "productcatalogservice",
-                "checkoutservice",
-                "paymentservice",
-            ]
+
+        system_options = [
+            "All"
+        ] + sorted(
+            incidents["affected_system"]
+            .dropna()
+            .unique()
+            .tolist()
         )
 
+
+        system_filter = st.selectbox(
+            "Affected System",
+            system_options
+        )
+
+
+    # --------------------------
+    # CREATED FROM
+    # --------------------------
+
     with col3:
-        date_from = st.date_input("From Date")
+
+        date_from = st.date_input(
+            "Created From"
+        )
+
+
+    # --------------------------
+    # CREATED TO
+    # --------------------------
 
     with col4:
-        date_to = st.date_input("To Date")
+
+        date_to = st.date_input(
+            "Created To"
+        )
+
+
 
     # ==========================
     # FILTER LOGIC
@@ -102,128 +146,302 @@ if st.session_state.selected_ticket is None:
 
     filtered = incidents.copy()
 
+
+
     if status_filter != "All":
+
         filtered = filtered[
-            filtered["Status"] == status_filter
+            filtered["status"]
+            == status_filter
         ]
+
+
 
     if system_filter != "All":
+
         filtered = filtered[
-            filtered["Affected System"] == system_filter
+            filtered["affected_system"]
+            == system_filter
         ]
 
-    filtered["Date"] = pd.to_datetime(filtered["Date"])
+
+
+    filtered["created_at"] = pd.to_datetime(
+        filtered["created_at"]
+    )
+
+
 
     filtered = filtered[
-        (filtered["Date"].dt.date >= date_from)
+        (
+            filtered["created_at"]
+            .dt.date >= date_from
+        )
         &
-        (filtered["Date"].dt.date <= date_to)
+        (
+            filtered["created_at"]
+            .dt.date <= date_to
+        )
     ]
-
     # ==========================
-    # DISPLAY
+    # TABLE HEADER
     # ==========================
 
-    st.subheader("Incident List")
+    st.subheader(
+        "Incident List"
+    )
 
-    header = st.columns([2, 2, 3, 2, 1])
 
-    header[0].markdown("**Ticket**")
-    header[1].markdown("**Date**")
-    header[2].markdown("**Affected System**")
-    header[3].markdown("**Status**")
-    header[4].markdown("**Action**")
+    header = st.columns(
+        [2,2,3,2,1]
+    )
+
+
+    header[0].markdown(
+        "**Ticket**"
+    )
+
+    header[1].markdown(
+        "**Created Date**"
+    )
+
+    header[2].markdown(
+        "**Affected System**"
+    )
+
+    header[3].markdown(
+        "**Status**"
+    )
+
+    header[4].markdown(
+        "**Action**"
+    )
+
 
     st.divider()
 
+
+
+    # ==========================
+    # TABLE ROW
+    # ==========================
+
     for _, row in filtered.iterrows():
 
+
         col1, col2, col3, col4, col5 = st.columns(
-            [2, 2, 3, 2, 1]
+            [2,2,3,2,1]
         )
 
-        col1.write(row["Ticket"])
-        col2.write(row["Date"].strftime("%Y-%m-%d %H:%M"))
-        col3.write(row["Affected System"])
-        col4.write(row["Status"])
+
+        col1.write(
+            row["issue_key"]
+        )
+
+
+        col2.write(
+            row["created_at"]
+            .strftime("%Y-%m-%d %H:%M")
+        )
+
+
+        col3.write(
+            row["affected_system"]
+        )
+
+
+        col4.write(
+            row["status"]
+        )
+
+
 
         if col5.button(
             "View",
-            key=row["Ticket"]
+            key=f"view_{row['issue_key']}"
         ):
-            st.session_state.selected_ticket = row["Ticket"]
+
+            st.session_state.selected_ticket = (
+                row["issue_key"]
+            )
+
             st.rerun()
 
 
+
+
+
 # ==========================================================
-# INCIDENT DETAILS
+# INCIDENT DETAIL
 # ==========================================================
 
 else:
 
+
     ticket = st.session_state.selected_ticket
 
-    incident = incidents[
-        incidents["Ticket"] == ticket
-    ].iloc[0]
 
-    if st.button("← Back to My Incidents"):
+    incident_df = get_incident_detail(
+        ticket
+    )
+
+
+    if incident_df.empty:
+
+        st.error(
+            "Incident not found."
+        )
+
         st.session_state.selected_ticket = None
+
+        st.stop()
+
+
+
+    incident = incident_df.iloc[0]
+
+
+
+    if st.button(
+        "← Back to My Incidents"
+    ):
+
+        st.session_state.selected_ticket = None
+
         st.rerun()
 
-    st.title("📄 Incident Details")
+
+
+    st.title(
+        "📄 Incident Details"
+    )
+
 
     st.caption(
         "View detailed information for the selected incident."
     )
 
+
     st.divider()
+
+
 
     col1, col2 = st.columns(2)
 
+
+
     with col1:
-        st.markdown("**Ticket**")
-        st.write(incident["Ticket"])
 
-        st.markdown("**Affected System**")
-        st.write(incident["Affected System"])
+        st.markdown(
+            "**Ticket ID**"
+        )
 
-        st.markdown("**Status**")
-        st.write(incident["Status"])
+        st.write(
+            incident["issue_key"]
+        )
+
+
+        st.markdown(
+            "**Affected System**"
+        )
+
+        st.write(
+            incident["affected_system"]
+        )
+
+
+        st.markdown(
+            "**Status**"
+        )
+
+        st.write(
+            incident["status"]
+        )
+
+
 
     with col2:
-        st.markdown("**Incident Time**")
-        st.write(incident["Date"])
 
-    st.markdown("### Description")
 
-    st.write(
-        incident["Description"]
-    )
+        st.markdown(
+            "**Environment**"
+        )
+
+        st.write(
+            incident["environment"]
+        )
+
+
+        st.markdown(
+            "**Incident Time**"
+        )
+
+        st.write(
+            incident["incident_time"]
+        )
+
+
 
     st.divider()
 
-    st.subheader("Investigation Progress")
 
-    if incident["Status"] == "Created":
-        st.info("🟢 Created")
+    st.markdown(
+        "### Description"
+    )
 
-    elif incident["Status"] == "Processing":
+
+    st.write(
+        incident["incident_description"]
+    )
+
+
+
+    st.divider()
+
+
+    st.subheader(
+        "Investigation Progress"
+    )
+
+
+    status = incident["status"]
+
+
+    if status == "Created":
+
         st.info(
             """
-🟢 Created
+🟢 Incident Created
 
-🟡 Processing
+⏳ Waiting for RCA investigation
 """
         )
 
-    else:
+
+    elif status == "Processing":
+
+        st.info(
+            """
+🟢 Incident Created
+
+🟡 RCA Investigation Running
+"""
+        )
+
+
+    elif status == "Completed":
+
         st.success(
             """
-🟢 Created
+🟢 Incident Created
 
-🟢 Processing
-
-🟢 Done
+🟢 RCA Investigation Completed
 """
+        )
+
+
+    else:
+
+        st.warning(
+            f"Current status: {status}"
         )

@@ -26,6 +26,8 @@ TABLE_SCHEMAS = {
 
             "environment": "TEXT",
 
+            "affected_system": "TEXT",
+
             "dataset": "TEXT",
 
             "incident_time": "TIMESTAMP",
