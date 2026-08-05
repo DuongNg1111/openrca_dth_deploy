@@ -38,11 +38,12 @@ TABLE_SCHEMAS = {
 
             "reporter": "TEXT",
 
-            "reporter_email": "TEXT"
+            "reporter_email": "TEXT",
+
+            "status": "TEXT DEFAULT 'Created'"
             
         }
     },
-
 
     # =====================================================
     # RAW METRIC SNAPSHOT

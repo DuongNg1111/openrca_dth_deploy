@@ -3,6 +3,7 @@ from datetime import datetime
 
 from src.auth.google_auth import require_login
 from src.jira.jira_client import create_issue
+from src.database.repository import create_investigation
 
 
 require_login()
@@ -248,7 +249,17 @@ if submitted:
             reporter_email=st.user.email
         )
 
-
+        investigation_id = create_investigation(
+        issue_key=issue_key,
+        environment=environment,
+        dataset="",
+        incident_time=incident_datetime,
+        window_start=None,
+        window_end=None,
+        incident_description=incident_description,
+        reporter=st.user.name,
+        reporter_email=st.user.email
+    )
         st.success(
             "✅ Incident submitted successfully!"
         )

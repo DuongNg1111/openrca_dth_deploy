@@ -435,3 +435,70 @@ def save_rca_result(
 
     cur.close()
     conn.close()
+
+# =====================================================
+# STREAMLIT - MY INCIDENTS
+# =====================================================
+
+def get_user_incidents(
+    reporter_email
+):
+    """
+    Get all incidents submitted by a user.
+    """
+
+    conn = get_connection()
+
+    query = """
+        SELECT
+            id,
+            issue_key,
+            environment,
+            incident_time,
+            incident_description,
+            status
+        FROM investigations
+        WHERE reporter_email = %s
+        ORDER BY incident_time DESC;
+    """
+
+    df = pd.read_sql(
+        query,
+        conn,
+        params=(reporter_email,)
+    )
+
+    conn.close()
+
+    return df
+
+
+
+# =====================================================
+# STREAMLIT - INCIDENT DETAIL
+# =====================================================
+
+def get_incident_detail(
+    issue_key
+):
+    """
+    Get one incident detail by Jira ticket.
+    """
+
+    conn = get_connection()
+
+    query = """
+        SELECT *
+        FROM investigations
+        WHERE issue_key = %s;
+    """
+
+    df = pd.read_sql(
+        query,
+        conn,
+        params=(issue_key,)
+    )
+
+    conn.close()
+
+    return df
