@@ -15,7 +15,7 @@ class LogAgent(BaseAgent):
 
         # Lấy api_key và model từ config trung tâm
         api_key = llm_cfg.get("api_key")
-        self.model_name = llm_cfg.get("model", "gemini-3.5-flash")
+        self.model_name = llm_cfg.get("model")
 
         # Khởi tạo client Gemini
         if api_key:
@@ -81,7 +81,7 @@ class LogAgent(BaseAgent):
 
         try:
             response = self.client.models.generate_content(
-                model=self.model_name,  # Lấy linh hoạt tên model từ config.py
+                model=self.model_name,  # Lấy hoàn toàn từ config chung đã load ở __init__
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.1,
@@ -91,20 +91,21 @@ class LogAgent(BaseAgent):
             return json.loads(response.text)
 
         except Exception as e:
-            # Fallback nếu gọi AI lỗi nhưng vẫn giữ nguyên form chuẩn cấu trúc nhóm đề ra
+            # Fallback gọn gàng
+            fallback_errors = [
+                {
+                    "service": context.service,
+                    "timestamp": context.incident_time,
+                    "level": "ERROR",
+                    "error_type": "LogAnalysisError",
+                    "message": f"Detected {total_errors} raw error entries. (API Rate Limit / Fallback)",
+                    "count": total_errors
+                }
+            ]
             return {
                 "agent": "Log Agent",
                 "evidence_type": "log",
-                "errors": [
-                    {
-                        "service": context.service,
-                        "timestamp": context.incident_time,
-                        "level": "ERROR",
-                        "error_type": "LogAnalysisError",
-                        "message": f"Detected {error_count} raw error entries, but AI formatting failed: {str(e)}",
-                        "count": error_count
-                    }
-                ],
-                "summary": f"Detected {error_count} error/timeout log entries.",
+                "errors": fallback_errors,
+                "summary": summary_text,
                 "confidence": 0.5
             }

@@ -15,7 +15,7 @@ class TraceAgent(BaseAgent):
 
         # Lấy api_key và model từ cấu hình chung
         api_key = llm_cfg.get("api_key")
-        self.model_name = llm_cfg.get("model", "gemini-3.5-flash")
+        self.model_name = llm_cfg.get("model")
 
         # Khởi tạo client Gemini với api_key (nếu có)
         if api_key:
@@ -97,7 +97,7 @@ class TraceAgent(BaseAgent):
             return json.loads(response.text)
 
         except Exception as e:
-            # Fallback nếu gọi AI lỗi nhưng vẫn giữ nguyên form chuẩn cấu trúc nhóm đề ra
+            # Fallback gọn gàng
             fallback_traces = [
                 {
                     "trace_id": "unknown_trace",
@@ -106,7 +106,7 @@ class TraceAgent(BaseAgent):
                     "latency_ms": float(max_duration),
                     "normal_latency_ms": float(max_duration) * 0.1 if max_duration > 0 else 100.0,
                     "dependency": "unknown-dependency",
-                    "description": f"High latency span detected with duration {max_duration} ms. AI formatting failed: {str(e)}"
+                    "description": f"High latency span detected with duration {max_duration} ms. (API Rate Limit / Fallback)"
                 }
             ]
             return {
