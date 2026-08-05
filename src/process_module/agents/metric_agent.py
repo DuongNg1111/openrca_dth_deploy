@@ -15,7 +15,7 @@ class MetricAgent(BaseAgent):
 
         # Lấy api_key và model từ cấu hình chung
         api_key = llm_cfg.get("api_key")
-        self.model_name = llm_cfg.get("model", "gemini-3.5-flash")
+        self.model_name = llm_cfg.get("model")
 
         # Khởi tạo client Gemini với api_key (nếu có)
         if api_key:
@@ -106,7 +106,7 @@ class MetricAgent(BaseAgent):
             return json.loads(response.text)
 
         except Exception as e:
-            # Fallback nếu gọi AI lỗi nhưng vẫn giữ nguyên form chuẩn cấu trúc nhóm đề ra
+            # Fallback gọn gàng, không nhét chuỗi JSON lỗi dài dòng của Google API vào description
             fallback_anomalies = [
                 {
                     "metric": item.get("metric", "unknown"),
@@ -115,7 +115,7 @@ class MetricAgent(BaseAgent):
                     "baseline": item.get("mean_value", 0.0),
                     "timestamp": context.incident_time,
                     "severity": "warning",
-                    "description": f"Observed peak value {item.get('max_value', 0.0)} with mean {item.get('mean_value', 0.0)}. AI formatting failed: {str(e)}"
+                    "description": f"Observed peak value {item.get('max_value', 0.0)} with mean {item.get('mean_value', 0.0)}. (API Rate Limit / Fallback)"
                 }
                 for item in raw_metric_evidence
             ]
