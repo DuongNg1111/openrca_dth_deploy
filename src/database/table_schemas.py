@@ -26,6 +26,8 @@ TABLE_SCHEMAS = {
 
             "environment": "TEXT",
 
+            "affected_system": "TEXT",
+
             "dataset": "TEXT",
 
             "incident_time": "TIMESTAMP",
@@ -38,11 +40,12 @@ TABLE_SCHEMAS = {
 
             "reporter": "TEXT",
 
-            "reporter_email": "TEXT"
+            "reporter_email": "TEXT",
+
+            "status": "TEXT DEFAULT 'Created'"
             
         }
     },
-
 
     # =====================================================
     # RAW METRIC SNAPSHOT
