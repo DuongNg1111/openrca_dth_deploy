@@ -10,8 +10,19 @@ from src.process_module.agents.base_agent import BaseAgent
 
 class MetricAgent(BaseAgent):
 
-    def __init__(self, config=None):
-        super().__init__("Metric Agent", config=config)
+        # Load cấu hình từ config.py (đã bao gồm đọc .env và file yaml)
+        self.config = load_config()
+        llm_cfg = self.config.get("llm", {})
+
+        # Lấy api_key và model từ cấu hình chung
+        api_key = llm_cfg.get("api_key")
+        self.model_name = llm_cfg.get("model")
+
+        # Khởi tạo client Gemini với api_key (nếu có)
+        if api_key:
+            self.client = genai.Client(api_key=api_key)
+        else:
+            self.client = genai.Client()
 
     def analyze(self, context) -> dict:
         """
@@ -448,37 +459,9 @@ class MetricAgent(BaseAgent):
                 )
             )
 
-            text = response.text.strip()
-
-            print("\n========== METRIC RESPONSE ==========")
-            print(text)
-            print("=====================================")
-
-            # Handle incomplete JSON response
-            while text.count("{") > text.count("}"):
-                text += "}"
-
-            while text.count("[") > text.count("]"):
-                text += "]"
-
-            result = json.loads(text)
-
-            if not isinstance(result, dict):
-                raise ValueError("Metric Agent response must be a JSON object")
-
-            return result
-
-        # =====================================================
-        # 10. FALLBACK
-        # =====================================================
-
-        except Exception:
-
-            fallback_anomalies = []
-
-        for item in raw_metric_evidence:
-
-            fallback_anomalies.append(
+        except Exception as e:
+            # Fallback gọn gàng, không nhét chuỗi JSON lỗi dài dòng của Google API vào description
+            fallback_anomalies = [
                 {
                     "metric": item.get(
                         "metric",
@@ -503,13 +486,7 @@ class MetricAgent(BaseAgent):
                     ),
 
                     "severity": "warning",
-
-                    "description": (
-                        f"Observed peak value "
-                        f"{item.get('peak_value', 0.0)} "
-                        f"with mean "
-                        f"{item.get('baseline_mean', 0.0)}."
-                    )
+                    "description": f"Observed peak value {item.get('max_value', 0.0)} with mean {item.get('mean_value', 0.0)}. (API Rate Limit / Fallback)"
                 }
             )
 
