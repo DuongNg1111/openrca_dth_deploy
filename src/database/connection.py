@@ -32,7 +32,6 @@ def get_connection():
         )
     )
 
-
     return conn
 
 if __name__ == "__main__":
