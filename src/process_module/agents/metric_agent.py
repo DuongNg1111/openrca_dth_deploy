@@ -169,17 +169,16 @@ class MetricAgent(BaseAgent):
             }
 
         # =====================================================
-        # 6. BUILD METRIC STATISTICS
+        # 6. BUILD METRIC EVIDENCE
         # =====================================================
 
         raw_metric_evidence = []
+
         summaries = []
 
+
         grouped = df.groupby(
-            [
-                "cmdb_id",
-                "kpi_name"
-            ],
+            ["cmdb_id", "kpi_name"],
             dropna=False
         )
 
@@ -190,15 +189,21 @@ class MetricAgent(BaseAgent):
                 continue
 
 
-            # -----------------------------------------
-            # Find peak metric value and timestamp
-            # -----------------------------------------
+            # baseline
+            mean_value = float(
+                kpi_df["value"].mean()
+            )
 
-            max_index = kpi_df["value"].idxmax()
 
-            max_row = kpi_df.loc[
-                max_index
-            ]
+            # peak point
+            max_row = (
+                kpi_df
+                .sort_values(
+                    "value",
+                    ascending=False
+                )
+                .iloc[0]
+            )
 
 
             max_value = float(
@@ -206,56 +211,55 @@ class MetricAgent(BaseAgent):
             )
 
 
-            max_timestamp = str(
-                max_row["timestamp"]
-            )
-
-
-            mean_value = float(
-                kpi_df["value"].mean()
-            )
-
-
-            min_value = float(
-                kpi_df["value"].min()
+            deviation_ratio = (
+                max_value / mean_value
+                if mean_value != 0
+                else 0
             )
 
 
             raw_metric_evidence.append(
+
                 {
-                    "cmdb_id": (
-                        str(cmdb_id)
-                        if cmdb_id is not None
-                        else ""
-                    ),
+                    "cmdb_id":
+                        str(cmdb_id),
 
-                    "metric": (
-                        str(kpi_name)
-                        if kpi_name is not None
-                        else "unknown"
-                    ),
+                    "metric":
+                        str(kpi_name),
 
-                    "min_value": min_value,
+                    "peak_value":
+                        max_value,
 
-                    "max_value": max_value,
+                    "baseline_mean":
+                        mean_value,
 
-                    "mean_value": mean_value,
+                    "deviation_ratio":
+                        round(
+                            deviation_ratio,
+                            2
+                        ),
 
-                    "max_timestamp": max_timestamp,
+                    "peak_timestamp":
+                        str(
+                            max_row["timestamp"]
+                        ),
 
-                    "sample_count": int(
-                        len(kpi_df)
-                    )
+                    "sample_count":
+                        int(
+                            len(kpi_df)
+                        )
                 }
+
             )
 
 
             summaries.append(
-                f"KPI '{kpi_name}' "
+
+                f"{kpi_name} "
                 f"(CMDB: {cmdb_id}) "
-                f"max={max_value:.2f}, "
-                f"mean={mean_value:.2f}, "
-                f"peak_time={max_timestamp}"
+                f"peak={max_value:.2f}, "
+                f"baseline={mean_value:.2f}"
+
             )
 
 
@@ -268,28 +272,36 @@ class MetricAgent(BaseAgent):
 
             return {
 
-                "agent": "Metric Agent",
+                "agent":
+                    "Metric Agent",
 
-                "evidence_type": "metric",
+                "evidence_type":
+                    "metric",
 
-                "anomalies": [],
+                "anomalies":
+                    [],
 
                 "summary":
                     "No usable metric statistics were found.",
 
-                "confidence": 1.0
+                "confidence":
+                    1.0
 
             }
 
 
 
         summary_text = (
-            ", ".join(summaries)
+
+            " | ".join(
+                summaries
+            )
+
             if summaries
+
             else "Metrics analyzed."
+
         )
-
-
 
         # =====================================================
         # 8. PREPARE GEMINI PROMPT

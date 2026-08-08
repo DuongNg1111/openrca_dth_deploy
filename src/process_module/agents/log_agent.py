@@ -172,7 +172,11 @@ class LogAgent(BaseAgent):
         error_pattern = (
             r"error|exception|timeout|"
             r"failed|failure|fatal|"
-            r"critical|unavailable"
+            r"critical|unavailable|"
+            r"refused|reset|"
+            r"retry|deadline|"
+            r"slow|latency|"
+            r"throttle"
         )
 
 
@@ -228,11 +232,28 @@ class LogAgent(BaseAgent):
 
             raw_logs.append(
                 {
-                    "service": service,
-                    "message": message,
-                    "count": int(count)
+                "service": service,
+
+                "message": message,
+
+                "count": int(count),
+
+                "first_seen": str(
+                    error_df[
+                    error_df[message_column]==message
+                    ]["timestamp"]
+                    .min()
+                ),
+
+                "last_seen": str(
+                    error_df[
+                    error_df[message_column]==message
+                    ]["timestamp"]
+                    .max()
+                )
+
                 }
-            )
+                )
 
 
 

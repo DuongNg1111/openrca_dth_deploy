@@ -196,7 +196,10 @@ class TraceAgent(BaseAgent):
         )
 
 
-        sample = anomaly_df.head(20)
+        sample = related_df.sort_values(
+            "duration_ms",
+            ascending=False
+        ).head(50)
 
 
 
@@ -207,29 +210,32 @@ class TraceAgent(BaseAgent):
 
             raw_trace.append(
 
-                {
-                    "trace_id":
-                        str(row["trace_id"]),
+                    {
+                        "trace_id":
+                            str(row["trace_id"]),
 
-                    "service":
-                        str(row["cmdb_id"]),
+                        "service":
+                            str(row["cmdb_id"]),
 
-                    "span_id":
-                        str(row["span_id"]),
+                        "span_id":
+                            str(row["span_id"]),
 
-                    "parent_span":
-                        str(row["parent_span"]),
+                        "parent_span":
+                            str(row["parent_span"]),
 
-                    "operation":
-                        str(row["operation_name"]),
+                        "operation":
+                            str(row["operation_name"]),
 
-                    "latency_ms":
-                        float(row["duration_ms"])
+                        "latency_ms":
+                            float(row["duration_ms"]),
 
-                }
-
+                        "is_anomaly":
+                            bool(
+                                row["duration_ms"]
+                                >= p95_latency
+                            )
+                        }
             )
-
 
 
         if not raw_trace:

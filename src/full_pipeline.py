@@ -444,6 +444,8 @@ def run_pipeline(issue_key, run_agents=False):
                     "value"
                 ),
 
+                metadata=metric,
+
                 confidence=metric_result.get(
                     "confidence",
                     0
@@ -519,6 +521,8 @@ def run_pipeline(issue_key, run_agents=False):
                         0
                     )
                 ),
+
+                metadata=log,
 
                 confidence=log_result.get(
                     "confidence",
@@ -596,6 +600,8 @@ def run_pipeline(issue_key, run_agents=False):
                     "latency_ms"
                 ),
 
+                metadata=trace,
+                
                 confidence=trace_result.get(
                     "confidence",
                     0
