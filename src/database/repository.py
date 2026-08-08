@@ -1,6 +1,7 @@
 from src.database.connection import get_connection
 import pandas as pd
 from psycopg2.extras import execute_values
+import json
 
 
 # =====================================================
@@ -529,7 +530,8 @@ def insert_evidence(
     value=None,
     baseline=None,
     timestamp=None,
-    confidence=0.0
+    confidence=0.0,
+    metadata=None
 ):
 
     conn = get_connection()
@@ -549,7 +551,8 @@ def insert_evidence(
             baseline,
             timestamp,
             score,
-            confidence
+            confidence,
+            metadata
         )
 
         VALUES
@@ -570,7 +573,8 @@ def insert_evidence(
             baseline,
             timestamp,
             score,
-            confidence
+            confidence,
+            json.dumps(metadata)
         )
     )
 
