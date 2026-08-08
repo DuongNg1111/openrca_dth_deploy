@@ -1,124 +1,368 @@
 from __future__ import annotations
+
 import json
+
 from google import genai
 from google.genai import types
+
 from src.process_module.agents.base_agent import BaseAgent
-from src.config import load_config  # Import hàm load_config trung tâm
+from src.database.repository import get_investigation_metrics
+
 
 class MetricAgent(BaseAgent):
+
     def __init__(self):
         super().__init__("Metric Agent")
 
-        # Load cấu hình từ config.py (đã bao gồm đọc .env và file yaml)
-        self.config = load_config()
-        llm_cfg = self.config.get("llm", {})
-
-        # Lấy api_key và model từ cấu hình chung
-        api_key = llm_cfg.get("api_key")
-        self.model_name = llm_cfg.get("model")
-
-        # Khởi tạo client Gemini với api_key (nếu có)
-        if api_key:
-            self.client = genai.Client(api_key=api_key)
-        else:
-            self.client = genai.Client()
-
     def analyze(self, context) -> dict:
-        metrics = context.metrics
+        """
+        Analyze metrics stored in PostgreSQL for the current investigation.
+
+        IMPORTANT:
+        This agent no longer reads context.metrics.
+        All metric data must come from investigation_metrics.
+        """
+
+        investigation_id = getattr(
+            context,
+            "investigation_id",
+            None
+        )
+
+        service = getattr(
+            context,
+            "service",
+            "unknown"
+        )
+
+        incident_time = getattr(
+            context,
+            "incident_time",
+            ""
+        )
+
+        # =====================================================
+        # 1. VALIDATE INVESTIGATION ID
+        # =====================================================
+
+        if investigation_id is None:
+            return {
+                "agent": "Metric Agent",
+                "evidence_type": "metric",
+                "anomalies": [],
+                "summary": (
+                    "Metric analysis skipped because "
+                    "investigation_id was not provided."
+                ),
+                "confidence": 0.0
+            }
+
+        # =====================================================
+        # 2. LOAD METRICS FROM DATABASE
+        # =====================================================
+
+        try:
+            df = get_investigation_metrics(
+                investigation_id,
+                service=service
+            )
+
+        except Exception as e:
+            return {
+                "agent": "Metric Agent",
+                "evidence_type": "metric",
+                "anomalies": [],
+                "summary": (
+                    f"Failed to load metrics for "
+                    f"investigation {investigation_id}: {str(e)}"
+                ),
+                "confidence": 0.0
+            }
+
+        # =====================================================
+        # 3. CHECK DATA
+        # =====================================================
+
+        if df is None or df.empty:
+            return {
+                "agent": "Metric Agent",
+                "evidence_type": "metric",
+                "anomalies": [],
+                "summary": (
+                    f"No metric data found for "
+                    f"investigation {investigation_id}."
+                ),
+                "confidence": 1.0
+            }
+
+        # =====================================================
+        # 4. VALIDATE REQUIRED COLUMNS
+        # =====================================================
+
+        required_columns = [
+            "timestamp",
+            "cmdb_id",
+            "kpi_name",
+            "value"
+        ]
+
+        missing_columns = [
+            column
+            for column in required_columns
+            if column not in df.columns
+        ]
+
+        if missing_columns:
+            return {
+                "agent": "Metric Agent",
+                "evidence_type": "metric",
+                "anomalies": [],
+                "summary": (
+                    "Metric table is missing required columns: "
+                    + ", ".join(missing_columns)
+                ),
+                "confidence": 0.0
+            }
+
+        # =====================================================
+        # 5. CLEAN NUMERIC VALUES
+        # =====================================================
+
+        df = df.copy()
+
+        df["value"] = (
+            df["value"]
+            .astype(str)
+            .str.strip()
+        )
+
+        df["value"] = (
+            df["value"]
+            .replace(
+                ["", "nan", "None", "null"],
+                None
+            )
+        )
+
+        df["value"] = (
+            __import__("pandas")
+            .to_numeric(
+                df["value"],
+                errors="coerce"
+            )
+        )
+
+        df = df.dropna(
+            subset=["value"]
+        )
+
+        if df.empty:
+            return {
+                "agent": "Metric Agent",
+                "evidence_type": "metric",
+                "anomalies": [],
+                "summary": (
+                    "No valid numeric metric values "
+                    "were found."
+                ),
+                "confidence": 1.0
+            }
+
+        # =====================================================
+        # 6. BUILD METRIC STATISTICS
+        # =====================================================
+
         raw_metric_evidence = []
         summaries = []
 
-        # 1. Trích xuất dữ liệu metric thô từ DataFrame giống logic cũ của bạn
-        for name, df in (metrics.items() if metrics else []):
-            if df is None or df.empty or "value" not in df.columns:
+        grouped = df.groupby(
+            ["cmdb_id", "kpi_name"],
+            dropna=False
+        )
+
+        for (cmdb_id, kpi_name), kpi_df in grouped:
+
+            if kpi_df.empty:
                 continue
 
-            if "kpi_name" in df.columns:
-                for kpi in df["kpi_name"].unique():
-                    kpi_df = df[df["kpi_name"] == kpi]
-                    if not kpi_df.empty:
-                        kpi_max = float(kpi_df["value"].max())
-                        kpi_mean = float(kpi_df["value"].mean())
-                        raw_metric_evidence.append({
-                            "metric_file": name,
-                            "metric": kpi,
-                            "max_value": kpi_max,
-                            "mean_value": kpi_mean
-                        })
-                        summaries.append(f"KPI '{kpi}' reached max value {kpi_max:.2f}")
-            else:
-                max_val = float(df["value"].max())
-                mean_val = float(df["value"].mean())
-                raw_metric_evidence.append({
-                    "metric_file": name,
-                    "metric": "general_value",
-                    "max_value": max_val,
-                    "mean_value": mean_val
-                })
-                summaries.append(f"Metric max value {max_val:.2f}")
+            max_value = float(
+                kpi_df["value"].max()
+            )
 
-        # 2. Nếu không có metric data, trả về cấu trúc chuẩn rỗng
+            mean_value = float(
+                kpi_df["value"].mean()
+            )
+
+            min_value = float(
+                kpi_df["value"].min()
+            )
+
+            raw_metric_evidence.append(
+                {
+                    "cmdb_id": (
+                        str(cmdb_id)
+                        if cmdb_id is not None
+                        else ""
+                    ),
+                    "metric": (
+                        str(kpi_name)
+                        if kpi_name is not None
+                        else "unknown"
+                    ),
+                    "min_value": min_value,
+                    "max_value": max_value,
+                    "mean_value": mean_value,
+                    "sample_count": int(
+                        len(kpi_df)
+                    )
+                }
+            )
+
+            summaries.append(
+                f"KPI '{kpi_name}' "
+                f"(CMDB: {cmdb_id}) "
+                f"max={max_value:.2f}, "
+                f"mean={mean_value:.2f}"
+            )
+
+        # =====================================================
+        # 7. NO STATISTICS
+        # =====================================================
+
         if not raw_metric_evidence:
             return {
                 "agent": "Metric Agent",
                 "evidence_type": "metric",
                 "anomalies": [],
-                "summary": "No metric anomalies detected within the window.",
+                "summary": (
+                    "No usable metric statistics "
+                    "were found."
+                ),
                 "confidence": 1.0
             }
 
-        summary_text = ", ".join(summaries) if summaries else "Metrics analyzed."
+        summary_text = (
+            ", ".join(summaries)
+            if summaries
+            else "Metrics analyzed."
+        )
 
-        # 3. Sử dụng GenAI để chuẩn hóa thành các anomalies có mức độ ảnh hưởng (severity, baseline, description)
+        # =====================================================
+        # 8. PREPARE GEMINI PROMPT
+        # =====================================================
+
         prompt = f"""
-        You are an SRE Metric and Performance Analysis Expert. Analyze the following metric statistics extracted for service '{context.service}' during the incident window.
-        Extracted Metric Statistics: {json.dumps(raw_metric_evidence)}
+You are an SRE Metric and Performance Analysis Expert.
 
-        You MUST respond ONLY with a valid JSON object matching this exact structure:
+Analyze metric data stored for investigation ID:
+{investigation_id}
+
+Selected service:
+{service}
+
+Incident time:
+{incident_time}
+
+The following statistics were calculated directly
+from the PostgreSQL investigation_metrics table:
+
+{json.dumps(
+    raw_metric_evidence,
+    indent=2,
+    default=str
+)}
+
+Identify meaningful metric anomalies.
+
+IMPORTANT:
+- Do not invent metric values.
+- Use only the supplied statistics.
+- Distinguish normal variation from meaningful anomalies.
+- If there is insufficient evidence for an anomaly,
+  return an empty anomalies list.
+- Use the service name "{service}" in the output.
+- Return ONLY valid JSON.
+
+Required structure:
+
+{{
+    "agent": "Metric Agent",
+    "evidence_type": "metric",
+    "anomalies": [
         {{
-            "agent": "Metric Agent",
-            "evidence_type": "metric",
-            "anomalies": [
-                {{
-                    "metric": "<metric or kpi name, e.g., mrt or cpu_usage>",
-                    "service": "{context.service}",
-                    "value": 0.0,
-                    "baseline": 0.0,
-                    "timestamp": "{context.incident_time}",
-                    "severity": "<critical | warning | normal>",
-                    "description": "<detailed professional explanation of the metric anomaly compared to baseline>"
-                }}
-            ],
-            "summary": "{summary_text}",
-            "confidence": 0.8
+            "metric": "<metric or KPI name>",
+            "service": "{service}",
+            "value": 0.0,
+            "baseline": 0.0,
+            "timestamp": "{incident_time}",
+            "severity": "<critical | warning | normal>",
+            "description": "<professional explanation>"
         }}
-        """
+    ],
+    "summary": "<short summary>",
+    "confidence": 0.0
+}}
+"""
+
+        # =====================================================
+        # 9. CALL GEMINI
+        # =====================================================
 
         try:
+
             response = self.client.models.generate_content(
-                model=self.model_name,  # Sử dụng tên model được cấu hình linh hoạt từ config.py
+                model=self.model_name,
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.1,
                     response_mime_type="application/json"
                 ),
             )
-            return json.loads(response.text)
+
+            result = json.loads(
+                response.text
+            )
+
+            return result
+
+        # =====================================================
+        # 10. FALLBACK
+        # =====================================================
 
         except Exception as e:
-            # Fallback gọn gàng, không nhét chuỗi JSON lỗi dài dòng của Google API vào description
-            fallback_anomalies = [
-                {
-                    "metric": item.get("metric", "unknown"),
-                    "service": context.service,
-                    "value": item.get("max_value", 0.0),
-                    "baseline": item.get("mean_value", 0.0),
-                    "timestamp": context.incident_time,
-                    "severity": "warning",
-                    "description": f"Observed peak value {item.get('max_value', 0.0)} with mean {item.get('mean_value', 0.0)}. (API Rate Limit / Fallback)"
-                }
-                for item in raw_metric_evidence
-            ]
+
+            fallback_anomalies = []
+
+            for item in raw_metric_evidence:
+
+                fallback_anomalies.append(
+                    {
+                        "metric": item.get(
+                            "metric",
+                            "unknown"
+                        ),
+                        "service": service,
+                        "value": item.get(
+                            "max_value",
+                            0.0
+                        ),
+                        "baseline": item.get(
+                            "mean_value",
+                            0.0
+                        ),
+                        "timestamp": incident_time,
+                        "severity": "warning",
+                        "description": (
+                            f"Observed peak value "
+                            f"{item.get('max_value', 0.0)} "
+                            f"with mean "
+                            f"{item.get('mean_value', 0.0)}. "
+                            f"Gemini analysis unavailable; "
+                            f"fallback evidence generated."
+                        )
+                    }
+                )
+
             return {
                 "agent": "Metric Agent",
                 "evidence_type": "metric",

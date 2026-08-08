@@ -15,7 +15,7 @@ READY_TO_CALL_DB = {
 
 
 # =====================================================
-# Step 8.4
+# STEP 8.4
 # Store Ready-To-Call Data
 # =====================================================
 
@@ -27,15 +27,11 @@ def store_ready_call_data(
     """
     Store investigation context into Ready-To-Call Database.
 
-    Parameters
-    ----------
-    parsed_query
+    IMPORTANT:
+    This temporary database does NOT store raw/preprocessed
+    telemetry DataFrames or telemetry file mappings.
 
-    telemetry
-        Output from preprocess()
-
-    contexts
-        Output from build_investigation_context()
+    Agents use investigation_id to query PostgreSQL directly.
     """
 
     # ---------------------------------------
@@ -43,17 +39,11 @@ def store_ready_call_data(
     # ---------------------------------------
 
     case = InvestigationCase(
-
         issue_key=parsed_query.issue_key,
-
         environment=parsed_query.environment,
-
         dataset=telemetry.dataset,
-
         incident_time=parsed_query.incident_time,
-
         window_start=parsed_query.time_window.start,
-
         window_end=parsed_query.time_window.end,
     )
 
@@ -73,11 +63,7 @@ def store_ready_call_data(
 
                 service=service,
 
-                metric_files=list(context.metrics.keys()),
-
-                log_files=list(context.logs.keys()),
-
-                trace_files=list(context.traces.keys()),
+                investigation_id=context.investigation_id,
             )
         )
 

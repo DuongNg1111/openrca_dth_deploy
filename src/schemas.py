@@ -1,14 +1,16 @@
 """Shared data contracts between the three pipeline modules.
 
-These dataclasses are the *interface* between DEV 1 (input), DEV 2 (process) and
-DEV 3 (output). Agree on these shapes first, then each dev works independently.
+These dataclasses are the interface between DEV 1 (input), DEV 2 (process)
+and DEV 3 (output).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 from pathlib import Path
+
 import pandas as pd
 
 
@@ -51,34 +53,41 @@ class Prediction:
 
     def to_openrca_json(self) -> dict[str, dict[str, str]]:
         """Serialize to OpenRCA's expected prediction format."""
+
         out: dict[str, dict[str, str]] = {}
+
         for i, c in enumerate(self.candidates, start=1):
             out[str(i)] = {
-                "root cause occurrence datetime": c.occurrence_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "root cause occurrence datetime":
+                    c.occurrence_time.strftime("%Y-%m-%d %H:%M:%S"),
                 "root cause component": c.component,
                 "root cause reason": c.reason,
             }
+
         return out
+
 
 @dataclass
 class RawQuery:
     issue_key: str
-
     incident_description: str
-    additional_information: str
-    
-    environment: str
-    affected_system: str
-    incident_time: str
+    additional_information: str = ""
 
-    reporter: str
-    status: str
-    created: str
+    environment: str = ""
+    affected_system: str = ""
+    incident_time: datetime | str = ""
+
+    reporter: str = ""
+    reporter_email: str = ""
+    status: str = ""
+    created: str = ""
+
 
 @dataclass
 class ValidationResult:
     is_valid: bool
     errors: list[str] = field(default_factory=list)
+
 
 @dataclass
 class ParsedQuery:
@@ -87,9 +96,10 @@ class ParsedQuery:
     incident_description: str
     affected_system: str
     incident_time: datetime | str
-    additional_information: str
+    additional_information: str = ""
 
     keywords: list[str] = field(default_factory=list)
+
 
 @dataclass
 class TelemetryMetadata:
@@ -111,9 +121,30 @@ class MetadataIndex:
 
 @dataclass
 class PreprocessedTelemetry:
+    dataset: str = ""
+
+    metrics: dict[str, pd.DataFrame] = field(default_factory=dict)
+    logs: dict[str, pd.DataFrame] = field(default_factory=dict)
+    traces: dict[str, pd.DataFrame] = field(default_factory=dict)
+
+
+@dataclass
+class InvestigationContext:
+    investigation_id: int
+    issue_key: str
+    dataset: str
+    service: str
+    incident_time: datetime
+    time_window: TimeWindow
 
     metrics: dict[str, pd.DataFrame]
-
     logs: dict[str, pd.DataFrame]
-
     traces: dict[str, pd.DataFrame]
+
+    cmdb_links: dict[str, dict[str, list[str]]] = field(
+        default_factory=dict
+    )
+
+    trace_links: dict[str, dict] = field(
+        default_factory=dict
+    )

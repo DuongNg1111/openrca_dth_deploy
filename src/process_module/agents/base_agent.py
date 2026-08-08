@@ -1,18 +1,21 @@
+from google import genai
 from src.config import load_config
 
-class BaseAgent: # hoặc tên Agent tương ứng (MetricAgent, LogAgent, TraceAgent, ReasoningAgent)
+
+class BaseAgent:
+
     def __init__(self, agent_name: str):
         self.name = agent_name
 
-        # 1. Load cấu hình tập trung từ config.py
+        # Load cấu hình tập trung
         self.config = load_config()
         llm_cfg = self.config.get("llm", {})
 
-        # 2. Lấy api_key và model_name trực tiếp từ file cấu hình chung
+        # Lấy API key và model từ config
         api_key = llm_cfg.get("api_key")
-        self.model_name = llm_cfg.get("model")  # Bắt buộc lấy từ config, không hardcode ở đây
+        self.model_name = llm_cfg.get("model")
 
-        # 3. Khởi tạo client Gemini
+        # Khởi tạo Gemini client
         if api_key:
             self.client = genai.Client(api_key=api_key)
         else:
