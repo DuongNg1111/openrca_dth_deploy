@@ -412,30 +412,41 @@ def run_pipeline(issue_key, run_agents=False):
 
 
             insert_evidence(
+                investigation_id=context.investigation_id,
+                service=metric.get(
+                    "service",
+                    context.service
+                ),
 
-                investigation_id=
-                    context.investigation_id,
+                evidence_type="metric",
 
-                service=
-                    metric.get(
-                        "service",
-                        context.service
-                    ),
+                metric_name=metric.get(
+                    "metric"
+                ),
 
-                evidence_type=
-                    "metric",
+                description=metric.get(
+                    "description"
+                ),
 
-                description=
-                    metric.get(
-                        "description",
-                        ""
-                    ),
+                value=metric.get(
+                    "value"
+                ),
 
-                score=float(
-                    metric.get(
-                        "value",
-                        0.0
-                    )
+                baseline=metric.get(
+                    "baseline"
+                ),
+
+                timestamp=metric.get(
+                    "timestamp"
+                ),
+
+                score=metric.get(
+                    "value"
+                ),
+
+                confidence=metric_result.get(
+                    "confidence",
+                    0
                 )
             )
 
@@ -477,30 +488,43 @@ def run_pipeline(issue_key, run_agents=False):
 
             insert_evidence(
 
-                investigation_id=
-                    context.investigation_id,
+                investigation_id=context.investigation_id,
 
-                service=
-                    log.get(
-                        "service",
-                        context.service
-                    ),
+                service=log.get(
+                    "service",
+                    context.service
+                ),
 
-                evidence_type=
-                    "log",
+                evidence_type="log",
 
-                description=
-                    log.get(
-                        "message",
-                        ""
-                    ),
+                description=log.get(
+                    "message",
+                    ""
+                ),
 
                 score=float(
                     log.get(
                         "count",
-                        0.0
+                        0
                     )
+                ),
+
+                timestamp=log.get(
+                    "timestamp"
+                ),
+
+                value=float(
+                    log.get(
+                        "count",
+                        0
+                    )
+                ),
+
+                confidence=log_result.get(
+                    "confidence",
+                    0
                 )
+
             )
 
 
@@ -540,30 +564,41 @@ def run_pipeline(issue_key, run_agents=False):
 
 
             insert_evidence(
+                investigation_id=context.investigation_id,
 
-                investigation_id=
-                    context.investigation_id,
+                service=trace.get(
+                    "service"
+                ),
 
-                service=
-                    trace.get(
-                        "service",
-                        context.service
-                    ),
+                evidence_type="trace",
 
-                evidence_type=
-                    "trace",
+                trace_id=trace.get(
+                    "trace_id"
+                ),
 
-                description=
-                    trace.get(
-                        "description",
-                        ""
-                    ),
+                operation=trace.get(
+                    "operation"
+                ),
 
-                score=float(
-                    trace.get(
-                        "latency_ms",
-                        0.0
-                    )
+                description=trace.get(
+                    "description"
+                ),
+
+                value=trace.get(
+                    "latency_ms"
+                ),
+
+                baseline=trace.get(
+                    "baseline_ms"
+                ),
+
+                score=trace.get(
+                    "latency_ms"
+                ),
+
+                confidence=trace_result.get(
+                    "confidence",
+                    0
                 )
             )
 

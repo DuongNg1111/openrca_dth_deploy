@@ -522,7 +522,14 @@ def insert_evidence(
     service,
     evidence_type,
     description,
-    score
+    score,
+    metric_name=None,
+    trace_id=None,
+    operation=None,
+    value=None,
+    baseline=None,
+    timestamp=None,
+    confidence=0.0
 ):
 
     conn = get_connection()
@@ -534,13 +541,20 @@ def insert_evidence(
             investigation_id,
             service,
             evidence_type,
+            metric_name,
+            trace_id,
+            operation,
             description,
-            score
+            value,
+            baseline,
+            timestamp,
+            score,
+            confidence
         )
 
         VALUES
-        (%s,%s,%s,%s,%s)
-    """
+        (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """
 
     cur.execute(
         sql,
@@ -548,8 +562,15 @@ def insert_evidence(
             investigation_id,
             service,
             evidence_type,
+            metric_name,
+            trace_id,
+            operation,
             description,
-            score
+            value,
+            baseline,
+            timestamp,
+            score,
+            confidence
         )
     )
 
