@@ -338,241 +338,241 @@ def run_pipeline(issue_key, run_agents=False):
         return selected_contexts
 
     # =====================================================
-# STEP 9: MULTI-AGENT ANALYSIS
-# =====================================================
-
-print("\n========================================")
-print("STEP 9: MULTI-AGENT ANALYSIS")
-print("========================================")
-
-
-metric_agent = MetricAgent()
-log_agent = LogAgent()
-trace_agent = TraceAgent()
-
-reasoning_agent = ReasoningAgent()
-
-
-# =====================================================
-# DEBUG CONTEXT
-# =====================================================
-
-print("\n==============================")
-print("SELECTED CONTEXTS DEBUG")
-print("==============================")
-
-
-for service, context in selected_contexts.items():
-
-    print("\nSERVICE:", service)
-    print(
-        "INVESTIGATION ID:",
-        context.investigation_id
-    )
-
-
-
-# =====================================================
-# RUN AGENTS
-# =====================================================
-
-for context in selected_contexts.values():
-
-    print("\n----------------------------------------")
-    print("SERVICE:", context.service)
-    print(
-        "INVESTIGATION ID:",
-        context.investigation_id
-    )
-    print("----------------------------------------")
-
-
-    # =================================================
-    # 1. METRIC AGENT
-    # =================================================
-
-    print("\nRunning Metric Agent...")
-
-    metric_result = metric_agent.analyze(
-        context
-    )
-
-    print(
-        "Metric Agent completed."
-    )
-
-
-    # =================================================
-    # SAVE METRIC EVIDENCE
-    # =================================================
-
-    for metric in metric_result.get(
-        "anomalies",
-        []
-    ):
-
-        insert_evidence(
-            investigation_id=context.investigation_id,
-            service=context.service,
-            evidence_type="metric",
-            description=metric.get(
-                "description",
-                ""
-            ),
-            score=float(
-                metric.get(
-                    "value",
-                    0.0
-                )
-            )
-        )
-
-
-    # =================================================
-    # 2. LOG AGENT
-    # =================================================
-
-    print("\nRunning Log Agent...")
-
-    log_result = log_agent.analyze(
-        context
-    )
-
-    print(
-        "Log Agent completed."
-    )
-
-
-    # =================================================
-    # SAVE LOG EVIDENCE
-    # =================================================
-
-    for log in log_result.get(
-        "errors",
-        []
-    ):
-
-        insert_evidence(
-            investigation_id=context.investigation_id,
-            service=context.service,
-            evidence_type="log",
-            description=log.get(
-                "message",
-                ""
-            ),
-            score=float(
-                log.get(
-                    "count",
-                    0.0
-                )
-            )
-        )
-
-
-    # =================================================
-    # 3. TRACE AGENT
-    # =================================================
-
-    print("\nRunning Trace Agent...")
-
-    trace_result = trace_agent.analyze(
-        context
-    )
-
-    print(
-        "Trace Agent completed."
-    )
-
-
-    # =================================================
-    # SAVE TRACE EVIDENCE
-    # =================================================
-
-    for trace in trace_result.get(
-        "traces",
-        []
-    ):
-
-        insert_evidence(
-            investigation_id=context.investigation_id,
-            service=context.service,
-            evidence_type="trace",
-            description=trace.get(
-                "description",
-                ""
-            ),
-            score=float(
-                trace.get(
-                    "latency_ms",
-                    0.0
-                )
-            )
-        )
-
-
-    # =================================================
-    # 4. REASONING AGENT
-    # READ FROM evidence_records
-    # =================================================
-
-    print("\nRunning Reasoning Agent...")
-
-
-    final_output = reasoning_agent.analyze(
-        context
-    )
-
-
-    print(
-        "Reasoning Agent completed."
-    )
-
-
-    # =================================================
-    # SAVE RCA RESULT
-    # =================================================
-
-    save_rca_result(
-        investigation_id=context.investigation_id,
-        root_cause=final_output.get(
-            "reason",
-            "unknown"
-        ),
-        confidence=float(
-            final_output.get(
-                "confidence",
-                0.0
-            )
-        ),
-        explanation=final_output.get(
-            "reasoning",
-            ""
-        )
-    )
-
-
-    # =================================================
-    # DEBUG FINAL OUTPUT
-    # =================================================
+    # STEP 9: MULTI-AGENT ANALYSIS
+    # =====================================================
 
     print("\n========================================")
-    print("FINAL RCA OUTPUT")
+    print("STEP 9: MULTI-AGENT ANALYSIS")
     print("========================================")
 
 
-    print(
-        json.dumps(
-            final_output,
-            indent=4,
-            default=str
+    metric_agent = MetricAgent()
+    log_agent = LogAgent()
+    trace_agent = TraceAgent()
+
+    reasoning_agent = ReasoningAgent()
+
+
+    # =====================================================
+    # DEBUG CONTEXT
+    # =====================================================
+
+    print("\n==============================")
+    print("SELECTED CONTEXTS DEBUG")
+    print("==============================")
+
+
+    for service, context in selected_contexts.items():
+
+        print("\nSERVICE:", service)
+        print(
+            "INVESTIGATION ID:",
+            context.investigation_id
         )
-    )
 
 
-# =====================================================
-# FINISH
-# =====================================================
 
-print("\n========================================")
-print("PIPELINE COMPLETED")
-print("========================================")
+    # =====================================================
+    # RUN AGENTS
+    # =====================================================
+
+    for context in selected_contexts.values():
+
+        print("\n----------------------------------------")
+        print("SERVICE:", context.service)
+        print(
+            "INVESTIGATION ID:",
+            context.investigation_id
+        )
+        print("----------------------------------------")
+
+
+        # =================================================
+        # 1. METRIC AGENT
+        # =================================================
+
+        print("\nRunning Metric Agent...")
+
+        metric_result = metric_agent.analyze(
+            context
+        )
+
+        print(
+            "Metric Agent completed."
+        )
+
+
+        # =================================================
+        # SAVE METRIC EVIDENCE
+        # =================================================
+
+        for metric in metric_result.get(
+            "anomalies",
+            []
+        ):
+
+            insert_evidence(
+                investigation_id=context.investigation_id,
+                service=context.service,
+                evidence_type="metric",
+                description=metric.get(
+                    "description",
+                    ""
+                ),
+                score=float(
+                    metric.get(
+                        "value",
+                        0.0
+                    )
+                )
+            )
+
+
+        # =================================================
+        # 2. LOG AGENT
+        # =================================================
+
+        print("\nRunning Log Agent...")
+
+        log_result = log_agent.analyze(
+            context
+        )
+
+        print(
+            "Log Agent completed."
+        )
+
+
+        # =================================================
+        # SAVE LOG EVIDENCE
+        # =================================================
+
+        for log in log_result.get(
+            "errors",
+            []
+        ):
+
+            insert_evidence(
+                investigation_id=context.investigation_id,
+                service=context.service,
+                evidence_type="log",
+                description=log.get(
+                    "message",
+                    ""
+                ),
+                score=float(
+                    log.get(
+                        "count",
+                        0.0
+                    )
+                )
+            )
+
+
+        # =================================================
+        # 3. TRACE AGENT
+        # =================================================
+
+        print("\nRunning Trace Agent...")
+
+        trace_result = trace_agent.analyze(
+            context
+        )
+
+        print(
+            "Trace Agent completed."
+        )
+
+
+        # =================================================
+        # SAVE TRACE EVIDENCE
+        # =================================================
+
+        for trace in trace_result.get(
+            "traces",
+            []
+        ):
+
+            insert_evidence(
+                investigation_id=context.investigation_id,
+                service=context.service,
+                evidence_type="trace",
+                description=trace.get(
+                    "description",
+                    ""
+                ),
+                score=float(
+                    trace.get(
+                        "latency_ms",
+                        0.0
+                    )
+                )
+            )
+
+
+        # =================================================
+        # 4. REASONING AGENT
+        # READ FROM evidence_records
+        # =================================================
+
+        print("\nRunning Reasoning Agent...")
+
+
+        final_output = reasoning_agent.analyze(
+            context
+        )
+
+
+        print(
+            "Reasoning Agent completed."
+        )
+
+
+        # =================================================
+        # SAVE RCA RESULT
+        # =================================================
+
+        save_rca_result(
+            investigation_id=context.investigation_id,
+            root_cause=final_output.get(
+                "reason",
+                "unknown"
+            ),
+            confidence=float(
+                final_output.get(
+                    "confidence",
+                    0.0
+                )
+            ),
+            explanation=final_output.get(
+                "reasoning",
+                ""
+            )
+        )
+
+
+        # =================================================
+        # DEBUG FINAL OUTPUT
+        # =================================================
+
+        print("\n========================================")
+        print("FINAL RCA OUTPUT")
+        print("========================================")
+
+
+        print(
+            json.dumps(
+                final_output,
+                indent=4,
+                default=str
+            )
+        )
+
+
+    # =====================================================
+    # FINISH
+    # =====================================================
+
+    print("\n========================================")
+    print("PIPELINE COMPLETED")
+    print("========================================")
