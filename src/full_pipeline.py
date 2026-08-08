@@ -581,13 +581,13 @@ def run_pipeline(issue_key, run_agents=False):
     # MAIN ENTRY
     # =====================================================
 
-    if __name__ == "__main__":
+if __name__ == "__main__":
 
-        issue_key = input(
-            "Enter Jira Issue Key: "
-        )
+    issue_key = input(
+        "Enter Jira Issue Key: "
+    )
 
-        run_pipeline(
-            issue_key,
-            run_agents=True
-        )
+    run_pipeline(
+        issue_key,
+        run_agents=True
+    )
