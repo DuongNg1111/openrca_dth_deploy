@@ -60,7 +60,8 @@ class TraceAgent(BaseAgent):
         try:
 
             traces_df = get_investigation_traces(
-                investigation_id
+                investigation_id,
+                service=service
             )
 
         except Exception as e:
