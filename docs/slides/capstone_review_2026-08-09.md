@@ -56,7 +56,8 @@ metrics, and 7,594,730 traces. Do not assume those rows are the same exact
 evaluation snapshot; document provenance and joins before using them.
 
 CSV-aware parsing confirms 70 logical query rows, 70 records, 29 component
-labels, and 15 failure reasons. The dataset card preserves query/record checksums
+labels, and 15 failure reasons. The dataset card and 20-file manifest preserve
+query/record checksums
 and the class distribution. Physical CSV counts are 15.46M metric, 25.77M log,
 and 18.16M trace data lines; logical parsing/cleaning counts remain required.
 
@@ -317,7 +318,7 @@ method, or result evidence.
 
 # Completeness gate
 
-- [x] Market dataset card with counts, dates, label distribution, and checksums.
+- [x] Market dataset card plus 20-file byte/SHA-256 manifest.
 - [ ] Real-data preparation report and executed EDA figures.
 - [ ] One chosen submitted method, baseline, split, and metric definition.
 - [x] Metric-only loader/time-window contract tested on one real case.
@@ -363,7 +364,7 @@ Record in the final deck:
 Repository: github.com/ThienHuynhNgoc/OpenRCA_DTH
 Branch:     codex/dth-capstone-review-2026-08-09
 Code commit: 3f99de3
-Dataset:    Market/cloudbed-1 <checksum + manifest path>
+Dataset:    docs/review/market_cloudbed1_file_manifest_2026-08-09.tsv
 Command:    <exact baseline and full-method commands>
 Results:    docs/review/full_pipeline_local_integration_2026-08-09.md
 ```

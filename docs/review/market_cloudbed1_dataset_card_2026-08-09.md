@@ -14,6 +14,7 @@ Raw data is not committed to Git.
 | Logical bytes | 11,936,971,181 (about 12 GB) |
 | `query.csv` SHA-256 | `3512ba2d72648f251e7e01733f079c492a4ff573de557a0223ea538bd9c06742` |
 | `record.csv` SHA-256 | `6246b65915ecaa948037875a149a3d50afdc730371c8b4e3785799995d589324` |
+| Per-file manifest | `market_cloudbed1_file_manifest_2026-08-09.tsv` (20 files; SHA-256 `2e4758131deba52e2ad2a2ae26b72055931f23ec23023d3ef0f321948891eb00`) |
 | Raw-data policy | Keep immutable and ignored; do not commit or send through Slack |
 
 Primary project: <https://github.com/microsoft/OpenRCA>
