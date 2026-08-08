@@ -1,5 +1,10 @@
-from src.jira.receive_query import receive_query
+if __name__ != "__main__":
+    import pytest
+
+    pytest.skip("manual Jira integration script", allow_module_level=True)
+
 from src.input_module.validate_query import validate_query
+from src.jira.receive_query import receive_query
 from src.schemas import RawQuery
 
 # ----------------------------

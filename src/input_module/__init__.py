@@ -12,7 +12,15 @@ def build_input_context(query: str, config: dict) -> InputContext:
     if config.get("use_mock", True):
         telemetry = telemetry_loader.load_mock(window)
     else:
-        telemetry = telemetry_loader.load(config["system"], window, config["data_root"])
+        telemetry = telemetry_loader.load(
+            config["system"],
+            window,
+            config["data_root"],
+            dataset=config.get("dataset", "cloudbed-1"),
+            metric_files=config.get("metric_files"),
+            include_auxiliary=config.get("include_auxiliary_telemetry", False),
+            timestamp_offset_hours=config.get("timestamp_offset_hours", 0),
+        )
     return InputContext(
         raw_query=query,
         system=config.get("system", "Market"),

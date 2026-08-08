@@ -10,14 +10,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install ruff pytest pyyaml
-      - name: Lint
+          pip install -r requirements.txt
+      - name: Lint every changed Python file
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            DIFF_BASE="$BASE_SHA"
+          elif git rev-parse HEAD^ >/dev/null 2>&1; then
+            DIFF_BASE="$(git rev-parse HEAD^)"
+          else
+            DIFF_BASE=""
+          fi
+
+          if [[ -n "$DIFF_BASE" ]]; then
+            mapfile -t changed_python < <(
+              git diff --name-only --diff-filter=ACMR "$DIFF_BASE" "$GITHUB_SHA" -- '*.py'
+            )
+          else
+            mapfile -t changed_python < <(git ls-files '*.py')
+          fi
+
+          if (( ${#changed_python[@]} )); then
+            printf '%s\0' "${changed_python[@]}" | xargs -0 ruff check
+          else
+            echo "No changed Python files to lint."
+          fi
+      - name: Report legacy lint backlog
         run: ruff check . || true
       - name: Smoke test
         run: python -m pytest -q

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 
-from google import genai
 from google.genai import types
 
 from src.process_module.agents.base_agent import BaseAgent
@@ -10,8 +9,8 @@ from src.process_module.agents.base_agent import BaseAgent
 
 class ReasoningAgent(BaseAgent):
 
-    def __init__(self):
-        super().__init__("Reasoning Agent")
+    def __init__(self, config=None):
+        super().__init__("Reasoning Agent", config=config)
 
     # =====================================================
     # MAIN ANALYSIS

@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -18,6 +18,10 @@ import pandas as pd
 class TimeWindow:
     start: datetime
     end: datetime
+
+    def __post_init__(self) -> None:
+        if self.end <= self.start:
+            raise ValueError("TimeWindow end must be after start")
 
     def contains(self, ts: datetime) -> bool:
         return self.start <= ts <= self.end

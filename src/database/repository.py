@@ -1,8 +1,9 @@
-from src.database.connection import get_connection
-import pandas as pd
-from psycopg2.extras import execute_values
 import json
 
+import pandas as pd
+from psycopg2.extras import execute_values
+
+from src.database.connection import get_connection
 
 # =====================================================
 # Helper: Normalize Timestamp For PostgreSQL TIMESTAMP
@@ -184,7 +185,8 @@ def insert_logs(
         "log",
         "message",
         "body",
-        "text"
+        "text",
+        "value",
     ]:
 
         if candidate in df.columns:

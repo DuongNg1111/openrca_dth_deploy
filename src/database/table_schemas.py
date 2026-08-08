@@ -42,8 +42,10 @@ TABLE_SCHEMAS = {
 
             "reporter_email": "TEXT",
 
-            "status": "TEXT DEFAULT 'Created'"
-            
+            "status": "TEXT DEFAULT 'Created'",
+
+            "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+
         }
     },
 
@@ -121,7 +123,7 @@ TABLE_SCHEMAS = {
 
             "type": "TEXT",
 
-            "status_code": "INTEGER",
+            "status_code": "TEXT",
 
             "operation_name": "TEXT",
 
@@ -219,7 +221,25 @@ TABLE_SCHEMAS = {
 
             "description": "TEXT",
 
-            "score": "DOUBLE PRECISION"
+            "score": "DOUBLE PRECISION",
+
+            "metric_name": "TEXT",
+
+            "trace_id": "TEXT",
+
+            "operation": "TEXT",
+
+            "value": "DOUBLE PRECISION",
+
+            "baseline": "DOUBLE PRECISION",
+
+            "timestamp": "TIMESTAMP",
+
+            "confidence": "DOUBLE PRECISION DEFAULT 0.0",
+
+            "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+
+            "metadata": "JSONB"
 
         }
     },

@@ -1,92 +1,36 @@
+import os
 from types import SimpleNamespace
 
-import pandas as pd
+import pytest
 
 from src.process_module.orchestrator import ProcessOrchestrator
 
+if (
+    os.getenv("OPENRCA_RUN_INTEGRATION_TESTS") != "1"
+    or os.getenv("OPENRCA_RUN_MUTATING_TESTS") != "1"
+    or not os.getenv("OPENRCA_TEST_INVESTIGATION_ID")
+):
+    pytest.skip(
+        "requires explicit PostgreSQL/Gemini and mutating-test opt-ins",
+        allow_module_level=True,
+    )
+
 
 def test_step19_process():
+    investigation_id = int(os.environ["OPENRCA_TEST_INVESTIGATION_ID"])
+    context = SimpleNamespace(
+        investigation_id=investigation_id,
+        service=os.getenv("OPENRCA_TEST_SERVICE", "payment-service"),
+        incident_time="2021-03-25 10:00:00",
+        incident_description="Payment service failure",
+    )
 
-    context = SimpleNamespace()
+    result = ProcessOrchestrator().run(
+        context,
+        investigation_id=investigation_id,
+    )
 
-    context.service = "payment-service"
-
-    context.incident_time = "2021-03-25 10:00:00"
-
-    metric_df = pd.DataFrame({
-
-        "kpi_name":[
-            "cpu_usage",
-            "cpu_usage",
-            "cpu_usage"
-        ],
-
-        "value":[
-            40,
-            60,
-            95
-        ]
-
-    })
-
-    log_df = pd.DataFrame({
-
-        "message":[
-            "Database timeout",
-            "Connection error",
-            "Normal request"
-        ]
-
-    })
-
-    trace_df = pd.DataFrame({
-
-        "trace_id":[
-            "abc"
-        ],
-
-        "duration":[
-            2500
-        ],
-
-        "service":[
-            "payment-service"
-        ]
-
-    })
-
-    context.metrics = {
-
-        "metric.csv":metric_df
-
-    }
-
-    context.logs = {
-
-        "log.csv":log_df
-
-    }
-
-    context.traces = {
-
-        "trace.csv":trace_df
-
-    }
-
-    orchestrator = ProcessOrchestrator()
-
-    result = orchestrator.run(context)
-
-    assert "reason" in result
-
+    assert result["agent"] == "Reasoning Agent"
+    assert "root_cause" in result
     assert "confidence" in result
-
-    assert "reasoning" in result
-
-    assert "component" in result
-
-    assert "metrics" in result
-
-    assert "logs" in result
-
-    assert "traces" in result
+    assert "explanation" in result

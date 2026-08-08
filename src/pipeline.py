@@ -21,7 +21,10 @@ def run(query: str, config: dict) -> Prediction:
 
 def main() -> None:
     cfg = load_config()
-    pred = run(cfg["example_query"], cfg)
+    # This command is the documented no-dataset quickstart. The separate
+    # ``src.full_pipeline`` entry point continues to use the real-data config.
+    mock_config = {**cfg, "use_mock": True}
+    pred = run(mock_config["example_query"], mock_config)
     print(json.dumps(pred.to_openrca_json(), indent=2, ensure_ascii=False))
 
 

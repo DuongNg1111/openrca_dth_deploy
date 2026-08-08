@@ -1,7 +1,12 @@
+if __name__ != "__main__":
+    import pytest
+
+    pytest.skip("manual PostgreSQL/Gemini integration script", allow_module_level=True)
+
 import json
 
-from src.process_module.agents.metric_agent import MetricAgent
 from src.process_module.agents.log_agent import LogAgent
+from src.process_module.agents.metric_agent import MetricAgent
 from src.process_module.agents.trace_agent import TraceAgent
 
 
