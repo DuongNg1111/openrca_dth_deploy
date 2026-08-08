@@ -23,7 +23,7 @@ from src.process_module.service_selector import (
 from src.process_module.agents.metric_agent import MetricAgent
 from src.process_module.agents.log_agent import LogAgent
 from src.process_module.agents.trace_agent import TraceAgent
-from src.process_module.agents.reasoning_agent import ReasoningAgent
+# from src.process_module.agents.reasoning_agent import ReasoningAgent
 from src.database.repository import (
     create_investigation,
     insert_metrics,
@@ -350,8 +350,6 @@ def run_pipeline(issue_key, run_agents=False):
     log_agent = LogAgent()
     trace_agent = TraceAgent()
 
-    reasoning_agent = ReasoningAgent()
-
 
     # =====================================================
     # DEBUG CONTEXT
@@ -369,7 +367,6 @@ def run_pipeline(issue_key, run_agents=False):
             "INVESTIGATION ID:",
             context.investigation_id
         )
-
 
 
     # =====================================================
@@ -510,76 +507,25 @@ def run_pipeline(issue_key, run_agents=False):
             )
 
 
-        # =================================================
-        # 4. REASONING AGENT
-        # READ FROM evidence_records
-        # =================================================
-
-        print("\nRunning Reasoning Agent...")
-
-
-        final_output = reasoning_agent.analyze(
-            context
-        )
-
-
         print(
-            "Reasoning Agent completed."
-        )
-
-
-        # =================================================
-        # SAVE RCA RESULT
-        # =================================================
-
-        save_rca_result(
-            investigation_id=context.investigation_id,
-            root_cause=final_output.get(
-                "reason",
-                "unknown"
-            ),
-            confidence=float(
-                final_output.get(
-                    "confidence",
-                    0.0
-                )
-            ),
-            explanation=final_output.get(
-                "reasoning",
-                ""
-            )
-        )
-
-
-        # =================================================
-        # DEBUG FINAL OUTPUT
-        # =================================================
-
-        print("\n========================================")
-        print("FINAL RCA OUTPUT")
-        print("========================================")
-
-
-        print(
-            json.dumps(
-                final_output,
-                indent=4,
-                default=str
-            )
+            "\nEvidence saved for service:",
+            context.service
         )
 
 
     # =====================================================
-    # FINISH
+    # FINISH STEP 9
     # =====================================================
 
     print("\n========================================")
-    print("PIPELINE COMPLETED")
+    print("MULTI-AGENT EVIDENCE COLLECTION COMPLETED")
     print("========================================")
+
 
     # =====================================================
     # MAIN ENTRY
     # =====================================================
+
 
 if __name__ == "__main__":
 
