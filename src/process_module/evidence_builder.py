@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict
+
 import pandas as pd
+
 from src.schemas import TimeWindow
 
 
@@ -12,15 +14,17 @@ from src.schemas import TimeWindow
 @dataclass
 class InvestigationContext:
     """
-    Investigation context for ONE service.
+    Investigation context for ONE logical service.
 
-    This object will be passed directly
-    to Metric / Log / Trace Agents.
+    This object is passed directly to
+    Metric / Log / Trace Agents.
     """
+
     dataset: str
     service: str
     incident_time: datetime
     time_window: TimeWindow
+
     metrics: Dict[str, pd.DataFrame]
     logs: Dict[str, pd.DataFrame]
     traces: Dict[str, pd.DataFrame]
@@ -30,22 +34,36 @@ class InvestigationContext:
 # STEP 8.3
 # ======================================================
 
-
 def build_investigation_context(
     telemetry,
     service_links,
     parsed_query,
 ):
     """
-    Build investigation context for every service.
+    Build investigation context for every logical service.
 
     Parameters
     ----------
     telemetry
-        Output from Step 7 (preprocess).
+        Output from telemetry preprocessing.
+
+        Expected structure:
+            telemetry.metrics
+            telemetry.logs
+            telemetry.traces
 
     service_links
-        Output from Step 8.2.
+        Output from build_service_links().
+
+        Structure:
+            {
+                "checkoutservice": {
+                    "metrics": ["metric_service"],
+                    "logs": ["log_service"],
+                    "traces": ["trace_service"],
+                },
+                ...
+            }
 
     parsed_query
         Parsed incident information.
@@ -53,65 +71,141 @@ def build_investigation_context(
     Returns
     -------
     dict
-
-    {
-        "shippingservice":
-            InvestigationContext(...),
-
-        "paymentservice":
-            InvestigationContext(...),
-    }
+        {
+            "checkoutservice": InvestigationContext(...),
+            "shippingservice": InvestigationContext(...),
+            ...
+        }
     """
-    print("==============================")
-    print("TELEMETRY METRIC KEYS")
-    print(telemetry.metrics.keys())
 
     contexts = {}
 
-    for service, links in service_links.items():
+    # ==================================================
+    # Debug
+    # ==================================================
 
-        print("==============================")
+    print("\n==============================")
+    print("BUILD INVESTIGATION CONTEXT")
+    print("==============================")
+
+    print(
+        "Telemetry metric keys:",
+        list(telemetry.metrics.keys()),
+    )
+
+    print(
+        "Telemetry log keys:",
+        list(telemetry.logs.keys()),
+    )
+
+    print(
+        "Telemetry trace keys:",
+        list(telemetry.traces.keys()),
+    )
+
+    print(
+        "Logical services:",
+        len(service_links),
+    )
+
+    # ==================================================
+    # Build context for each logical service
+    # ==================================================
+
+    for service, links in sorted(service_links.items()):
+
+        print("\n------------------------------")
         print("SERVICE:", service)
-        print("LINK METRICS:", links["metrics"])
+
+        # ----------------------------------------------
+        # Metrics
+        # ----------------------------------------------
 
         metric_dict = {}
 
+        for metric_file in links.get("metrics", []):
+
+            if metric_file not in telemetry.metrics:
+                print(
+                    f"WARNING: Metric dataset not found: "
+                    f"{metric_file}"
+                )
+                continue
+
+            df = telemetry.metrics[metric_file]
+
+            if df is None:
+                print(
+                    f"WARNING: Metric dataset is None: "
+                    f"{metric_file}"
+                )
+                continue
+
+            metric_dict[metric_file] = df
+
+        # ----------------------------------------------
+        # Logs
+        # ----------------------------------------------
+
         log_dict = {}
+
+        for log_file in links.get("logs", []):
+
+            if log_file not in telemetry.logs:
+                print(
+                    f"WARNING: Log dataset not found: "
+                    f"{log_file}"
+                )
+                continue
+
+            df = telemetry.logs[log_file]
+
+            if df is None:
+                print(
+                    f"WARNING: Log dataset is None: "
+                    f"{log_file}"
+                )
+                continue
+
+            log_dict[log_file] = df
+
+        # ----------------------------------------------
+        # Traces
+        # ----------------------------------------------
 
         trace_dict = {}
 
-        # ---------------------------------------
-        # Metrics
-        # ---------------------------------------
+        for trace_file in links.get("traces", []):
 
-        for metric_file in links["metrics"]:
-            if metric_file in telemetry.metrics:
-                metric_dict[metric_file] = (
-                    telemetry.metrics[metric_file]
+            if trace_file not in telemetry.traces:
+                print(
+                    f"WARNING: Trace dataset not found: "
+                    f"{trace_file}"
                 )
+                continue
 
-        # ---------------------------------------
-        # Logs
-        # ---------------------------------------
+            df = telemetry.traces[trace_file]
 
-        for log_file in links["logs"]:
-            if log_file in telemetry.logs:
-                log_dict[log_file] = (
-                    telemetry.logs[log_file]
+            if df is None:
+                print(
+                    f"WARNING: Trace dataset is None: "
+                    f"{trace_file}"
                 )
+                continue
 
-        # ---------------------------------------
-        # Traces
-        # ---------------------------------------
+            trace_dict[trace_file] = df
 
-        for trace_file in links["traces"]:
-            if trace_file in telemetry.traces:
-                trace_dict[trace_file] = (
-                    telemetry.traces[trace_file]
-                )
+        # ----------------------------------------------
+        # Debug
+        # ----------------------------------------------
 
-        print(service)
-        print(metric_dict.keys())
+        print("Metrics:", list(metric_dict.keys()))
+        print("Logs:", list(log_dict.keys()))
+        print("Traces:", list(trace_dict.keys()))
+
+        # ----------------------------------------------
+        # Create InvestigationContext
+        # ----------------------------------------------
 
         contexts[service] = InvestigationContext(
             dataset=telemetry.dataset,
@@ -122,5 +216,37 @@ def build_investigation_context(
             logs=log_dict,
             traces=trace_dict,
         )
+
+    # ==================================================
+    # Summary
+    # ==================================================
+
+    print("\n==============================")
+    print("INVESTIGATION CONTEXT RESULT")
+    print("==============================")
+
+    for service, context in sorted(contexts.items()):
+
+        print("\nSERVICE:", service)
+
+        print(
+            "Metrics:",
+            list(context.metrics.keys()),
+        )
+
+        print(
+            "Logs:",
+            list(context.logs.keys()),
+        )
+
+        print(
+            "Traces:",
+            list(context.traces.keys()),
+        )
+
+    print(
+        "\nTotal contexts:",
+        len(contexts),
+    )
 
     return contexts
