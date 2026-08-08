@@ -398,6 +398,18 @@ def run_pipeline(issue_key, run_agents=False):
             "Metric Agent completed."
         )
 
+        metric_result = metric_agent.analyze(
+            context
+        )
+
+        print("\nMETRIC RESULT")
+        print(
+            json.dumps(
+                metric_result,
+                indent=2,
+                default=str
+            )
+        )
 
         # =================================================
         # SAVE METRIC EVIDENCE
@@ -439,6 +451,18 @@ def run_pipeline(issue_key, run_agents=False):
             "Log Agent completed."
         )
 
+        log_result = log_agent.analyze(
+            context
+        )
+
+        print("\nLOG RESULT")
+        print(
+            json.dumps(
+                log_result,
+                indent=2,
+                default=str
+            )
+        )
 
         # =================================================
         # SAVE LOG EVIDENCE
@@ -480,6 +504,18 @@ def run_pipeline(issue_key, run_agents=False):
             "Trace Agent completed."
         )
 
+        metric_result = metric_agent.analyze(
+            context
+        )
+
+        print("\nTRACE RESULT")
+        print(
+            json.dumps(
+                trace_result,
+                indent=2,
+                default=str
+            )
+        )
 
         # =================================================
         # SAVE TRACE EVIDENCE
