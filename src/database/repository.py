@@ -1,5 +1,6 @@
 from src.database.connection import get_connection
 import pandas as pd
+from psycopg2.extras import execute_values
 
 
 # =====================================================
@@ -33,6 +34,7 @@ def ensure_datetime(df):
 
     return df
 
+
 # =====================================================
 # INVESTIGATION
 # =====================================================
@@ -52,7 +54,6 @@ def create_investigation(
 
     conn = get_connection()
     cur = conn.cursor()
-
 
     sql = """
         INSERT INTO investigations
@@ -75,7 +76,6 @@ def create_investigation(
         RETURNING id;
     """
 
-
     cur.execute(
         sql,
         (
@@ -92,17 +92,16 @@ def create_investigation(
         )
     )
 
-
     investigation_id = cur.fetchone()[0]
-
 
     conn.commit()
 
     cur.close()
     conn.close()
 
-
     return investigation_id
+
+
 # =====================================================
 # RAW METRICS
 # =====================================================
@@ -115,29 +114,24 @@ def insert_metrics(
     conn = get_connection()
     cur = conn.cursor()
 
-
     df = ensure_datetime(
         dataframe
     )
 
-
     sql = """
-    INSERT INTO investigation_metrics
-    (
-        investigation_id,
-        timestamp,
-        cmdb_id,
-        kpi_name,
-        value
-    )
+        INSERT INTO investigation_metrics
+        (
+            investigation_id,
+            timestamp,
+            cmdb_id,
+            kpi_name,
+            value
+        )
 
-    VALUES
-    (%s,%s,%s,%s,%s)
+        VALUES %s
     """
 
-
     records = []
-
 
     for _, row in df.iterrows():
 
@@ -151,18 +145,19 @@ def insert_metrics(
             )
         )
 
+    if records:
 
-        cur.executemany(
+        execute_values(
+            cur,
             sql,
-            records
+            records,
+            page_size=5000
         )
-
 
     conn.commit()
 
     cur.close()
     conn.close()
-
 
 
 # =====================================================
@@ -177,11 +172,9 @@ def insert_logs(
     conn = get_connection()
     cur = conn.cursor()
 
-
     df = ensure_datetime(
         dataframe
     )
-
 
     content_col = "content"
 
@@ -198,59 +191,59 @@ def insert_logs(
             content_col = candidate
             break
 
-
-
     sql = """
-    INSERT INTO investigation_logs
-    (
-        investigation_id,
-        log_id,
-        timestamp,
-        cmdb_id,
-        log_name,
-        value
-    )
+        INSERT INTO investigation_logs
+        (
+            investigation_id,
+            log_id,
+            timestamp,
+            cmdb_id,
+            log_name,
+            value
+        )
 
-    VALUES
-    (%s,%s,%s,%s,%s,%s)
+        VALUES %s
     """
-
 
     records = []
 
-
     for _, row in df.iterrows():
-        log_content = ""
-        if content_col in df.columns and pd.notna(row[content_col]):
-            log_content = str(row[content_col])
 
-        try:
-            ts_val = int(pd.to_datetime(row["timestamp"]).timestamp()) if pd.notna(row["timestamp"]) else 0
-        except Exception:
-            ts_val = 0
+        log_content = ""
+
+        if (
+            content_col in df.columns
+            and pd.notna(row[content_col])
+        ):
+
+            log_content = str(
+                row[content_col]
+            )
 
         records.append(
             (
                 investigation_id,
                 row.get("log_id", ""),
-                ts_val,  # <--- Thay row["timestamp"] thành ts_val
+                row["timestamp"],
                 row.get("cmdb_id", ""),
                 row.get("log_name", ""),
                 log_content
             )
         )
 
-    cur.executemany(
-        sql,
-        records
-    )
+    if records:
 
+        execute_values(
+            cur,
+            sql,
+            records,
+            page_size=5000
+        )
 
     conn.commit()
 
     cur.close()
     conn.close()
-
 
 
 # =====================================================
@@ -265,51 +258,53 @@ def insert_traces(
     conn = get_connection()
     cur = conn.cursor()
 
-
     df = ensure_datetime(
         dataframe
     )
 
-
     sql = """
-    INSERT INTO investigation_traces
-    (
-        investigation_id,
-        timestamp,
-        cmdb_id,
-        span_id,
-        trace_id,
-        duration,
-        type,
-        status_code,
-        operation_name,
-        parent_span
-    )
+        INSERT INTO investigation_traces
+        (
+            investigation_id,
+            timestamp,
+            cmdb_id,
+            span_id,
+            trace_id,
+            duration,
+            type,
+            status_code,
+            operation_name,
+            parent_span
+        )
 
-    VALUES
-    (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        VALUES %s
     """
-
 
     records = []
 
-
     for _, row in df.iterrows():
+
         raw_status = row["status_code"]
-        try:
-            status_code_val = int(float(raw_status)) if pd.notna(raw_status) else 0
-        except (ValueError, TypeError):
-            status_code_val = 0
 
         try:
-            ts_val = int(pd.to_datetime(row["timestamp"]).timestamp()) if pd.notna(row["timestamp"]) else 0
-        except Exception:
-            ts_val = 0
+
+            status_code_val = (
+                int(float(raw_status))
+                if pd.notna(raw_status)
+                else 0
+            )
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
+            status_code_val = 0
 
         records.append(
             (
                 investigation_id,
-                ts_val,  # <--- Thay row["timestamp"] thành ts_val
+                row["timestamp"],
                 row["cmdb_id"],
                 row["span_id"],
                 row["trace_id"],
@@ -321,18 +316,19 @@ def insert_traces(
             )
         )
 
+    if records:
 
-    cur.executemany(
-        sql,
-        records
-    )
-
+        execute_values(
+            cur,
+            sql,
+            records,
+            page_size=5000
+        )
 
     conn.commit()
 
     cur.close()
     conn.close()
-
 
 
 # =====================================================
@@ -350,21 +346,19 @@ def insert_evidence(
     conn = get_connection()
     cur = conn.cursor()
 
-
     sql = """
-    INSERT INTO evidence_records
-    (
-        investigation_id,
-        service,
-        evidence_type,
-        description,
-        score
-    )
+        INSERT INTO evidence_records
+        (
+            investigation_id,
+            service,
+            evidence_type,
+            description,
+            score
+        )
 
-    VALUES
-    (%s,%s,%s,%s,%s)
+        VALUES
+        (%s,%s,%s,%s,%s)
     """
-
 
     cur.execute(
         sql,
@@ -377,12 +371,10 @@ def insert_evidence(
         )
     )
 
-
     conn.commit()
 
     cur.close()
     conn.close()
-
 
 
 # =====================================================
@@ -399,20 +391,18 @@ def save_rca_result(
     conn = get_connection()
     cur = conn.cursor()
 
-
     sql = """
-    INSERT INTO rca_results
-    (
-        investigation_id,
-        root_cause,
-        confidence,
-        explanation
-    )
+        INSERT INTO rca_results
+        (
+            investigation_id,
+            root_cause,
+            confidence,
+            explanation
+        )
 
-    VALUES
-    (%s,%s,%s,%s)
+        VALUES
+        (%s,%s,%s,%s)
     """
-
 
     cur.execute(
         sql,
@@ -424,11 +414,11 @@ def save_rca_result(
         )
     )
 
-
     conn.commit()
 
     cur.close()
     conn.close()
+
 
 # =====================================================
 # STREAMLIT - MY INCIDENTS
@@ -467,7 +457,6 @@ def get_user_incidents(
     conn.close()
 
     return df
-
 
 
 # =====================================================
