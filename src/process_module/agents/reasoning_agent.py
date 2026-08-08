@@ -1,90 +1,230 @@
-from __future__ import annotations
 import json
-from google import genai
-from google.genai import types
+
 from src.process_module.agents.base_agent import BaseAgent
-from src.config import load_config  # Import hàm load_config trung tâm
+from src.llm.gemini_client import GeminiClient
 
 class ReasoningAgent(BaseAgent):
+
     def __init__(self):
-        super().__init__("Reasoning Agent")
 
-        # Load cấu hình từ config.py (đã bao gồm đọc .env và file yaml)
-        self.config = load_config()
-        llm_cfg = self.config.get("llm", {})
+        super().__init__(
+            "Reasoning Agent"
+        )
 
-        # Lấy api_key và model từ cấu hình chung
-        api_key = llm_cfg.get("api_key")
-        self.model_name = llm_cfg.get("model", "gemini-3.5-flash")
+        self.llm = GeminiClient()
 
-        # Khởi tạo client Gemini với api_key (nếu có)
-        if api_key:
-            self.client = genai.Client(api_key=api_key)
-        else:
-            self.client = genai.Client()
 
-    def analyze(self, context, metric_result: dict, log_result: dict, trace_result: dict) -> dict:
-        # Lấy đúng các mảng dữ liệu đã chuẩn hóa từ 3 agent thành phần
-        metric_anomalies = metric_result.get('anomalies', [])
-        log_errors = log_result.get('errors', [])
-        trace_spans = trace_result.get('traces', [])
+    def calculate_confidence(
+        self,
+        metric_result,
+        log_result,
+        trace_result
+    ):
+
+        score = 0
+        total = 3
+
+
+        if metric_result.get(
+            "anomalies"
+        ):
+            score += 1
+
+
+        if log_result.get(
+            "errors"
+        ):
+            score += 1
+
+
+        if trace_result.get(
+            "traces"
+        ):
+            score += 1
+
+
+        return round(
+            score / total,
+            2
+        )
+
+
+    def check_evidence(
+        self,
+        metric_result,
+        log_result,
+        trace_result
+    ):
+
+        missing = []
+
+
+        if not metric_result.get(
+            "anomalies"
+        ):
+            missing.append(
+                "metrics"
+            )
+
+
+        if not log_result.get(
+            "errors"
+        ):
+            missing.append(
+                "logs"
+            )
+
+
+        if not trace_result.get(
+            "traces"
+        ):
+            missing.append(
+                "traces"
+            )
+
+
+        return missing
+
+
+
+    def analyze(
+        self,
+        context,
+        metric_result,
+        log_result,
+        trace_result
+    ):
+
+
+        missing = self.check_evidence(
+            metric_result,
+            log_result,
+            trace_result
+        )
+
+
+        confidence = self.calculate_confidence(
+            metric_result,
+            log_result,
+            trace_result
+        )
+
+
+        if len(missing) == 3:
+
+            return {
+
+                "component": context.service,
+
+                "reason":
+                "Insufficient evidence",
+
+                "confidence":0,
+
+                "reasoning":
+                "No telemetry evidence available"
+
+            }
+
+
 
         prompt = f"""
-        You are an expert Site Reliability Engineer (SRE) AI. Synthesize the findings from the specialized multi-agent telemetry below for service '{context.service}' to determine the definitive root cause (RCA) of the incident.
 
-        [METRIC AGENT EVIDENCE]:
-        Summary: {metric_result.get('summary')}
-        Anomalies: {json.dumps(metric_anomalies, default=str)}
+You are an expert SRE.
 
-        [LOG AGENT EVIDENCE]:
-        Summary: {log_result.get('summary')}
-        Errors: {json.dumps(log_errors, default=str)}
+Analyze this incident.
 
-        [TRACE AGENT EVIDENCE]:
-        Summary: {trace_result.get('summary')}
-        Traces: {json.dumps(trace_spans, default=str)}
+SERVICE:
+{context.service}
 
-        You MUST respond ONLY with a valid JSON object matching this exact structure:
-        {{
-            "component": "{context.service}",
-            "reason": "<Concise Root Cause Title>",
-            "confidence": 0.9,
-            "occurrence_time": "{context.incident_time}",
-            "metrics": {json.dumps(metric_anomalies, default=str)},
-            "logs": {json.dumps(log_errors, default=str)},
-            "traces": {json.dumps(trace_spans, default=str)},
-            "metric_summary": "{metric_result.get('summary', '')}",
-            "log_summary": "{log_result.get('summary', '')}",
-            "trace_summary": "{trace_result.get('summary', '')}",
-            "reasoning": "<Thorough, professional technical root cause analysis>"
-        }}
-        """
+
+METRICS:
+{json.dumps(metric_result)}
+
+
+LOGS:
+{json.dumps(log_result)}
+
+
+TRACES:
+{json.dumps(trace_result)}
+
+
+Return ONLY JSON:
+
+{{
+"reason":"",
+"reasoning":"",
+"recommendation":""
+}}
+
+"""
+
 
         try:
-            response = self.client.models.generate_content(
-                model=self.model_name,  # Sử dụng tên model linh hoạt từ config.py
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.1,
-                    response_mime_type="application/json"
-                ),
+
+            response = self.llm.generate(
+                prompt
             )
-            result_dict = json.loads(response.text)
-            # Đảm bảo luôn gán đúng occurrence_time từ context
-            result_dict["occurrence_time"] = context.incident_time
-            return result_dict
+
+
+            result = json.loads(
+                response
+            )
+
+
+            result.update({
+
+                "component":
+                context.service,
+
+
+                "confidence":
+                confidence,
+
+
+                "occurrence_time":
+                context.incident_time,
+
+
+                "metrics":
+                metric_result,
+
+
+                "logs":
+                log_result,
+
+
+                "traces":
+                trace_result
+
+            })
+
+
+            return result
+
+
 
         except Exception as e:
+
+
             return {
-                "component": context.service,
-                "reason": "Analysis Error",
-                "confidence": 0.0,
-                "occurrence_time": context.incident_time,
-                "metrics": metric_anomalies,
-                "logs": log_errors,
-                "traces": trace_spans,
-                "metric_summary": metric_result.get('summary', ''),
-                "log_summary": log_result.get('summary', ''),
-                "trace_summary": trace_result.get('summary', ''),
-                "reasoning": f"Failed to generate AI conclusion due to error: {str(e)}"
-            }
+
+    "component": metric_result.get(
+        "service",
+        "unknown"
+    ),
+
+    "reason": "LLM Error",
+
+    "confidence": 0,
+
+    "reasoning": str(e),
+
+    "metrics": metric_result,
+
+    "logs": log_result,
+
+    "traces": trace_result
+
+}

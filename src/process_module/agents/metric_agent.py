@@ -446,12 +446,23 @@ class MetricAgent(BaseAgent):
                 config=types.GenerateContentConfig(
                     temperature=0.1,
                     response_mime_type="application/json"
-                ),
+                )
             )
 
-            result = json.loads(
-                response.text
-            )
+            text = response.text.strip()
+
+            print("\n========== METRIC RESPONSE ==========")
+            print(text)
+            print("=====================================")
+
+            # Handle incomplete JSON response
+            while text.count("{") > text.count("}"):
+                text += "}"
+
+            while text.count("[") > text.count("]"):
+                text += "]"
+
+            result = json.loads(text)
 
             return result
 
@@ -463,44 +474,47 @@ class MetricAgent(BaseAgent):
 
             fallback_anomalies = []
 
-            for item in raw_metric_evidence:
+        for item in raw_metric_evidence:
 
-                fallback_anomalies.append(
-                    {
-                        "metric": item.get(
-                            "metric",
-                            "unknown"
-                        ),
-                        "service": service,
-                        "value": item.get(
-                            "max_value",
-                            0.0
-                        ),
-                        "baseline": item.get(
-                            "mean_value",
-                            0.0
-                        ),
-                        "timestamp": incident_time,
-                        "severity": "warning",
-                        "description": (
-                            f"Observed peak value "
-                            f"{item.get('max_value', 0.0)} "
-                            f"with mean "
-                            f"{item.get('mean_value', 0.0)}. "
-                            f"Gemini analysis unavailable; "
-                            f"fallback evidence generated."
-                        )
-                    }
-                )
+            fallback_anomalies.append(
+                {
+                    "metric": item.get(
+                        "metric",
+                        "unknown"
+                    ),
 
-            return {
-                "agent": "Metric Agent",
+                    "service": service,
 
-                "evidence_type": "metric",
+                    "value": item.get(
+                        "max_value",
+                        0.0
+                    ),
 
-                "anomalies": fallback_anomalies,
+                    "baseline": item.get(
+                        "mean_value",
+                        0.0
+                    ),
 
-                "summary": summary_text,
+                    "timestamp": item.get(
+                        "max_timestamp",
+                        ""
+                    ),
 
-                "confidence": 0.6
-            }
+                    "severity": "warning",
+
+                    "description": (
+                        f"Observed peak value "
+                        f"{item.get('max_value', 0.0)} "
+                        f"with mean "
+                        f"{item.get('mean_value', 0.0)}."
+                    )
+                }
+            )
+
+        return {
+            "agent": "Metric Agent",
+            "evidence_type": "metric",
+            "anomalies": fallback_anomalies,
+            "summary": summary_text,
+            "confidence": 0.6
+        }

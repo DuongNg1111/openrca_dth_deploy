@@ -50,8 +50,17 @@ def _extract_keywords(text: str) -> list[str]:
 
 
 def _parse_incident_time(
-    incident_time: str
+    incident_time: str | None,
+    created: str | None = None,
 ) -> tuple[datetime, TimeWindow]:
+
+    # Nếu incident_time rỗng thì dùng created của Jira
+    incident_time = incident_time or created
+
+    if incident_time is None:
+        raise ValueError(
+            "Both incident_time and created are missing."
+        )
 
     match = _DATETIME.search(incident_time)
 
@@ -90,8 +99,9 @@ def parse_query(
     """
 
     incident_dt, window = _parse_incident_time(
-        raw_query.incident_time
-    )
+    raw_query.incident_time,
+    raw_query.created,
+)
 
     combined_text = " ".join([
         raw_query.incident_description or "",

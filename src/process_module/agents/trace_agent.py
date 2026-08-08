@@ -63,7 +63,6 @@ class TraceAgent(BaseAgent):
                 investigation_id
             )
 
-
         except Exception as e:
 
             return {
@@ -73,8 +72,6 @@ class TraceAgent(BaseAgent):
                 "summary": str(e),
                 "confidence": 0.0
             }
-
-
 
         if traces_df is None or traces_df.empty:
 
@@ -357,30 +354,29 @@ class TraceAgent(BaseAgent):
         try:
 
             response = self.client.models.generate_content(
-
                 model=self.model_name,
-
                 contents=prompt,
-
                 config=types.GenerateContentConfig(
-
                     temperature=0.1,
-
                     response_mime_type="application/json"
-
                 )
-
             )
 
+            text = response.text.strip()
 
-            result = json.loads(
-                response.text
-            )
+            print("\n========== TRACE RESPONSE ==========")
+            print(text)
+            print("=====================================")
 
+            while text.count("{") > text.count("}"):
+                text += "}"
+
+            while text.count("[") > text.count("]"):
+                text += "]"
+
+            result = json.loads(text)
 
             return result
-
-
 
         # ============================================
         # 8. FALLBACK
