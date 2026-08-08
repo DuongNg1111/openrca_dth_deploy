@@ -1,5 +1,6 @@
 from dataclasses import asdict
 import json
+import pandas as pd
 
 from src.jira.receive_query import receive_query
 
@@ -18,6 +19,7 @@ from src.process_module.service_selector import (
     select_services,
 )
 
+# Import Agents
 from src.process_module.agents.metric_agent import MetricAgent
 from src.process_module.agents.log_agent import LogAgent
 from src.process_module.agents.trace_agent import TraceAgent
@@ -27,6 +29,8 @@ from src.database.repository import (
     insert_metrics,
     insert_logs,
     insert_traces,
+    save_rca_result,
+    insert_evidence
 )
 
 
@@ -381,17 +385,44 @@ def run_pipeline(issue_key, run_agents=False):
             trace_result
         )
 
-        print("\nMetric Agent")
-        print(metric_result)
+        # 1. Lưu kết quả nguyên nhân gốc rễ (RCA) vào bảng rca_results
+        save_rca_result(
+            investigation_id= investigation_id,
+            root_cause=final_output.get("reason", "unknown"),
+            confidence=float(final_output.get("confidence", 0.0)),
+            explanation=final_output.get("reasoning", "")
+        )
 
-        print("\nLog Agent")
-        print(log_result)
-
-        print("\nTrace Agent")
-        print(trace_result)
-
+        # 2. Lưu kết quả bằng chứng Metric vào bảng evidence_records
+        for metric in final_output.get("metrics", []):
+            insert_evidence(
+                investigation_id= investigation_id,
+                service=context.service,
+                evidence_type="metric",
+                description=metric.get("description",""),
+                score=float(metric.get("value", 0.0))
+            )
+        # 3. Lưu kết quả bằng chứng Log vào bảng evidence_records
+        for log in final_output.get("logs", []):
+            insert_evidence(
+                investigation_id= investigation_id,
+                service=context.service,
+                evidence_type="log",
+                description=log.get("message",""),
+                score=float(log.get("count", 1.0))
+            )
+        # 4. Lưu kết quả bằng chứng Trace vào bảng evidence_records
+        for trace in final_output.get("traces", []):
+            insert_evidence(
+                investigation_id= investigation_id,
+                service=context.service,
+                evidence_type="trace",
+                description=trace.get("description",""),
+                score=float(trace.get("latency_ms", 0.0))
+            )
         print("\nFinal Output JSON format:")
         print(json.dumps(final_output, indent=4, default=str))
+
 
     # =====================================================
     # FINISH
