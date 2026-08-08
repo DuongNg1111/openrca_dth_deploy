@@ -10,16 +10,29 @@ def ensure_datetime(df):
 
     df = df.copy()
 
-    if "timestamp" in df.columns:
+    if "timestamp" not in df.columns:
+        return df
 
-        if not pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
+    if pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
+        return df
 
-            df["timestamp"] = pd.to_datetime(
-                df["timestamp"],
-                errors="coerce"
-            )
+    if pd.api.types.is_numeric_dtype(df["timestamp"]):
+
+        df["timestamp"] = pd.to_datetime(
+            df["timestamp"],
+            unit="s",
+            errors="coerce"
+        )
+
+    else:
+
+        df["timestamp"] = pd.to_datetime(
+            df["timestamp"],
+            errors="coerce"
+        )
 
     return df
+
 # =====================================================
 # INVESTIGATION
 # =====================================================
