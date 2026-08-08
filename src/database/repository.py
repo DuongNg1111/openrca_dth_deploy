@@ -140,15 +140,11 @@ def insert_metrics(
 
 
     for _, row in df.iterrows():
-        try:
-            ts_val = int(pd.to_datetime(row["timestamp"]).timestamp()) if pd.notna(row["timestamp"]) else 0
-        except Exception:
-            ts_val = 0
 
         records.append(
             (
                 investigation_id,
-                ts_val,  # <--- Thay row["timestamp"] thành ts_val
+                row["timestamp"],
                 row["cmdb_id"],
                 row["kpi_name"],
                 row["value"]
@@ -156,10 +152,10 @@ def insert_metrics(
         )
 
 
-    cur.executemany(
-        sql,
-        records
-    )
+        cur.executemany(
+            sql,
+            records
+        )
 
 
     conn.commit()
