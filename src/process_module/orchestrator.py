@@ -6,7 +6,7 @@ from src.process_module.agents.reasoning_agent import ReasoningAgent
 from src.database.repository import (
     insert_evidence,
     get_investigation_evidence,
-    save_rca_result
+    save_rca_result,
 )
 
 
@@ -19,7 +19,6 @@ class ProcessOrchestrator:
         self.trace_agent = TraceAgent()
         self.reasoning_agent = ReasoningAgent()
 
-
     def run(
         self,
         context,
@@ -28,21 +27,50 @@ class ProcessOrchestrator:
 
         print("\n========== PROCESS MODULE ==========")
 
+        # =====================================================
+        # VALIDATE INVESTIGATION ID
+        # =====================================================
+
+        if investigation_id is None:
+
+            investigation_id = getattr(
+                context,
+                "investigation_id",
+                None
+            )
+
+        if investigation_id is None:
+
+            raise ValueError(
+                "investigation_id is required for ProcessOrchestrator."
+            )
+
+        print(
+            f"\nInvestigation ID: {investigation_id}"
+        )
 
         # =====================================================
         # 1. METRIC AGENT
         # =====================================================
 
-        print("\nRunning Metric Agent...")
+        print("\n========================================")
+        print("1. METRIC AGENT")
+        print("========================================")
 
-        metric_result = self.metric_agent.analyze(context)
+        metric_result = self.metric_agent.analyze(
+            context
+        )
 
+        print("\nMetric Result:")
         print(metric_result)
-
 
         # =====================================================
         # SAVE METRIC EVIDENCE
         # =====================================================
+
+        print("\nSaving Metric Evidence...")
+
+        metric_evidence_count = 0
 
         for metric in metric_result.get(
             "anomalies",
@@ -55,7 +83,11 @@ class ProcessOrchestrator:
 
                 service=metric.get(
                     "service",
-                    context.service
+                    getattr(
+                        context,
+                        "service",
+                        "unknown"
+                    )
                 ),
 
                 evidence_type="metric",
@@ -73,21 +105,35 @@ class ProcessOrchestrator:
                 )
             )
 
+            metric_evidence_count += 1
+
+        print(
+            f"Metric evidence saved: "
+            f"{metric_evidence_count}"
+        )
 
         # =====================================================
         # 2. LOG AGENT
         # =====================================================
 
-        print("\nRunning Log Agent...")
+        print("\n========================================")
+        print("2. LOG AGENT")
+        print("========================================")
 
-        log_result = self.log_agent.analyze(context)
+        log_result = self.log_agent.analyze(
+            context
+        )
 
+        print("\nLog Result:")
         print(log_result)
-
 
         # =====================================================
         # SAVE LOG EVIDENCE
         # =====================================================
+
+        print("\nSaving Log Evidence...")
+
+        log_evidence_count = 0
 
         for log in log_result.get(
             "logs",
@@ -100,7 +146,11 @@ class ProcessOrchestrator:
 
                 service=log.get(
                     "service",
-                    context.service
+                    getattr(
+                        context,
+                        "service",
+                        "unknown"
+                    )
                 ),
 
                 evidence_type="log",
@@ -118,21 +168,35 @@ class ProcessOrchestrator:
                 )
             )
 
+            log_evidence_count += 1
+
+        print(
+            f"Log evidence saved: "
+            f"{log_evidence_count}"
+        )
 
         # =====================================================
         # 3. TRACE AGENT
         # =====================================================
 
-        print("\nRunning Trace Agent...")
+        print("\n========================================")
+        print("3. TRACE AGENT")
+        print("========================================")
 
-        trace_result = self.trace_agent.analyze(context)
+        trace_result = self.trace_agent.analyze(
+            context
+        )
 
+        print("\nTrace Result:")
         print(trace_result)
-
 
         # =====================================================
         # SAVE TRACE EVIDENCE
         # =====================================================
+
+        print("\nSaving Trace Evidence...")
+
+        trace_evidence_count = 0
 
         for trace in trace_result.get(
             "traces",
@@ -145,7 +209,11 @@ class ProcessOrchestrator:
 
                 service=trace.get(
                     "service",
-                    context.service
+                    getattr(
+                        context,
+                        "service",
+                        "unknown"
+                    )
                 ),
 
                 evidence_type="trace",
@@ -163,108 +231,115 @@ class ProcessOrchestrator:
                 )
             )
 
+            trace_evidence_count += 1
+
+        print(
+            f"Trace evidence saved: "
+            f"{trace_evidence_count}"
+        )
 
         # =====================================================
-        # 4. READ EVIDENCE FROM DATABASE
+        # 4. LOAD EVIDENCE FROM DATABASE
         # =====================================================
 
         print("\n========================================")
-        print("LOADING EVIDENCE FROM DATABASE")
+        print("4. LOAD EVIDENCE FROM DATABASE")
         print("========================================")
 
         evidence_df = get_investigation_evidence(
             investigation_id
         )
 
+        print("\nEvidence loaded from database:")
 
-        print("\nEvidence Records:")
-
-        print(evidence_df)
-
-
-        # =====================================================
-        # 5. BUILD EVIDENCE FOR REASONING AGENT
-        # =====================================================
-
-        evidence = {
-
-            "metric": [],
-
-            "log": [],
-
-            "trace": []
-        }
-
-
-        for _, row in evidence_df.iterrows():
-
-            evidence_type = row["evidence_type"]
-
-            if evidence_type in evidence:
-
-                evidence[evidence_type].append({
-
-                    "service": row["service"],
-
-                    "description": row["description"],
-
-                    "score": row["score"]
-                })
-
-
-        print("\n========== REASONING EVIDENCE ==========")
-
-        print(evidence)
-
+        print(
+            evidence_df
+        )
 
         # =====================================================
-        # 6. REASONING AGENT
+        # CHECK EVIDENCE
         # =====================================================
 
-        print("\nRunning Reasoning Agent...")
+        if evidence_df is None or evidence_df.empty:
 
+            print(
+                "\nWARNING: No evidence found."
+            )
+
+        else:
+
+            print(
+                f"\nTotal evidence records: "
+                f"{len(evidence_df)}"
+            )
+
+        # =====================================================
+        # 5. REASONING AGENT
+        # =====================================================
+
+        print("\n========================================")
+        print("5. REASONING AGENT")
+        print("========================================")
 
         final_result = self.reasoning_agent.analyze(
 
-            context=context,
+            context,
 
-            evidence=evidence
+            evidence_df
+
         )
 
-
-        print("\n========== RCA ==========")
-
+        print("\nReasoning Result:")
         print(final_result)
 
-
         # =====================================================
-        # 7. SAVE RCA RESULT
+        # 6. SAVE RCA RESULT
         # =====================================================
 
-        if investigation_id is not None:
+        print("\n========================================")
+        print("6. SAVE RCA RESULT")
+        print("========================================")
 
-            save_rca_result(
+        save_rca_result(
 
-                investigation_id=investigation_id,
+            investigation_id=investigation_id,
 
-                root_cause=final_result.get(
-                    "root_cause",
+            root_cause=final_result.get(
+                "root_cause",
+                final_result.get(
+                    "reason",
                     ""
-                ),
+                )
+            ),
 
-                confidence=final_result.get(
-                    "confidence",
-                    0
-                ),
+            confidence=final_result.get(
+                "confidence",
+                0
+            ),
 
-                explanation=final_result.get(
-                    "explanation",
+            explanation=final_result.get(
+                "explanation",
+                final_result.get(
+                    "reasoning",
                     ""
                 )
             )
+        )
 
+        print(
+            "\nRCA Result Saved Successfully."
+        )
 
-            print("\nRCA Result Saved.")
+        # =====================================================
+        # FINAL RESULT
+        # =====================================================
 
+        print("\n========================================")
+        print("FINAL RCA")
+        print("========================================")
+
+        print(
+            final_result
+        )
 
         return final_result

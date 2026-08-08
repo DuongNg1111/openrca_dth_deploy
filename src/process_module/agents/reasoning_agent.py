@@ -1,230 +1,435 @@
+from __future__ import annotations
+
 import json
 
+from google import genai
+from google.genai import types
+
 from src.process_module.agents.base_agent import BaseAgent
-from src.llm.gemini_client import GeminiClient
+
 
 class ReasoningAgent(BaseAgent):
 
     def __init__(self):
+        super().__init__("Reasoning Agent")
 
-        super().__init__(
-            "Reasoning Agent"
-        )
-
-        self.llm = GeminiClient()
-
-
-    def calculate_confidence(
-        self,
-        metric_result,
-        log_result,
-        trace_result
-    ):
-
-        score = 0
-        total = 3
-
-
-        if metric_result.get(
-            "anomalies"
-        ):
-            score += 1
-
-
-        if log_result.get(
-            "errors"
-        ):
-            score += 1
-
-
-        if trace_result.get(
-            "traces"
-        ):
-            score += 1
-
-
-        return round(
-            score / total,
-            2
-        )
-
-
-    def check_evidence(
-        self,
-        metric_result,
-        log_result,
-        trace_result
-    ):
-
-        missing = []
-
-
-        if not metric_result.get(
-            "anomalies"
-        ):
-            missing.append(
-                "metrics"
-            )
-
-
-        if not log_result.get(
-            "errors"
-        ):
-            missing.append(
-                "logs"
-            )
-
-
-        if not trace_result.get(
-            "traces"
-        ):
-            missing.append(
-                "traces"
-            )
-
-
-        return missing
-
-
+    # =====================================================
+    # MAIN ANALYSIS
+    # =====================================================
 
     def analyze(
         self,
         context,
-        metric_result,
-        log_result,
-        trace_result
-    ):
+        evidence_df
+    ) -> dict:
 
+        """
+        Reasoning Agent
 
-        missing = self.check_evidence(
-            metric_result,
-            log_result,
-            trace_result
+        Input:
+            - investigation context
+            - evidence_records loaded from PostgreSQL
+
+        Flow:
+
+            Metric Agent
+                    |
+            Log Agent  |  Trace Agent
+                    |
+                    v
+             evidence_records
+                    |
+                    v
+            Reasoning Agent
+                    |
+                    v
+                RCA Result
+
+        IMPORTANT:
+        Reasoning Agent does NOT directly use
+        metric_result / log_result / trace_result.
+
+        It reasons only from evidence stored
+        in evidence_records.
+        """
+
+        # =====================================================
+        # 1. GET CONTEXT
+        # =====================================================
+
+        investigation_id = getattr(
+            context,
+            "investigation_id",
+            None
         )
 
-
-        confidence = self.calculate_confidence(
-            metric_result,
-            log_result,
-            trace_result
+        service = getattr(
+            context,
+            "service",
+            "unknown"
         )
 
+        incident_time = getattr(
+            context,
+            "incident_time",
+            ""
+        )
 
-        if len(missing) == 3:
+        incident_description = getattr(
+            context,
+            "incident_description",
+            ""
+        )
+
+        # =====================================================
+        # 2. VALIDATE EVIDENCE
+        # =====================================================
+
+        if evidence_df is None:
 
             return {
-
-                "component": context.service,
-
-                "reason":
-                "Insufficient evidence",
-
-                "confidence":0,
-
-                "reasoning":
-                "No telemetry evidence available"
-
+                "agent": "Reasoning Agent",
+                "root_cause": "Insufficient evidence",
+                "confidence": 0.0,
+                "explanation": (
+                    "No evidence was provided "
+                    "to the Reasoning Agent."
+                )
             }
 
+        if evidence_df.empty:
 
+            return {
+                "agent": "Reasoning Agent",
+                "root_cause": "Insufficient evidence",
+                "confidence": 0.0,
+                "explanation": (
+                    "No evidence was found in "
+                    "evidence_records."
+                )
+            }
+
+        # =====================================================
+        # 3. CONVERT DATABASE EVIDENCE TO JSON
+        # =====================================================
+
+        evidence = evidence_df.to_dict(
+            orient="records"
+        )
+
+        # =====================================================
+        # 4. CHECK EVIDENCE TYPES
+        # =====================================================
+
+        metric_evidence = [
+            item
+            for item in evidence
+            if item.get("evidence_type") == "metric"
+        ]
+
+        log_evidence = [
+            item
+            for item in evidence
+            if item.get("evidence_type") == "log"
+        ]
+
+        trace_evidence = [
+            item
+            for item in evidence
+            if item.get("evidence_type") == "trace"
+        ]
+
+        # =====================================================
+        # 5. EVIDENCE SUFFICIENCY
+        # =====================================================
+
+        evidence_types = set(
+            item.get("evidence_type")
+            for item in evidence
+        )
+
+        evidence_summary = {
+            "metric_count": len(metric_evidence),
+            "log_count": len(log_evidence),
+            "trace_count": len(trace_evidence),
+            "total_count": len(evidence),
+            "available_types": list(
+                evidence_types
+            )
+        }
+
+        # =====================================================
+        # 6. PREPARE GEMINI PROMPT
+        # =====================================================
 
         prompt = f"""
+You are an SRE Root Cause Analysis Reasoning Agent.
 
-You are an expert SRE.
+Your task is to determine the most likely root cause
+of an incident by correlating evidence from:
 
-Analyze this incident.
+1. Metric evidence
+2. Log evidence
+3. Trace evidence
 
-SERVICE:
-{context.service}
+IMPORTANT ARCHITECTURE RULE:
+
+All evidence below was already generated by the
+Metric Agent, Log Agent, and Trace Agent and stored
+in PostgreSQL evidence_records.
+
+You MUST reason ONLY from the supplied evidence.
+
+Do NOT use information that is not present
+in the evidence.
+
+====================================================
+INCIDENT CONTEXT
+====================================================
+
+Investigation ID:
+{investigation_id}
+
+Target Service:
+{service}
+
+Incident Time:
+{incident_time}
+
+Incident Description:
+{incident_description}
 
 
-METRICS:
-{json.dumps(metric_result)}
+====================================================
+EVIDENCE SUMMARY
+====================================================
+
+{json.dumps(
+    evidence_summary,
+    indent=2,
+    default=str
+)}
 
 
-LOGS:
-{json.dumps(log_result)}
+====================================================
+METRIC EVIDENCE
+====================================================
+
+{json.dumps(
+    metric_evidence,
+    indent=2,
+    default=str
+)}
 
 
-TRACES:
-{json.dumps(trace_result)}
+====================================================
+LOG EVIDENCE
+====================================================
+
+{json.dumps(
+    log_evidence,
+    indent=2,
+    default=str
+)}
 
 
-Return ONLY JSON:
+====================================================
+TRACE EVIDENCE
+====================================================
+
+{json.dumps(
+    trace_evidence,
+    indent=2,
+    default=str
+)}
+
+
+====================================================
+REASONING RULES
+====================================================
+
+1. Use ONLY the supplied evidence.
+
+2. Do NOT invent:
+   - services
+   - errors
+   - timestamps
+   - metric values
+   - trace relationships
+   - dependencies
+
+3. Correlate evidence across Metric, Log,
+   and Trace evidence.
+
+4. Give higher confidence when multiple
+   evidence types support the same conclusion.
+
+5. A metric anomaly alone is not sufficient
+   to claim a specific root cause.
+
+6. A log error alone is not sufficient
+   to claim a specific root cause.
+
+7. A trace latency anomaly alone is not sufficient
+   to claim a specific root cause.
+
+8. When metric, log, and trace evidence
+   point to the same service or failure,
+   use their correlation to determine the
+   most likely root cause.
+
+9. If evidence conflicts, explicitly state
+   that the evidence is conflicting.
+
+10. If evidence is insufficient to determine
+    a root cause, return:
+    "Insufficient evidence"
+
+11. Confidence must be between 0 and 100.
+
+12. Do NOT claim certainty unless the evidence
+    strongly supports the conclusion.
+
+13. The explanation must describe HOW the
+    supplied evidence supports the root cause.
+
+14. Return ONLY valid JSON.
+
+====================================================
+REQUIRED OUTPUT FORMAT
+====================================================
 
 {{
-"reason":"",
-"reasoning":"",
-"recommendation":""
+    "agent": "Reasoning Agent",
+
+    "root_cause": "",
+
+    "confidence": 0.0,
+
+    "explanation": "",
+
+    "supporting_evidence": [
+        {{
+            "evidence_type": "",
+            "service": "",
+            "description": "",
+            "score": 0.0
+        }}
+    ]
 }}
 
 """
 
+        # =====================================================
+        # 7. CALL GEMINI
+        # =====================================================
 
         try:
 
-            response = self.llm.generate(
-                prompt
+            response = self.client.models.generate_content(
+
+                model=self.model_name,
+
+                contents=prompt,
+
+                config=types.GenerateContentConfig(
+
+                    temperature=0.1,
+
+                    response_mime_type="application/json"
+
+                )
             )
 
+            text = response.text.strip()
 
-            result = json.loads(
-                response
+            print(
+                "\n========== REASONING RESPONSE =========="
             )
 
+            print(text)
 
-            result.update({
+            print(
+                "========================================"
+            )
 
-                "component":
-                context.service,
+            result = json.loads(text)
 
+            # =================================================
+            # 8. NORMALIZE RESULT
+            # =================================================
 
-                "confidence":
-                confidence,
+            result.setdefault(
+                "agent",
+                "Reasoning Agent"
+            )
 
+            result.setdefault(
+                "root_cause",
+                "Insufficient evidence"
+            )
 
-                "occurrence_time":
-                context.incident_time,
+            result.setdefault(
+                "confidence",
+                0.0
+            )
 
+            result.setdefault(
+                "explanation",
+                ""
+            )
 
-                "metrics":
-                metric_result,
+            result.setdefault(
+                "supporting_evidence",
+                []
+            )
 
+            # Ensure confidence is numeric
 
-                "logs":
-                log_result,
+            try:
 
+                result["confidence"] = float(
+                    result["confidence"]
+                )
 
-                "traces":
-                trace_result
+            except (
+                TypeError,
+                ValueError
+            ):
 
-            })
+                result["confidence"] = 0.0
 
+            # Keep confidence within 0-100
+
+            result["confidence"] = max(
+                0.0,
+                min(
+                    100.0,
+                    result["confidence"]
+                )
+            )
 
             return result
 
-
+        # =====================================================
+        # 9. FALLBACK
+        # =====================================================
 
         except Exception as e:
 
-
             return {
+                "agent": "Reasoning Agent",
 
-    "component": metric_result.get(
-        "service",
-        "unknown"
-    ),
+                "root_cause": (
+                    "Reasoning analysis failed"
+                ),
 
-    "reason": "LLM Error",
+                "confidence": 0.0,
 
-    "confidence": 0,
+                "explanation": (
+                    "Gemini reasoning failed: "
+                    f"{str(e)}"
+                ),
 
-    "reasoning": str(e),
-
-    "metrics": metric_result,
-
-    "logs": log_result,
-
-    "traces": trace_result
-
-}
+                "supporting_evidence": evidence[:10]
+            }

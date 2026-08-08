@@ -1,44 +1,110 @@
+
+import pandas as pd
 from types import SimpleNamespace
 
 from src.process_module.agents.reasoning_agent import ReasoningAgent
 
 
 def test_reasoning_agent():
-
     context = SimpleNamespace(
+        investigation_id="INV-001",
         service="payment-service",
-        incident_time="2021-03-25 10:00:00"
+        incident_time="2021-03-25 10:00:00",
+        incident_description="Payment service is slow and requests are timing out",
+    )
+
+    evidence_df = pd.DataFrame(
+        [
+            {
+                "evidence_type": "metric",
+                "service": "payment-service",
+                "description": "CPU usage is high",
+                "score": 0.9,
+            },
+            {
+                "evidence_type": "log",
+                "service": "payment-service",
+                "description": "Many timeout errors",
+                "score": 0.9,
+            },
+            {
+                "evidence_type": "trace",
+                "service": "payment-service",
+                "description": "payment-service slow",
+                "score": 0.9,
+            },
+        ]
     )
 
     agent = ReasoningAgent()
 
     result = agent.analyze(
-
         context,
-
-        {
-            "anomalies": [
-                "CPU high"
-            ],
-            "summary": "CPU usage is high"
-        },
-
-        {
-            "errors": [
-                "timeout"
-            ],
-            "summary": "Many timeout errors"
-        },
-
-        {
-            "traces": [
-                "payment-service slow"
-            ],
-            "summary": "Slow trace detected"
-        }
-
+        evidence_df,
     )
 
-    assert "reason" in result
+    assert isinstance(result, dict)
+
+    assert "agent" in result
+    assert result["agent"] == "Reasoning Agent"
+
+    assert "root_cause" in result
     assert "confidence" in result
-    assert result["component"] == "payment-service"
+    assert "explanation" in result
+    assert "supporting_evidence" in result
+
+    assert isinstance(result["root_cause"], str)
+
+    assert isinstance(
+        result["confidence"],
+        (int, float),
+    )
+
+    assert 0 <= result["confidence"] <= 100
+
+    assert isinstance(
+        result["supporting_evidence"],
+        list,
+    )
+
+
+def test_reasoning_agent_empty_evidence():
+    context = SimpleNamespace(
+        investigation_id="INV-002",
+        service="payment-service",
+        incident_time="2021-03-25 10:00:00",
+        incident_description="Payment service is unavailable",
+    )
+
+    evidence_df = pd.DataFrame()
+
+    agent = ReasoningAgent()
+
+    result = agent.analyze(
+        context,
+        evidence_df,
+    )
+
+    assert result["agent"] == "Reasoning Agent"
+    assert result["root_cause"] == "Insufficient evidence"
+    assert result["confidence"] == 0.0
+
+
+def test_reasoning_agent_no_evidence():
+    context = SimpleNamespace(
+        investigation_id="INV-003",
+        service="payment-service",
+        incident_time="2021-03-25 10:00:00",
+        incident_description="Payment service is unavailable",
+    )
+
+    agent = ReasoningAgent()
+
+    result = agent.analyze(
+        context,
+        None,
+    )
+
+    assert result["agent"] == "Reasoning Agent"
+    assert result["root_cause"] == "Insufficient evidence"
+    assert result["confidence"] == 0.0
