@@ -429,10 +429,10 @@ def get_investigation_logs(
 
     return df
 
-def get_investigation_traces(investigation_id):
-    """
-    Get preprocessed traces stored for one investigation.
-    """
+def get_investigation_traces(
+    investigation_id,
+    service=None
+):
 
     conn = get_connection()
 
@@ -449,19 +449,40 @@ def get_investigation_traces(investigation_id):
             parent_span
         FROM investigation_traces
         WHERE investigation_id = %s
+    """
+
+    params = [
+        investigation_id
+    ]
+
+
+    if service:
+
+        query += """
+            AND cmdb_id ILIKE %s
+        """
+
+        params.append(
+            f"%{service}%"
+        )
+
+
+    query += """
         ORDER BY timestamp;
     """
+
 
     df = pd.read_sql(
         query,
         conn,
-        params=(investigation_id,)
+        params=tuple(params)
     )
+
 
     conn.close()
 
-    return df
 
+    return df
 
 def get_investigation_evidence(investigation_id):
     """

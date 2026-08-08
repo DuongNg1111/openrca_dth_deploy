@@ -176,26 +176,50 @@ class MetricAgent(BaseAgent):
         summaries = []
 
         grouped = df.groupby(
-            ["cmdb_id", "kpi_name"],
+            [
+                "cmdb_id",
+                "kpi_name"
+            ],
             dropna=False
         )
+
 
         for (cmdb_id, kpi_name), kpi_df in grouped:
 
             if kpi_df.empty:
                 continue
 
+
+            # -----------------------------------------
+            # Find peak metric value and timestamp
+            # -----------------------------------------
+
+            max_index = kpi_df["value"].idxmax()
+
+            max_row = kpi_df.loc[
+                max_index
+            ]
+
+
             max_value = float(
-                kpi_df["value"].max()
+                max_row["value"]
             )
+
+
+            max_timestamp = str(
+                max_row["timestamp"]
+            )
+
 
             mean_value = float(
                 kpi_df["value"].mean()
             )
 
+
             min_value = float(
                 kpi_df["value"].min()
             )
+
 
             raw_metric_evidence.append(
                 {
@@ -204,42 +228,60 @@ class MetricAgent(BaseAgent):
                         if cmdb_id is not None
                         else ""
                     ),
+
                     "metric": (
                         str(kpi_name)
                         if kpi_name is not None
                         else "unknown"
                     ),
+
                     "min_value": min_value,
+
                     "max_value": max_value,
+
                     "mean_value": mean_value,
+
+                    "max_timestamp": max_timestamp,
+
                     "sample_count": int(
                         len(kpi_df)
                     )
                 }
             )
 
+
             summaries.append(
                 f"KPI '{kpi_name}' "
                 f"(CMDB: {cmdb_id}) "
                 f"max={max_value:.2f}, "
-                f"mean={mean_value:.2f}"
+                f"mean={mean_value:.2f}, "
+                f"peak_time={max_timestamp}"
             )
+
+
 
         # =====================================================
         # 7. NO STATISTICS
         # =====================================================
 
         if not raw_metric_evidence:
+
             return {
+
                 "agent": "Metric Agent",
+
                 "evidence_type": "metric",
+
                 "anomalies": [],
-                "summary": (
-                    "No usable metric statistics "
-                    "were found."
-                ),
+
+                "summary":
+                    "No usable metric statistics were found.",
+
                 "confidence": 1.0
+
             }
+
+
 
         summary_text = (
             ", ".join(summaries)
@@ -247,62 +289,138 @@ class MetricAgent(BaseAgent):
             else "Metrics analyzed."
         )
 
+
+
         # =====================================================
         # 8. PREPARE GEMINI PROMPT
         # =====================================================
 
+
         prompt = f"""
-You are an SRE Metric and Performance Analysis Expert.
 
-Analyze metric data stored for investigation ID:
-{investigation_id}
+    You are an SRE Metric Performance Analysis Expert.
 
-Selected service:
-{service}
+    Analyze ONLY the supplied metric statistics.
 
-Incident time:
-{incident_time}
+    Investigation ID:
+    {investigation_id}
 
-The following statistics were calculated directly
-from the PostgreSQL investigation_metrics table:
 
-{json.dumps(
-    raw_metric_evidence,
-    indent=2,
-    default=str
-)}
+    Target service:
+    {service}
 
-Identify meaningful metric anomalies.
 
-IMPORTANT:
-- Do not invent metric values.
-- Use only the supplied statistics.
-- Distinguish normal variation from meaningful anomalies.
-- If there is insufficient evidence for an anomaly,
-  return an empty anomalies list.
-- Use the service name "{service}" in the output.
-- Return ONLY valid JSON.
+    Incident time:
+    {incident_time}
 
-Required structure:
 
-{{
+    Metric statistics generated directly from PostgreSQL
+    investigation_metrics table:
+
+
+    {json.dumps(
+        raw_metric_evidence,
+        indent=2,
+        default=str
+    )}
+
+
+
+    Your task:
+
+    Identify meaningful metric anomalies related to the incident.
+
+
+
+    STRICT RULES:
+
+    1. Use ONLY supplied metric statistics.
+
+    2. Do NOT invent metric names.
+
+    3. Do NOT invent metric values.
+
+    4. Do NOT invent timestamps.
+
+    5. Do NOT rename services.
+
+    6. Always use service name:
+    "{service}"
+
+
+    7. Output mapping:
+
+    - value = max_value
+    - baseline = mean_value
+    - timestamp = max_timestamp
+
+
+    8. Prioritize abnormal performance indicators:
+
+    - request duration
+    - latency
+    - response time
+    - timeout related metrics
+    - error related metrics
+
+
+    9. A metric should be considered suspicious when:
+
+    - max_value is significantly higher than mean_value
+    - latency/request duration reaches unusually high values
+    - the metric represents possible service degradation
+
+
+    10. Normal infrastructure metrics
+    (CPU, memory, filesystem, network)
+    should NOT be reported unless they show clear abnormal deviation.
+
+
+    11. If no meaningful anomaly exists,
+    return an empty anomalies list.
+
+
+    12. Return ONLY valid JSON.
+
+
+
+    Required JSON format:
+
+
+    {{
     "agent": "Metric Agent",
+
     "evidence_type": "metric",
-    "anomalies": [
-        {{
-            "metric": "<metric or KPI name>",
-            "service": "{service}",
-            "value": 0.0,
-            "baseline": 0.0,
-            "timestamp": "{incident_time}",
-            "severity": "<critical | warning | normal>",
-            "description": "<professional explanation>"
-        }}
+
+    "anomalies":
+    [
+
+    {{
+    "metric": "",
+
+    "service": "{service}",
+
+    "value": 0.0,
+
+    "baseline": 0.0,
+
+    "timestamp": "",
+
+    "severity": "",
+
+    "description": ""
+    }}
+
     ],
-    "summary": "<short summary>",
+
+
+    "summary": "",
+
     "confidence": 0.0
-}}
-"""
+
+    }}
+
+    """
 
         # =====================================================
         # 9. CALL GEMINI
@@ -365,8 +483,12 @@ Required structure:
 
             return {
                 "agent": "Metric Agent",
+
                 "evidence_type": "metric",
+
                 "anomalies": fallback_anomalies,
+
                 "summary": summary_text,
+
                 "confidence": 0.6
             }

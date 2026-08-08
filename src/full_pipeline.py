@@ -346,63 +346,51 @@ def run_pipeline(issue_key, run_agents=False):
     print("========================================")
 
 
+    # =====================================================
+    # INITIALIZE AGENTS
+    # =====================================================
+
     metric_agent = MetricAgent()
     log_agent = LogAgent()
     trace_agent = TraceAgent()
 
 
-    # =====================================================
-    # DEBUG CONTEXT
-    # =====================================================
-
-    print("\n==============================")
-    print("SELECTED CONTEXTS DEBUG")
-    print("==============================")
-
-
-    for service, context in selected_contexts.items():
-
-        print("\nSERVICE:", service)
-        print(
-            "INVESTIGATION ID:",
-            context.investigation_id
-        )
-
 
     # =====================================================
-    # RUN AGENTS
+    # RUN ANALYSIS FOR EACH SERVICE
     # =====================================================
 
     for context in selected_contexts.values():
 
+
         print("\n----------------------------------------")
-        print("SERVICE:", context.service)
-        print(
-            "INVESTIGATION ID:",
-            context.investigation_id
-        )
+        print("TEST CONTEXT")
         print("----------------------------------------")
+
+        print(
+            {
+                "investigation_id": context.investigation_id,
+                "service": context.service,
+                "incident_time": context.incident_time
+            }
+        )
+
 
 
         # =================================================
         # 1. METRIC AGENT
         # =================================================
 
-        print("\nRunning Metric Agent...")
+        print("\n\n[1/3] Testing Metric Agent...")
+
 
         metric_result = metric_agent.analyze(
             context
         )
 
-        print(
-            "Metric Agent completed."
-        )
-
-        metric_result = metric_agent.analyze(
-            context
-        )
 
         print("\nMETRIC RESULT")
+
         print(
             json.dumps(
                 metric_result,
@@ -410,6 +398,8 @@ def run_pipeline(issue_key, run_agents=False):
                 default=str
             )
         )
+
+
 
         # =================================================
         # SAVE METRIC EVIDENCE
@@ -420,14 +410,27 @@ def run_pipeline(issue_key, run_agents=False):
             []
         ):
 
+
             insert_evidence(
-                investigation_id=context.investigation_id,
-                service=context.service,
-                evidence_type="metric",
-                description=metric.get(
-                    "description",
-                    ""
-                ),
+
+                investigation_id=
+                    context.investigation_id,
+
+                service=
+                    metric.get(
+                        "service",
+                        context.service
+                    ),
+
+                evidence_type=
+                    "metric",
+
+                description=
+                    metric.get(
+                        "description",
+                        ""
+                    ),
+
                 score=float(
                     metric.get(
                         "value",
@@ -437,25 +440,21 @@ def run_pipeline(issue_key, run_agents=False):
             )
 
 
+
         # =================================================
         # 2. LOG AGENT
         # =================================================
 
-        print("\nRunning Log Agent...")
+        print("\n\n[2/3] Testing Log Agent...")
+
 
         log_result = log_agent.analyze(
             context
         )
 
-        print(
-            "Log Agent completed."
-        )
-
-        log_result = log_agent.analyze(
-            context
-        )
 
         print("\nLOG RESULT")
+
         print(
             json.dumps(
                 log_result,
@@ -464,23 +463,38 @@ def run_pipeline(issue_key, run_agents=False):
             )
         )
 
+
+
         # =================================================
         # SAVE LOG EVIDENCE
         # =================================================
 
         for log in log_result.get(
-            "errors",
+            "logs",
             []
         ):
 
+
             insert_evidence(
-                investigation_id=context.investigation_id,
-                service=context.service,
-                evidence_type="log",
-                description=log.get(
-                    "message",
-                    ""
-                ),
+
+                investigation_id=
+                    context.investigation_id,
+
+                service=
+                    log.get(
+                        "service",
+                        context.service
+                    ),
+
+                evidence_type=
+                    "log",
+
+                description=
+                    log.get(
+                        "message",
+                        ""
+                    ),
+
                 score=float(
                     log.get(
                         "count",
@@ -490,25 +504,21 @@ def run_pipeline(issue_key, run_agents=False):
             )
 
 
+
         # =================================================
         # 3. TRACE AGENT
         # =================================================
 
-        print("\nRunning Trace Agent...")
+        print("\n\n[3/3] Testing Trace Agent...")
+
 
         trace_result = trace_agent.analyze(
             context
         )
 
-        print(
-            "Trace Agent completed."
-        )
-
-        metric_result = metric_agent.analyze(
-            context
-        )
 
         print("\nTRACE RESULT")
+
         print(
             json.dumps(
                 trace_result,
@@ -516,6 +526,8 @@ def run_pipeline(issue_key, run_agents=False):
                 default=str
             )
         )
+
+
 
         # =================================================
         # SAVE TRACE EVIDENCE
@@ -526,14 +538,27 @@ def run_pipeline(issue_key, run_agents=False):
             []
         ):
 
+
             insert_evidence(
-                investigation_id=context.investigation_id,
-                service=context.service,
-                evidence_type="trace",
-                description=trace.get(
-                    "description",
-                    ""
-                ),
+
+                investigation_id=
+                    context.investigation_id,
+
+                service=
+                    trace.get(
+                        "service",
+                        context.service
+                    ),
+
+                evidence_type=
+                    "trace",
+
+                description=
+                    trace.get(
+                        "description",
+                        ""
+                    ),
+
                 score=float(
                     trace.get(
                         "latency_ms",
@@ -543,20 +568,64 @@ def run_pipeline(issue_key, run_agents=False):
             )
 
 
+
+        # =================================================
+        # AGENT SUMMARY
+        # =================================================
+
+        print("\n========================================")
+        print("AGENT SUMMARY")
+        print("========================================")
+
+
+        print(
+            "Metric anomalies:",
+            len(
+                metric_result.get(
+                    "anomalies",
+                    []
+                )
+            )
+        )
+
+
+        print(
+            "Log errors:",
+            len(
+                log_result.get(
+                    "logs",
+                    []
+                )
+            )
+        )
+
+
+        print(
+            "Trace anomalies:",
+            len(
+                trace_result.get(
+                    "traces",
+                    []
+                )
+            )
+        )
+
+
         print(
             "\nEvidence saved for service:",
             context.service
         )
 
 
+
     # =====================================================
-    # FINISH STEP 9
+    # STEP 9 COMPLETED
     # =====================================================
+
 
     print("\n========================================")
     print("MULTI-AGENT EVIDENCE COLLECTION COMPLETED")
     print("========================================")
-
 
     # =====================================================
     # MAIN ENTRY

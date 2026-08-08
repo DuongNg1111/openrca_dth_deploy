@@ -15,27 +15,8 @@ class TraceAgent(BaseAgent):
     def __init__(self):
         super().__init__("Trace Agent")
 
-    def analyze(self, context) -> dict:
-        """
-        Analyze traces stored in PostgreSQL.
 
-        Flow:
-            investigation_traces
-                    ↓
-            query by investigation_id
-                    ↓
-            filter by service
-                    ↓
-            calculate latency statistics
-                    ↓
-            detect high-latency traces
-                    ↓
-            Gemini analysis
-                    ↓
-            return structured trace evidence
-                    ↓
-            full_pipeline saves evidence to evidence_records
-        """
+    def analyze(self, context) -> dict:
 
         investigation_id = getattr(
             context,
@@ -55,404 +36,422 @@ class TraceAgent(BaseAgent):
             ""
         )
 
-        # =====================================================
-        # 1. VALIDATE INVESTIGATION ID
-        # =====================================================
+
+        # ============================================
+        # 1. VALIDATE
+        # ============================================
 
         if investigation_id is None:
+
             return {
                 "agent": "Trace Agent",
                 "evidence_type": "trace",
                 "traces": [],
-                "summary": (
-                    "Trace analysis skipped because "
-                    "investigation_id was not provided."
-                ),
+                "summary": "Missing investigation_id.",
                 "confidence": 0.0
             }
 
-        # =====================================================
-        # 2. LOAD TRACES FROM DATABASE
-        # =====================================================
+
+
+        # ============================================
+        # 2. LOAD TRACE DATA
+        # ============================================
 
         try:
+
             traces_df = get_investigation_traces(
                 investigation_id
             )
 
+
         except Exception as e:
+
             return {
                 "agent": "Trace Agent",
                 "evidence_type": "trace",
                 "traces": [],
-                "summary": (
-                    f"Failed to load traces for "
-                    f"investigation {investigation_id}: "
-                    f"{str(e)}"
-                ),
+                "summary": str(e),
                 "confidence": 0.0
             }
 
-        # =====================================================
-        # 3. CHECK DATA
-        # =====================================================
+
 
         if traces_df is None or traces_df.empty:
+
             return {
                 "agent": "Trace Agent",
                 "evidence_type": "trace",
                 "traces": [],
-                "summary": (
-                    f"No trace data found for "
-                    f"investigation {investigation_id}."
-                ),
+                "summary": "No trace data found.",
                 "confidence": 1.0
             }
 
-        # =====================================================
-        # 4. VALIDATE COLUMNS
-        # =====================================================
 
-        required_columns = [
-            "timestamp",
-            "cmdb_id",
-            "span_id",
-            "trace_id",
-            "duration",
-            "type",
-            "status_code",
-            "operation_name",
-            "parent_span"
-        ]
 
-        missing_columns = [
-            column
-            for column in required_columns
-            if column not in traces_df.columns
-        ]
+        # ============================================
+        # 3. CLEAN DATA
+        # ============================================
 
-        if missing_columns:
-            return {
-                "agent": "Trace Agent",
-                "evidence_type": "trace",
-                "traces": [],
-                "summary": (
-                    "Trace table is missing required columns: "
-                    + ", ".join(missing_columns)
-                ),
-                "confidence": 0.0
-            }
-        # =====================================================
-        # 5. FILTER BY SERVICE
-        # =====================================================
+        df = traces_df.copy()
 
-        if "cmdb_id" not in traces_df.columns:
-            return {
-                "agent": "Trace Agent",
-                "evidence_type": "trace",
-                "traces": [],
-                "summary": (
-                    "Trace table is missing required column: cmdb_id"
-                ),
-                "confidence": 0.0
-            }
 
-        service_df = traces_df[
-            traces_df["cmdb_id"].astype(str).str.lower()
-            == str(service).lower()
-        ].copy()
-
-        if service_df.empty:
-            return {
-                "agent": "Trace Agent",
-                "evidence_type": "trace",
-                "traces": [],
-                "summary": (
-                    f"No trace data found for service '{service}'."
-                ),
-                "confidence": 1.0
-            }
-
-        # =====================================================
-        # 6. CLEAN DURATION
-        # =====================================================
-
-        service_df["duration"] = pd.to_numeric(
-            service_df["duration"],
+        df["duration"] = pd.to_numeric(
+            df["duration"],
             errors="coerce"
         )
 
-        service_df = service_df.dropna(
+
+        df = df.dropna(
             subset=["duration"]
         )
 
-        service_df["duration_ms"] = (
-            service_df["duration"] / 1000.0
+
+        if df.empty:
+
+            return {
+                "agent": "Trace Agent",
+                "evidence_type": "trace",
+                "traces": [],
+                "summary": "No valid duration.",
+                "confidence": 1.0
+            }
+
+
+
+        # PostgreSQL duration = microseconds
+        df["duration_ms"] = (
+            df["duration"] / 1000
         )
 
-        if service_df.empty:
+
+
+        # ============================================
+        # 4. FIND TARGET SERVICE TRACE
+        # ============================================
+
+        service_trace_ids = set(
+            df[
+                df["cmdb_id"]
+                .astype(str)
+                .str.contains(
+                    service.replace("-0",""),
+                    case=False,
+                    na=False
+                )
+            ]["trace_id"]
+            .tolist()
+        )
+
+
+
+        if not service_trace_ids:
+
             return {
                 "agent": "Trace Agent",
                 "evidence_type": "trace",
                 "traces": [],
                 "summary": (
-                    f"No valid trace duration values "
-                    f"were found for service '{service}'."
+                    f"No traces related to "
+                    f"service {service}"
                 ),
                 "confidence": 1.0
             }
 
-        # duration trong PostgreSQL là microseconds
-        # Convert sang milliseconds cho Agent output
-        service_df["duration_ms"] = (
-            service_df["duration"] / 1000.0
-        )
-        # =====================================================
-        # 7. CALCULATE LATENCY STATISTICS
-        # =====================================================
 
-        max_duration = float(
-            service_df["duration_ms"].max()
-        )
 
-        mean_duration = float(
-            service_df["duration_ms"].mean()
-        )
-
-        median_duration = float(
-            service_df["duration_ms"].median()
-        )
-
-        p95_duration = float(
-            service_df["duration_ms"].quantile(0.95)
-        )
-
-        p99_duration = float(
-            service_df["duration_ms"].quantile(0.99)
-        )
-
-        sample_count = int(
-            len(service_df)
-        )
-        # =====================================================
-        # 8. IDENTIFY HIGH-LATENCY TRACES
-        # =====================================================
-
-        high_latency_df = service_df[
-            service_df["duration_ms"] >= p95_duration
+        # lấy toàn bộ span trong trace đó
+        related_df = df[
+            df["trace_id"].isin(
+                service_trace_ids
+            )
         ].copy()
 
-        high_latency_df = high_latency_df.sort_values(
-            by="duration_ms",
+
+
+        # ============================================
+        # 5. STATISTICS
+        # ============================================
+
+        median_latency = float(
+            related_df["duration_ms"].median()
+        )
+
+
+        p95_latency = float(
+            related_df["duration_ms"]
+            .quantile(0.95)
+        )
+
+
+
+        anomaly_df = related_df[
+            related_df["duration_ms"]
+            >= p95_latency
+        ]
+
+
+        anomaly_df = anomaly_df.sort_values(
+            "duration_ms",
             ascending=False
         )
 
-        sample_df = high_latency_df.head(20)
 
-        # =====================================================
-        # 9. BUILD RAW TRACE EVIDENCE
-        # =====================================================
+        sample = anomaly_df.head(20)
 
-        sample_columns = [
-            column
-            for column in [
-                "timestamp",
-                "cmdb_id",
-                "span_id",
-                "trace_id",
-                "duration_ms",
-                "type",
-                "status_code",
-                "operation_name",
-                "parent_span"
-            ]
-            if column in sample_df.columns
-        ]
 
-        raw_trace_evidence = (
-            sample_df[
-                sample_columns
-            ]
-            .to_dict(
-                orient="records"
+
+        raw_trace = []
+
+
+        for _, row in sample.iterrows():
+
+            raw_trace.append(
+
+                {
+                    "trace_id":
+                        str(row["trace_id"]),
+
+                    "service":
+                        str(row["cmdb_id"]),
+
+                    "span_id":
+                        str(row["span_id"]),
+
+                    "parent_span":
+                        str(row["parent_span"]),
+
+                    "operation":
+                        str(row["operation_name"]),
+
+                    "latency_ms":
+                        float(row["duration_ms"])
+
+                }
+
             )
-        )
-        # =====================================================
-        # 10. PREPARE SUMMARY
-        # =====================================================
 
-        summary_text = (
-            f"Service '{service}' has "
-            f"{sample_count} trace records. "
-            f"Mean latency: {mean_duration:.2f} ms, "
-            f"median: {median_duration:.2f} ms, "
-            f"P95: {p95_duration:.2f} ms, "
-            f"P99: {p99_duration:.2f} ms, "
-            f"maximum: {max_duration:.2f} ms."
-        )
-        # =====================================================
-        # 11. GEMINI PROMPT
-        # =====================================================
+
+
+        if not raw_trace:
+
+            return {
+
+                "agent": "Trace Agent",
+
+                "evidence_type": "trace",
+
+                "traces": [],
+
+                "summary":
+                    "No latency anomaly detected.",
+
+                "confidence": 1.0
+            }
+
+
+
+        # ============================================
+        # 6. GEMINI ANALYSIS
+        # ============================================
 
         prompt = f"""
-You are an SRE Distributed Tracing and Latency Analysis Expert.
 
-Analyze trace evidence stored in PostgreSQL.
+    You are an SRE Distributed Tracing Expert.
 
-Investigation ID:
-{investigation_id}
+    Analyze ONLY the supplied trace evidence.
 
-Service:
-{service}
+    IMPORTANT CONTEXT:
 
-Incident Time:
-{incident_time}
+    The target service provided by the investigation context is a logical service name.
 
-Trace Statistics:
+    The trace data may contain runtime service/container names
+    that are slightly different from the logical service name.
 
-Total trace records:
-{sample_count}
+    Example:
+    - Logical service: frontend-0
+    - Runtime trace service: frontend2-0
 
-Mean latency:
-{mean_duration}
+    These should be considered related evidence if they represent the same service family.
 
-Median latency:
-{median_duration}
+    Do NOT discard trace evidence only because the cmdb_id
+    does not exactly match the logical service name.
 
-P95 latency:
-{p95_duration}
 
-P99 latency:
-{p99_duration}
+    Target logical service:
+    {service}
 
-Maximum latency:
-{max_duration}
 
-Representative high-latency trace records:
+    Incident time:
+    {incident_time}
 
-{json.dumps(
-    raw_trace_evidence,
-    indent=2,
-    default=str
-)}
 
-IMPORTANT RULES:
+    Median latency:
+    {median_latency} ms
 
-1. Use ONLY the supplied trace data.
-2. Do NOT invent trace IDs.
-3. Do NOT invent services.
-4. Do NOT invent dependencies.
-5. Do NOT invent latency values.
-6. The slow_service MUST be "{service}".
-7. Do NOT infer a dependency from operation_name alone.
-8. If parent_span is empty, null, or NaN, return dependency as "".
-9. Do NOT infer root_service unless explicitly supported by the data.
-10. operation_name may describe the operation, but do not assume it is a dependency.
-11. If root service or dependency cannot be determined from the supplied data,
-    return an empty string.
-12. If there is insufficient evidence of a meaningful latency anomaly,
-    return an empty traces list.
-13. Return ONLY valid JSON.
 
-Required JSON structure:
+    Trace evidence:
 
-{{
-    "agent": "Trace Agent",
-    "evidence_type": "trace",
-    "traces": [
-        {{
-            "trace_id": "",
-            "root_service": "",
-            "slow_service": "{service}",
-            "latency_ms": 0.0,
-            "normal_latency_ms": {median_duration},
-            "dependency": "",
-            "description": ""
-        }}
+    {json.dumps(
+        raw_trace,
+        indent=2
+    )}
+
+
+    Rules:
+
+    1. Use ONLY the supplied trace evidence.
+    2. Do NOT invent services.
+    3. Do NOT rename services.
+    4. Keep the original runtime service name from cmdb_id.
+    5. The "service" field in output MUST contain the original trace cmdb_id.
+    6. The context service name is only used to identify related traces.
+    7. Runtime service names with similar prefixes should be treated as related evidence.
+    8. Do NOT assume dependency only from operation_name.
+    9. A dependency is valid only when parent_span matches another span_id in the supplied trace evidence.
+    10. If dependency cannot be proven, return an empty string.
+    11. Do NOT invent root services.
+    12. Return only meaningful latency anomalies.
+    13. If latency is not significantly higher than the baseline, do not include it.
+    14. Return ONLY valid JSON.
+
+
+    Required JSON format:
+
+    {{
+    "agent":"Trace Agent",
+
+    "evidence_type":"trace",
+
+    "traces":[
+
+    {{
+    "trace_id":"",
+    "service":"",
+    "operation":"",
+    "latency_ms":0,
+    "baseline_ms":0,
+    "dependency":"",
+    "description":""
+    }}
+
     ],
-    "summary": "",
-    "confidence": 0.0
-}}
-"""
 
-        # =====================================================
-        # 12. CALL GEMINI
-        # =====================================================
+    "summary":"",
+
+    "confidence":0.0
+
+    }}
+
+    """
+
+            # ============================================
+        # 7. CALL GEMINI
+        # ============================================
 
         try:
 
             response = self.client.models.generate_content(
+
                 model=self.model_name,
+
                 contents=prompt,
+
                 config=types.GenerateContentConfig(
+
                     temperature=0.1,
+
                     response_mime_type="application/json"
-                ),
+
+                )
+
             )
+
 
             result = json.loads(
                 response.text
             )
 
+
             return result
 
-        # =====================================================
-        # 13. FALLBACK
-        # =====================================================
+
+
+        # ============================================
+        # 8. FALLBACK
+        # ============================================
 
         except Exception as e:
 
-            fallback_traces = []
 
-            for item in raw_trace_evidence[:5]:
+            fallback = []
 
-                duration_value = item.get(
-                    "duration_ms",
-                    0.0
-                )
 
-                try:
-                    duration_value = float(
-                        duration_value
-                    )
-                except (TypeError, ValueError):
-                    duration_value = 0.0
+            for item in raw_trace[:10]:
 
-                fallback_traces.append(
+
+                fallback.append(
+
                     {
-                        "trace_id": str(
-                            item.get(
-                                "trace_id",
-                                ""
+                        "trace_id":
+                            item["trace_id"],
+
+
+                        "service":
+                            item["service"],
+
+
+                        "operation":
+                            item["operation"],
+
+
+                        "latency_ms":
+                            item["latency_ms"],
+
+
+                        "baseline_ms":
+                            median_latency,
+
+
+                        "dependency":
+                            "",
+
+
+                        "description":
+                            (
+                                f"High latency detected "
+                                f"in {item['service']} "
+                                f"operation "
+                                f"{item['operation']}"
                             )
-                        ),
 
-                        "root_service": "",
-
-                        "slow_service": service,
-
-                        "latency_ms": duration_value,
-
-                        "normal_latency_ms": (
-                            median_duration
-                        ),
-
-                        "dependency": "",
-
-                        "description": (
-                            f"High-latency trace detected "
-                            f"for service '{service}' "
-                            f"with duration "
-                            f"{duration_value}. "
-                            f"Gemini analysis unavailable."
-                        )
                     }
+
                 )
+
 
             return {
-                "agent": "Trace Agent",
-                "evidence_type": "trace",
-                "traces": fallback_traces,
-                "summary": summary_text,
-                "confidence": 0.5
+
+
+                "agent":
+                    "Trace Agent",
+
+
+                "evidence_type":
+                    "trace",
+
+
+                "traces":
+                    fallback,
+
+
+                "summary":
+                    (
+                        f"Detected latency anomalies "
+                        f"for service {service}"
+                    ),
+
+
+                "confidence":
+                    0.5
+
             }

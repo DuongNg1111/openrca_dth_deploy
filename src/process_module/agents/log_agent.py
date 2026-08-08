@@ -14,32 +14,36 @@ class LogAgent(BaseAgent):
     def __init__(self):
         super().__init__("Log Agent")
 
+
     def analyze(self, context) -> dict:
-        """
-        Analyze logs stored in PostgreSQL for one investigation
-        and one logical service.
 
-        Flow:
-
-            investigation_logs
-                    ↓
-            query by investigation_id + service
-                    ↓
-            LogAgent
-                    ↓
-            detect error-related logs
-                    ↓
-            Gemini analysis
-                    ↓
-            structured log evidence
-                    ↓
-            full_pipeline
-                    ↓
-            evidence_records
         """
+        Log Agent Pipeline
+
+        PostgreSQL
+            |
+            v
+        investigation_logs
+            |
+            v
+        filter service
+            |
+            v
+        detect error patterns
+            |
+            v
+        group repeated errors
+            |
+            v
+        Gemini analysis
+            |
+            v
+        structured log evidence
+        """
+
 
         # =====================================================
-        # 1. GET CONTEXT INFORMATION
+        # 1. GET CONTEXT
         # =====================================================
 
         investigation_id = getattr(
@@ -60,8 +64,9 @@ class LogAgent(BaseAgent):
             ""
         )
 
+
         # =====================================================
-        # 2. VALIDATE INVESTIGATION ID
+        # 2. VALIDATE INVESTIGATION
         # =====================================================
 
         if investigation_id is None:
@@ -69,16 +74,18 @@ class LogAgent(BaseAgent):
             return {
                 "agent": "Log Agent",
                 "evidence_type": "log",
-                "errors": [],
+                "logs": [],
                 "summary": (
                     "Log analysis skipped because "
-                    "investigation_id was not provided."
+                    "investigation_id is missing."
                 ),
-                "confidence": 0.0,
+                "confidence": 0.0
             }
 
+
+
         # =====================================================
-        # 3. LOAD LOG DATA FROM DATABASE
+        # 3. LOAD LOGS
         # =====================================================
 
         try:
@@ -88,22 +95,23 @@ class LogAgent(BaseAgent):
                 service=service
             )
 
+
         except Exception as e:
 
             return {
                 "agent": "Log Agent",
                 "evidence_type": "log",
-                "errors": [],
+                "logs": [],
                 "summary": (
-                    f"Unable to load logs for "
-                    f"investigation {investigation_id}: "
-                    f"{str(e)}"
+                    f"Failed loading logs: {str(e)}"
                 ),
-                "confidence": 0.0,
+                "confidence": 0.0
             }
 
+
+
         # =====================================================
-        # 4. VALIDATE DATA
+        # 4. CHECK EMPTY DATA
         # =====================================================
 
         if logs_df is None or logs_df.empty:
@@ -111,128 +119,147 @@ class LogAgent(BaseAgent):
             return {
                 "agent": "Log Agent",
                 "evidence_type": "log",
-                "errors": [],
+                "logs": [],
                 "summary": (
                     f"No log data found for service "
-                    f"'{service}' in investigation "
-                    f"{investigation_id}."
+                    f"'{service}'."
                 ),
-                "confidence": 1.0,
+                "confidence": 1.0
             }
 
+
+
         # =====================================================
-        # 5. FIND LOG CONTENT COLUMN
+        # 5. FIND MESSAGE COLUMN
         # =====================================================
 
-        content_column = None
+        message_column = None
 
-        for candidate in [
+
+        for column in [
             "value",
             "content",
             "message",
             "log",
             "body",
-            "text",
+            "text"
         ]:
 
-            if candidate in logs_df.columns:
-
-                content_column = candidate
+            if column in logs_df.columns:
+                message_column = column
                 break
 
-        if content_column is None:
+
+
+        if message_column is None:
 
             return {
                 "agent": "Log Agent",
                 "evidence_type": "log",
-                "errors": [],
+                "logs": [],
                 "summary": (
-                    f"No usable log content column found "
-                    f"for service '{service}'."
+                    "No log message column found."
                 ),
-                "confidence": 0.5,
+                "confidence": 0.5
             }
 
+
+
         # =====================================================
-        # 6. FIND ERROR LOGS
+        # 6. DETECT ERROR LOGS
         # =====================================================
 
         error_pattern = (
-            r"error|exception|timeout|fail|failed|failure|"
-            r"fatal|critical|slow|unavailable"
+            r"error|exception|timeout|"
+            r"failed|failure|fatal|"
+            r"critical|unavailable"
         )
 
+
         error_mask = (
-            logs_df[content_column]
+            logs_df[message_column]
             .astype(str)
             .str.contains(
                 error_pattern,
                 case=False,
-                na=False,
                 regex=True,
+                na=False
             )
         )
+
 
         error_df = logs_df[
             error_mask
         ].copy()
 
-        error_count = len(error_df)
 
-        # =====================================================
-        # 7. NO ERROR FOUND
-        # =====================================================
 
-        if error_count == 0:
+        if error_df.empty:
 
             return {
                 "agent": "Log Agent",
                 "evidence_type": "log",
-                "errors": [],
+                "logs": [],
                 "summary": (
                     f"No explicit error logs found "
                     f"for service '{service}'."
                 ),
-                "confidence": 1.0,
+                "confidence": 1.0
             }
 
+
+
         # =====================================================
-        # 8. PREPARE SAMPLE FOR GEMINI
+        # 7. GROUP ERROR MESSAGES
         # =====================================================
 
-        sample_columns = [
-            column
-            for column in [
-                "timestamp",
-                "cmdb_id",
-                "log_name",
-                content_column,
-            ]
-            if column in error_df.columns
-        ]
-
-        sample_df = (
-            error_df[
-                sample_columns
-            ]
-            .head(20)
+        grouped = (
+            error_df[message_column]
+            .astype(str)
+            .value_counts()
+            .head(10)
         )
 
-        raw_error_logs = (
-            sample_df
-            .to_dict(
-                orient="records"
+
+        raw_logs = []
+
+
+        for message, count in grouped.items():
+
+            raw_logs.append(
+                {
+                    "service": service,
+                    "message": message,
+                    "count": int(count)
+                }
             )
-        )
+
+
 
         # =====================================================
-        # 9. PREPARE GEMINI PROMPT
+        # 8. GET SAMPLE TIMESTAMP
+        # =====================================================
+
+        timestamp = ""
+
+
+        if "timestamp" in error_df.columns:
+
+            timestamp = str(
+                error_df.iloc[0]["timestamp"]
+            )
+
+
+
+        # =====================================================
+        # 9. GEMINI PROMPT
         # =====================================================
 
         prompt = f"""
+
 You are an SRE Log Analysis Expert.
 
-Analyze log evidence stored in PostgreSQL.
+Analyze log evidence from PostgreSQL.
 
 Investigation ID:
 {investigation_id}
@@ -243,52 +270,52 @@ Service:
 Incident Time:
 {incident_time}
 
-Number of error-related log entries:
-{error_count}
 
-The following log samples were retrieved directly
-from the investigation_logs table:
+Grouped Error Evidence:
 
 {json.dumps(
-    raw_error_logs,
+    raw_logs,
     indent=2,
     default=str
 )}
 
-Identify meaningful log-based evidence related
-to the incident.
 
-IMPORTANT RULES:
+Rules:
 
-- Use ONLY the supplied log evidence.
-- Do NOT invent error messages.
-- Do NOT invent timestamps.
-- Do NOT invent services.
-- Distinguish repeated errors from unique errors.
-- If the logs do not provide meaningful evidence,
-  return an empty errors list.
-- The service must be "{service}".
-- Return ONLY valid JSON.
+1. Use ONLY supplied evidence.
+2. Do NOT invent error messages.
+3. Do NOT invent timestamps.
+4. Do NOT invent services.
+5. Group repeated errors together.
+6. Count must represent occurrences.
+7. If evidence is insufficient return empty logs.
+8. Return ONLY valid JSON.
 
-Required JSON structure:
+
+Required format:
+
 
 {{
-    "agent": "Log Agent",
-    "evidence_type": "log",
-    "errors": [
-        {{
-            "service": "{service}",
-            "timestamp": "{incident_time}",
-            "level": "ERROR",
-            "error_type": "",
-            "message": "",
-            "count": 0
-        }}
-    ],
-    "summary": "",
-    "confidence": 0.0
+"agent":"Log Agent",
+"evidence_type":"log",
+
+"logs":[
+{{
+"service":"{service}",
+"timestamp":"{timestamp}",
+"level":"ERROR",
+"error_type":"",
+"message":"",
+"count":0
 }}
+],
+
+"summary":"",
+"confidence":0.0
+}}
+
 """
+
 
         # =====================================================
         # 10. CALL GEMINI
@@ -297,49 +324,75 @@ Required JSON structure:
         try:
 
             response = self.client.models.generate_content(
+
                 model=self.model_name,
+
                 contents=prompt,
+
                 config=types.GenerateContentConfig(
+
                     temperature=0.1,
-                    response_mime_type="application/json",
-                ),
+
+                    response_mime_type="application/json"
+
+                )
             )
+
 
             result = json.loads(
                 response.text
             )
 
+
             return result
+
+
 
         # =====================================================
         # 11. FALLBACK
         # =====================================================
 
-        except Exception:
+        except Exception as e:
 
-            fallback_errors = [
-                {
-                    "service": service,
-                    "timestamp": incident_time,
-                    "level": "ERROR",
-                    "error_type": "LogAnalysisError",
-                    "message": (
-                        f"Detected {error_count} "
-                        f"error-related log entries "
-                        f"for service '{service}'."
-                    ),
-                    "count": error_count,
-                }
-            ]
+
+            fallback_logs = []
+
+
+            for item in raw_logs:
+
+
+                fallback_logs.append(
+                    {
+                        "service": service,
+
+                        "timestamp": timestamp,
+
+                        "level": "ERROR",
+
+                        "error_type": "Unknown",
+
+                        "message": item["message"],
+
+                        "count": item["count"]
+                    }
+                )
+
+
 
             return {
+
                 "agent": "Log Agent",
+
                 "evidence_type": "log",
-                "errors": fallback_errors,
+
+                "logs": fallback_logs,
+
                 "summary": (
-                    f"Detected {error_count} "
-                    f"error-related log entries "
+                    f"Detected "
+                    f"{len(error_df)} error logs "
                     f"for service '{service}'."
                 ),
-                "confidence": 0.5,
+
+                "confidence": 0.5
+
             }
