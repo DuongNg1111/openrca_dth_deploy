@@ -207,24 +207,38 @@ TABLE_SCHEMAS = {
 
     "evidence_records": {
 
-        "columns": {
+    "columns": {
 
-            "id": "SERIAL PRIMARY KEY",
+        "id": "SERIAL PRIMARY KEY",
 
-            "investigation_id": "INTEGER",
+        "investigation_id": "INTEGER",
 
-            "service": "TEXT",
+        "service": "TEXT",
 
-            "evidence_type": "TEXT",
+        "evidence_type": "TEXT",
 
-            "description": "TEXT",
+        "metric_name": "TEXT",
 
-            "score": "DOUBLE PRECISION"
+        "trace_id": "TEXT",
 
-        }
-    },
+        "operation": "TEXT",
 
+        "description": "TEXT",
 
+        "value": "DOUBLE PRECISION",
+
+        "baseline": "DOUBLE PRECISION",
+
+        "timestamp": "TIMESTAMP",
+
+        "score": "DOUBLE PRECISION",
+
+        "confidence": "DOUBLE PRECISION",
+
+        "metadata": "JSONB"
+
+    }
+},
     # =====================================================
     # RCA RESULT
     # =====================================================

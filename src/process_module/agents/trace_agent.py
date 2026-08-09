@@ -127,20 +127,39 @@ class TraceAgent(BaseAgent):
         # 4. FIND TARGET SERVICE TRACE
         # ============================================
 
-        service_trace_ids = set(
-            df[
-                df["cmdb_id"]
-                .astype(str)
-                .str.contains(
-                    service.replace("-0",""),
-                    case=False,
-                    na=False
-                )
-            ]["trace_id"]
-            .tolist()
+        runtime_service = (
+            service
+            .replace("-0", "")
+            .strip()
+            .lower()
         )
 
+        cmdb_series = (
+            df["cmdb_id"]
+            .astype(str)
+            .str.lower()
+            .str.strip()
+        )
 
+        service_trace_ids = set(
+            df[
+                cmdb_series == runtime_service
+            ]["trace_id"].tolist()
+        )
+
+        # Support service instances:
+        # productcatalogservice-0
+        # productcatalogservice-1
+        # productcatalogservice-2
+        if not service_trace_ids:
+
+            service_trace_ids = set(
+                df[
+                    cmdb_series.str.fullmatch(
+                        rf"{runtime_service}-\d+"
+                    )
+                ]["trace_id"].tolist()
+            )
 
         if not service_trace_ids:
 
