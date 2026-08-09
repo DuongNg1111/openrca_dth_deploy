@@ -6,7 +6,6 @@ from src.process_module.agents.reasoning_agent import ReasoningAgent
 from src.database.repository import (
     insert_evidence,
     get_investigation_evidence,
-    save_rca_result,
 )
 
 
@@ -293,53 +292,13 @@ class ProcessOrchestrator:
         print(final_result)
 
         # =====================================================
-        # 6. SAVE RCA RESULT
-        # =====================================================
-
-        print("\n========================================")
-        print("6. SAVE RCA RESULT")
-        print("========================================")
-
-        save_rca_result(
-
-            investigation_id=investigation_id,
-
-            root_cause=final_result.get(
-                "root_cause",
-                final_result.get(
-                    "reason",
-                    ""
-                )
-            ),
-
-            confidence=final_result.get(
-                "confidence",
-                0
-            ),
-
-            explanation=final_result.get(
-                "explanation",
-                final_result.get(
-                    "reasoning",
-                    ""
-                )
-            )
-        )
-
-        print(
-            "\nRCA Result Saved Successfully."
-        )
-
-        # =====================================================
         # FINAL RESULT
         # =====================================================
 
         print("\n========================================")
         print("FINAL RCA")
         print("========================================")
-
         print(
             final_result
         )
-
         return final_result
