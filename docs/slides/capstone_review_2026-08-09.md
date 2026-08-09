@@ -188,8 +188,12 @@ Required result table:
 
 | Variant | Cases | Top-1 | Top-3 | Reason | Time | Latency/cost |
 |---|---:|---:|---:|---:|---:|---:|
-| Deterministic baseline | TBD | TBD | TBD | TBD | TBD | TBD |
-| Full agent pipeline | TBD | TBD | TBD | TBD | TBD | TBD |
+| Deterministic baseline | 1 metric-only diagnostic | 0/1 exact | 0/1 exact | Not scored | Not scored | 13.94 s / no AI |
+| Full agent pipeline | 1 integration smoke | 1/1 component | Not ranked | Not canonicalized | Not scored | 211.03 s / cost not captured |
+
+Neither row is a frozen multi-case accuracy estimate. The integration row proves
+execution and persistence only; the team must still produce a prospective
+evaluation manifest and aggregate scorer output.
 
 ---
 
