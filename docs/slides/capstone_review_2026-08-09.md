@@ -24,7 +24,8 @@ Evidence freeze target: 15 August 2026
 
 # Problem and success criteria
 
-Given an incident from Jira plus Market metrics, logs, and traces:
+Given an incident from Jira or a local `RawQuery`, plus Market metrics, logs,
+and traces:
 
 1. identify the root-cause component;
 2. explain the failure reason with evidence;
@@ -133,7 +134,7 @@ unless its predictions pass the scorer.
 # Full-pipeline architecture
 
 ```text
-Jira incident
+Jira incident OR local RawQuery
      │ parse + validate time/context
      ▼
 Market metric ─ log ─ trace telemetry
@@ -316,6 +317,25 @@ method, or result evidence.
 
 ---
 
+# Contribution ownership — complete before final
+
+Do not infer ownership from the final branch. Each student must add evidence for
+their own work before 15 August:
+
+| Area | Named owner(s) | Evidence required |
+|---|---|---|
+| Data acquisition and schema | **Team to fill** | Original commit/PR + dataset notes |
+| Preprocessing and time semantics | **Team to fill** | Tests + before/after counts |
+| Metric/log/trace agents | **Team to fill** | Module commits + one traced case |
+| Reasoning, persistence, and UI | **Team to fill** | Commit/PR + saved run/demo |
+| Evaluation and presentation | **Team to fill** | Scorer artifact + slide owner |
+
+The review commits repair and document the shared code; they do **not** establish
+which student authored the original modules. Teacher evaluation should reconcile
+the table with Git history and a short individual explanation.
+
+---
+
 # Completeness gate
 
 - [x] Market dataset card plus 20-file byte/SHA-256 manifest.
@@ -364,8 +384,13 @@ Record in the final deck:
 Repository: github.com/ThienHuynhNgoc/OpenRCA_DTH
 Branch:     codex/dth-capstone-review-2026-08-09
 Code commit: 3f99de3
+Evidence commits through: 9a08ffd
 Dataset:    docs/review/market_cloudbed1_file_manifest_2026-08-09.tsv
-Command:    <exact baseline and full-method commands>
+Dry run:    python -m src.full_pipeline --raw-query-file local-query.json \
+              --data-root /absolute/path/to/Market --dataset cloudbed-1 \
+              --timestamp-offset-hours 8
+Integration: same command plus --write-database --run-agents, against a \
+             disposable loopback-only PostgreSQL target
 Results:    docs/review/full_pipeline_local_integration_2026-08-09.md
 ```
 
