@@ -4,7 +4,8 @@ import pandas as pd
 from src.auth.google_auth import require_login
 from src.database.repository import (
     get_user_incidents,
-    get_incident_detail
+    get_incident_detail,
+get_rca_results
 )
 
 
@@ -299,7 +300,7 @@ else:
 
 
     incident = incident_df.iloc[0]
-
+    st.write("DEBUG investigation ID:", incident["id"])
 
 
     if st.button(
@@ -445,3 +446,43 @@ else:
         st.warning(
             f"Current status: {status}"
         )
+
+    # =====================================================
+    # RCA RESULTS
+    # =====================================================
+
+    st.divider()
+
+    st.subheader("🔍 Root Cause Analysis")
+
+    rca_df = get_rca_results(
+        int(incident["id"])
+    )
+    if rca_df.empty:
+
+        st.info(
+            "RCA results are not available yet."
+        )
+
+    else:
+
+        st.success(
+            f"RCA completed — {len(rca_df)} service(s) analyzed."
+        )
+
+        for _, rca in rca_df.iterrows():
+
+            st.markdown(
+                f"### 🔧 {rca['root_cause']}"
+            )
+
+            col1, col2 = st.columns([4, 1])
+
+            with col1:
+
+                st.markdown("**Root Cause**")
+
+                st.write(
+                    rca["root_cause"]
+                )
+

@@ -728,13 +728,48 @@ def get_incident_detail(
     query = """
         SELECT *
         FROM investigations
-        WHERE issue_key = %s;
+        WHERE issue_key = %s
+        ORDER BY id DESC
+        LIMIT 1;
     """
 
     df = pd.read_sql(
         query,
         conn,
         params=(issue_key,)
+    )
+
+    conn.close()
+
+    return df
+
+# =====================================================
+# STREAMLIT - RCA RESULTS
+# =====================================================
+
+def get_rca_results(investigation_id):
+    """
+    Get RCA results for one investigation.
+    """
+    investigation_id = int(investigation_id)
+    conn = get_connection()
+
+    query = """
+        SELECT
+            id,
+            investigation_id,
+            root_cause,
+            confidence,
+            explanation
+        FROM rca_results
+        WHERE investigation_id = %s
+        ORDER BY id ASC;
+    """
+
+    df = pd.read_sql(
+        query,
+        conn,
+        params=(investigation_id,)
     )
 
     conn.close()
