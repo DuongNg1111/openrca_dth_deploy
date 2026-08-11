@@ -1,5 +1,7 @@
 from src.database.connection import get_connection
 import pandas as pd
+from psycopg2.extras import execute_values
+import json
 
 
 # =====================================================
@@ -10,16 +12,33 @@ def ensure_datetime(df):
 
     df = df.copy()
 
-    if "timestamp" in df.columns:
+    if "timestamp" not in df.columns:
+        return df
 
-        if not pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
+    if pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
+        return df
 
-            df["timestamp"] = pd.to_datetime(
-                df["timestamp"],
-                errors="coerce"
-            )
+    if pd.api.types.is_numeric_dtype(df["timestamp"]):
+
+        df["timestamp"] = pd.to_datetime(
+            df["timestamp"],
+            unit="s",
+            errors="coerce"
+        )
+
+    else:
+
+        df["timestamp"] = pd.to_datetime(
+            df["timestamp"],
+            errors="coerce"
+        )
 
     return df
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 50e312bc6544b4bedc3e7da97ca54a572ec6a9fb
 # =====================================================
 # INVESTIGATION
 # =====================================================
@@ -39,7 +58,6 @@ def create_investigation(
 
     conn = get_connection()
     cur = conn.cursor()
-
 
     sql = """
         INSERT INTO investigations
@@ -62,7 +80,6 @@ def create_investigation(
         RETURNING id;
     """
 
-
     cur.execute(
         sql,
         (
@@ -79,17 +96,47 @@ def create_investigation(
         )
     )
 
-
     investigation_id = cur.fetchone()[0]
-
 
     conn.commit()
 
     cur.close()
     conn.close()
 
-
     return investigation_id
+
+
+# =====================================================
+# UPDATE INVESTIGATION STATUS
+# =====================================================
+
+def update_investigation_status(
+    investigation_id: int,
+    status: str
+):
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    sql = """
+        UPDATE investigations
+        SET status = %s
+        WHERE id = %s;
+    """
+
+    cur.execute(
+        sql,
+        (
+            status,
+            investigation_id
+        )
+    )
+
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
 # =====================================================
 # RAW METRICS
 # =====================================================
@@ -102,29 +149,24 @@ def insert_metrics(
     conn = get_connection()
     cur = conn.cursor()
 
-
     df = ensure_datetime(
         dataframe
     )
 
-
     sql = """
-    INSERT INTO investigation_metrics
-    (
-        investigation_id,
-        timestamp,
-        cmdb_id,
-        kpi_name,
-        value
-    )
+        INSERT INTO investigation_metrics
+        (
+            investigation_id,
+            timestamp,
+            cmdb_id,
+            kpi_name,
+            value
+        )
 
-    VALUES
-    (%s,%s,%s,%s,%s)
+        VALUES %s
     """
 
-
     records = []
-
 
     for _, row in df.iterrows():
         try:
@@ -142,18 +184,19 @@ def insert_metrics(
             )
         )
 
+    if records:
 
-    cur.executemany(
-        sql,
-        records
-    )
-
+        execute_values(
+            cur,
+            sql,
+            records,
+            page_size=5000
+        )
 
     conn.commit()
 
     cur.close()
     conn.close()
-
 
 
 # =====================================================
@@ -168,11 +211,9 @@ def insert_logs(
     conn = get_connection()
     cur = conn.cursor()
 
-
     df = ensure_datetime(
         dataframe
     )
-
 
     content_col = "content"
 
@@ -189,59 +230,71 @@ def insert_logs(
             content_col = candidate
             break
 
-
-
     sql = """
-    INSERT INTO investigation_logs
-    (
-        investigation_id,
-        log_id,
-        timestamp,
-        cmdb_id,
-        log_name,
-        value
-    )
+        INSERT INTO investigation_logs
+        (
+            investigation_id,
+            log_id,
+            timestamp,
+            cmdb_id,
+            log_name,
+            value
+        )
 
-    VALUES
-    (%s,%s,%s,%s,%s,%s)
+        VALUES %s
     """
 
-
     records = []
-
 
     for _, row in df.iterrows():
         log_content = ""
         if content_col in df.columns and pd.notna(row[content_col]):
             log_content = str(row[content_col])
 
+<<<<<<< HEAD
         try:
             ts_val = int(pd.to_datetime(row["timestamp"]).timestamp()) if pd.notna(row["timestamp"]) else 0
         except Exception:
             ts_val = 0
+=======
+        if (
+            content_col in df.columns
+            and pd.notna(row[content_col])
+        ):
+
+            log_content = str(
+                row[content_col]
+            )
+>>>>>>> 50e312bc6544b4bedc3e7da97ca54a572ec6a9fb
 
         records.append(
             (
                 investigation_id,
                 row.get("log_id", ""),
+<<<<<<< HEAD
                 ts_val,  # <--- Thay row["timestamp"] thành ts_val
+=======
+                row["timestamp"],
+>>>>>>> 50e312bc6544b4bedc3e7da97ca54a572ec6a9fb
                 row.get("cmdb_id", ""),
                 row.get("log_name", ""),
                 log_content
             )
         )
 
-    cur.executemany(
-        sql,
-        records
-    )
+    if records:
 
+        execute_values(
+            cur,
+            sql,
+            records,
+            page_size=5000
+        )
 
     conn.commit()
 
     cur.close()
     conn.close()
-
 
 
 # =====================================================
@@ -256,36 +309,32 @@ def insert_traces(
     conn = get_connection()
     cur = conn.cursor()
 
-
     df = ensure_datetime(
         dataframe
     )
 
-
     sql = """
-    INSERT INTO investigation_traces
-    (
-        investigation_id,
-        timestamp,
-        cmdb_id,
-        span_id,
-        trace_id,
-        duration,
-        type,
-        status_code,
-        operation_name,
-        parent_span
-    )
+        INSERT INTO investigation_traces
+        (
+            investigation_id,
+            timestamp,
+            cmdb_id,
+            span_id,
+            trace_id,
+            duration,
+            type,
+            status_code,
+            operation_name,
+            parent_span
+        )
 
-    VALUES
-    (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        VALUES %s
     """
-
 
     records = []
 
-
     for _, row in df.iterrows():
+<<<<<<< HEAD
         raw_status = row["status_code"]
         try:
             status_code_val = int(float(raw_status)) if pd.notna(raw_status) else 0
@@ -297,6 +346,26 @@ def insert_traces(
         except Exception:
             ts_val = 0
 
+=======
+
+        raw_status = row["status_code"]
+
+        try:
+
+            status_code_val = (
+                int(float(raw_status))
+                if pd.notna(raw_status)
+                else 0
+            )
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
+            status_code_val = 0
+
+>>>>>>> 50e312bc6544b4bedc3e7da97ca54a572ec6a9fb
         records.append(
             (
                 investigation_id,
@@ -312,19 +381,248 @@ def insert_traces(
             )
         )
 
+    if records:
 
-    cur.executemany(
-        sql,
-        records
-    )
-
+        execute_values(
+            cur,
+            sql,
+            records,
+            page_size=5000
+        )
 
     conn.commit()
 
     cur.close()
     conn.close()
 
+# =====================================================
+# INVESTIGATION DATA - READ
+# =====================================================
 
+def get_investigation_metrics(
+    investigation_id,
+    service=None
+):
+    """
+    Get preprocessed metrics stored for one investigation.
+
+    If service is provided, only return metrics whose
+    cmdb_id contains the logical service name.
+    """
+
+    conn = get_connection()
+
+    query = """
+        SELECT
+            timestamp,
+            cmdb_id,
+            kpi_name,
+            value
+        FROM investigation_metrics
+        WHERE investigation_id = %s
+    """
+
+    params = [investigation_id]
+
+    if service:
+        query += """
+            AND cmdb_id ILIKE %s
+        """
+        params.append(
+            f"%{service}%"
+        )
+
+    query += """
+        ORDER BY timestamp;
+    """
+
+    df = pd.read_sql(
+        query,
+        conn,
+        params=tuple(params)
+    )
+
+    conn.close()
+
+    return df
+
+def get_investigation_logs(
+    investigation_id,
+    service=None
+):
+    """
+    Get preprocessed logs stored for one investigation.
+
+    If service is provided, only return logs whose
+    cmdb_id contains the logical service name.
+    """
+
+    conn = get_connection()
+
+    query = """
+        SELECT
+            log_id,
+            timestamp,
+            cmdb_id,
+            log_name,
+            value
+        FROM investigation_logs
+        WHERE investigation_id = %s
+    """
+
+    params = [investigation_id]
+
+    if service:
+        query += """
+            AND cmdb_id ILIKE %s
+        """
+        params.append(
+            f"%{service}%"
+        )
+
+    query += """
+        ORDER BY timestamp;
+    """
+
+    df = pd.read_sql(
+        query,
+        conn,
+        params=tuple(params)
+    )
+
+    conn.close()
+
+    return df
+
+def get_investigation_traces(
+    investigation_id,
+    service=None
+):
+
+    conn = get_connection()
+
+    query = """
+        SELECT
+            timestamp,
+            cmdb_id,
+            span_id,
+            trace_id,
+            duration,
+            type,
+            status_code,
+            operation_name,
+            parent_span
+        FROM investigation_traces
+        WHERE investigation_id = %s
+    """
+
+    params = [
+        investigation_id
+    ]
+
+
+    if service:
+
+        query += """
+            AND cmdb_id ILIKE %s
+        """
+
+        params.append(
+            f"%{service}%"
+        )
+
+
+    query += """
+        ORDER BY timestamp;
+    """
+
+
+    df = pd.read_sql(
+        query,
+        conn,
+        params=tuple(params)
+    )
+
+
+    conn.close()
+
+
+    return df
+
+def get_investigation_evidence(
+    investigation_id,
+    service=None
+):
+    """
+    Get evidence generated by agents
+    for one investigation.
+
+    If service is provided, only evidence
+    belonging to that service is returned.
+    """
+
+    conn = get_connection()
+
+    if service is not None:
+
+        query = """
+            SELECT
+                id,
+                service,
+                evidence_type,
+                metric_name,
+                trace_id,
+                operation,
+                description,
+                value,
+                baseline,
+                timestamp,
+                score,
+                confidence,
+                metadata
+            FROM evidence_records
+            WHERE investigation_id = %s
+              AND service = %s
+            ORDER BY id;
+        """
+
+        df = pd.read_sql(
+            query,
+            conn,
+            params=(investigation_id, service)
+        )
+
+    else:
+
+        query = """
+            SELECT
+                id,
+                service,
+                evidence_type,
+                metric_name,
+                trace_id,
+                operation,
+                description,
+                value,
+                baseline,
+                timestamp,
+                score,
+                confidence,
+                metadata
+            FROM evidence_records
+            WHERE investigation_id = %s
+            ORDER BY id;
+        """
+
+        df = pd.read_sql(
+            query,
+            conn,
+            params=(investigation_id,)
+        )
+
+    conn.close()
+
+    return df
 
 # =====================================================
 # EVIDENCE
@@ -335,27 +633,41 @@ def insert_evidence(
     service,
     evidence_type,
     description,
-    score
+    score,
+    metric_name=None,
+    trace_id=None,
+    operation=None,
+    value=None,
+    baseline=None,
+    timestamp=None,
+    confidence=0.0,
+    metadata=None
 ):
 
     conn = get_connection()
     cur = conn.cursor()
 
-
     sql = """
-    INSERT INTO evidence_records
-    (
-        investigation_id,
-        service,
-        evidence_type,
-        description,
-        score
-    )
+        INSERT INTO evidence_records
+        (
+            investigation_id,
+            service,
+            evidence_type,
+            metric_name,
+            trace_id,
+            operation,
+            description,
+            value,
+            baseline,
+            timestamp,
+            score,
+            confidence,
+            metadata
+        )
 
-    VALUES
-    (%s,%s,%s,%s,%s)
-    """
-
+        VALUES
+        (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """
 
     cur.execute(
         sql,
@@ -363,17 +675,23 @@ def insert_evidence(
             investigation_id,
             service,
             evidence_type,
+            metric_name,
+            trace_id,
+            operation,
             description,
-            score
+            value,
+            baseline,
+            timestamp,
+            score,
+            confidence,
+            json.dumps(metadata)
         )
     )
-
 
     conn.commit()
 
     cur.close()
     conn.close()
-
 
 
 # =====================================================
@@ -382,44 +700,44 @@ def insert_evidence(
 
 def save_rca_result(
     investigation_id,
+    service,
     root_cause,
     confidence,
     explanation
 ):
-
     conn = get_connection()
     cur = conn.cursor()
 
-
     sql = """
-    INSERT INTO rca_results
-    (
-        investigation_id,
-        root_cause,
-        confidence,
-        explanation
-    )
+        INSERT INTO rca_results
+        (
+            investigation_id,
+            service,
+            root_cause,
+            confidence,
+            explanation
+        )
 
-    VALUES
-    (%s,%s,%s,%s)
+        VALUES
+        (%s, %s, %s, %s, %s)
     """
-
 
     cur.execute(
         sql,
         (
             investigation_id,
+            service,
             root_cause,
             confidence,
             explanation
         )
     )
 
-
     conn.commit()
 
     cur.close()
     conn.close()
+
 
 # =====================================================
 # STREAMLIT - MY INCIDENTS
@@ -460,7 +778,6 @@ def get_user_incidents(
     return df
 
 
-
 # =====================================================
 # STREAMLIT - INCIDENT DETAIL
 # =====================================================
@@ -477,13 +794,170 @@ def get_incident_detail(
     query = """
         SELECT *
         FROM investigations
-        WHERE issue_key = %s;
+        WHERE issue_key = %s
+        ORDER BY id DESC
+        LIMIT 1;
     """
 
     df = pd.read_sql(
         query,
         conn,
         params=(issue_key,)
+    )
+
+    conn.close()
+
+    return df
+
+# =====================================================
+# STREAMLIT - RCA RESULTS
+# =====================================================
+
+def get_rca_results(investigation_id):
+    """
+    Get RCA results for one investigation.
+    """
+    investigation_id = int(investigation_id)
+    conn = get_connection()
+
+    query = """
+        SELECT
+            id,
+            investigation_id,
+            service,
+            root_cause,
+            confidence,
+            explanation
+        FROM rca_results
+        WHERE investigation_id = %s
+        ORDER BY id ASC;
+    """
+
+    df = pd.read_sql(
+        query,
+        conn,
+        params=(investigation_id,)
+    )
+
+    conn.close()
+
+    return df
+
+# =====================================================
+# HOME - PERSONAL DASHBOARD
+# =====================================================
+
+def get_dashboard_summary(
+    reporter_email
+):
+    """
+    Get incident counts for the logged-in user.
+    """
+
+    conn = get_connection()
+
+    query = """
+        SELECT
+            COUNT(*) AS total_incidents,
+
+            COUNT(*) FILTER (
+                WHERE status = 'Created'
+            ) AS created,
+
+            COUNT(*) FILTER (
+                WHERE status = 'Processing'
+            ) AS processing,
+
+            COUNT(*) FILTER (
+                WHERE status = 'Completed'
+            ) AS completed
+
+        FROM investigations
+
+        WHERE reporter_email = %s;
+    """
+
+    df = pd.read_sql(
+        query,
+        conn,
+        params=(reporter_email,)
+    )
+
+    conn.close()
+
+    return df.iloc[0]
+
+
+def get_incident_trend(
+    reporter_email
+):
+    """
+    Get daily incident counts
+    for the logged-in user.
+    """
+
+    conn = get_connection()
+
+    query = """
+        SELECT
+            DATE(created_at) AS incident_date,
+            COUNT(*) AS incidents
+
+        FROM investigations
+
+        WHERE reporter_email = %s
+
+        GROUP BY DATE(created_at)
+
+        ORDER BY incident_date ASC;
+    """
+
+    df = pd.read_sql(
+        query,
+        conn,
+        params=(reporter_email,)
+    )
+
+    conn.close()
+
+    return df
+
+
+def get_recent_incidents(
+    reporter_email,
+    limit=5
+):
+    """
+    Get the most recent incidents
+    submitted by the logged-in user.
+    """
+
+    conn = get_connection()
+
+    query = """
+        SELECT
+            id,
+            issue_key,
+            created_at,
+            affected_system,
+            status
+
+        FROM investigations
+
+        WHERE reporter_email = %s
+
+        ORDER BY created_at DESC
+
+        LIMIT %s;
+    """
+
+    df = pd.read_sql(
+        query,
+        conn,
+        params=(
+            reporter_email,
+            limit
+        )
     )
 
     conn.close()

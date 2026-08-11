@@ -1,0 +1,12 @@
+{
+    "1": {
+        "root cause occurrence datetime": "2022-03-21 09:28:00",
+        "root cause component": "shippingservice",
+        "root cause reason": "Database timeout"
+    },
+    "2": {
+        "root cause occurrence datetime": "2022-03-21 09:29:00",
+        "root cause component": "checkoutservice",
+        "root cause reason": "CPU overload"
+    }
+}

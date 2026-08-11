@@ -29,12 +29,19 @@ def connect_data_source(parsed_query, config):
         raise ValueError(
             f"Unknown environment: {parsed_query.environment}"
         )
-    # Tự động quét và fallback về thư mục ./data/Market trong project nếu data_root ban đầu không tồn tại
+
+    # Ưu tiên data_root trong config
     base_path = Path(data_root)
     dataset_path = base_path / dataset_folder / "telemetry"
+
+    # Fallback sang ./data/Market nếu không tìm thấy
     if not dataset_path.exists():
-        # Thử tìm theo đường dẫn tương đối trong project hiện tại (data/Market)
-        local_fallback = Path("./data/Market") / dataset_folder / "telemetry"
+        local_fallback = (
+            Path("./data/Market")
+            / dataset_folder
+            / "telemetry"
+        )
+
         if local_fallback.exists():
             dataset_path = local_fallback
 
@@ -51,9 +58,12 @@ def connect_data_source(parsed_query, config):
     # Step 5.3 Select Data Source
     # =========================
 
-    print(f"System      : {system}")
-    print(f"Environment : {parsed_query.environment}")
-    print(f"Dataset     : {dataset_folder}")
-    print(f"Dataset Path: {dataset_path}")
+    print("=" * 40)
+    print("DATA SOURCE")
+    print("=" * 40)
+    print("System      :", system)
+    print("Environment :", parsed_query.environment)
+    print("Dataset     :", dataset_folder)
+    print("Dataset Path:", dataset_path)
 
     return dataset_path

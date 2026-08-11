@@ -30,7 +30,19 @@ from src.database.repository import (
     insert_logs,
     insert_traces,
     save_rca_result,
-    insert_evidence
+    insert_evidence,
+    get_investigation_evidence
+)
+
+from src.database.repository import (
+    create_investigation,
+    update_investigation_status,
+    insert_metrics,
+    insert_logs,
+    insert_traces,
+    save_rca_result,
+    insert_evidence,
+    get_investigation_evidence
 )
 
 
@@ -93,7 +105,7 @@ def run_pipeline(issue_key, run_agents=False):
         parsed_query.time_window.end,
     )
 
-        # =====================================================
+    # =====================================================
     # STEP 3
     # =====================================================
 
@@ -174,36 +186,12 @@ def run_pipeline(issue_key, run_agents=False):
     )
 
 
-
     # =====================================================
-    # STEP 7.2: BUILD INVESTIGATION CONTEXT
-    # =====================================================
-
-    print("\n========================================")
-    print("STEP 7.2: BUILD INVESTIGATION CONTEXT")
-    print("========================================")
-
-
-    contexts = build_investigation_context(
-        preprocessed,
-        service_links,
-        parsed_query,
-    )
-
-
-    print(
-        "Contexts Built:",
-        len(contexts)
-    )
-
-
-
-    # =====================================================
-    # STEP 7.3: PREPARE AGENT CONTEXT
+    # STEP 7.2: PREPARE AGENT CONTEXT
     # =====================================================
 
     print("\n========================================")
-    print("STEP 7.3: PREPARE AGENT CONTEXT")
+    print("STEP 7.2: PREPARE AGENT CONTEXT")
     print("========================================")
 
 
@@ -214,11 +202,11 @@ def run_pipeline(issue_key, run_agents=False):
 
 
     # =====================================================
-    # STEP 7.4: SAVE INVESTIGATION
+    # STEP 7.3: SAVE INVESTIGATION
     # =====================================================
 
     print("\n========================================")
-    print("STEP 7.4: SAVE INVESTIGATION")
+    print("STEP 7.3: SAVE INVESTIGATION")
     print("========================================")
 
 
@@ -232,7 +220,7 @@ def run_pipeline(issue_key, run_agents=False):
         window_end=parsed_query.time_window.end,
         incident_description=raw_query.incident_description,
         reporter=raw_query.reporter,
-        reporter_email="",
+        reporter_email=raw_query.reporter_email,
     )
 
 
@@ -242,14 +230,21 @@ def run_pipeline(issue_key, run_agents=False):
         investigation_id
     )
 
+    update_investigation_status(
+        investigation_id,
+        "Processing"
+    )
 
+    print(
+        "Investigation Status: Processing"
+    )
 
     # =====================================================
-    # STEP 7.5: SAVE METRICS
+    # STEP 7.4: SAVE METRICS
     # =====================================================
 
     print("\n========================================")
-    print("STEP 7.5: SAVE METRICS")
+    print("STEP 7.4: SAVE METRICS")
     print("========================================")
 
 
@@ -268,11 +263,11 @@ def run_pipeline(issue_key, run_agents=False):
 
 
     # =====================================================
-    # STEP 7.6: SAVE LOGS
+    # STEP 7.5: SAVE LOGS
     # =====================================================
 
     print("\n========================================")
-    print("STEP 7.6: SAVE LOGS")
+    print("STEP 7.5: SAVE LOGS")
     # =====================================================
 
 
@@ -291,11 +286,11 @@ def run_pipeline(issue_key, run_agents=False):
 
 
     # =====================================================
-    # STEP 7.7: SAVE TRACES
+    # STEP 7.6: SAVE TRACES
     # =====================================================
 
     print("\n========================================")
-    print("STEP 7.7: SAVE TRACES")
+    print("STEP 7.6: SAVE TRACES")
     print("========================================")
 
 
@@ -309,6 +304,26 @@ def run_pipeline(issue_key, run_agents=False):
 
     print(
         "Traces Saved"
+    )
+
+    # =====================================================
+    # STEP 7.7: BUILD INVESTIGATION CONTEXT
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 7.7: BUILD INVESTIGATION CONTEXT")
+    print("========================================")
+
+    contexts = build_investigation_context(
+        preprocessed,
+        service_links,
+        parsed_query,
+        investigation_id=investigation_id,
+    )
+
+    print(
+        "Contexts Built:",
+        len(contexts)
     )
     # =====================================================
     # STEP 8
@@ -342,7 +357,7 @@ def run_pipeline(issue_key, run_agents=False):
         return selected_contexts
 
     # =====================================================
-    # STEP 9
+    # STEP 9: MULTI-AGENT ANALYSIS
     # =====================================================
 
     print("\n========================================")
@@ -350,92 +365,560 @@ def run_pipeline(issue_key, run_agents=False):
     print("========================================")
 
     metric_agent = MetricAgent()
-
     log_agent = LogAgent()
-
     trace_agent = TraceAgent()
 
-    reasoning_agent = ReasoningAgent()
-
-    print("==============================")
-    print("SELECTED CONTEXTS DEBUG")
-
-    for name, ctx in selected_contexts.items():
-        print("SERVICE:", name)
-        print("METRICS:", ctx.metrics.keys())
-        print("LOGS:", ctx.logs.keys())
-        print("TRACES:", ctx.traces.keys())
-
-
-
-    for context in selected_contexts.values():
-        print("\n----------------------------------------")
-        print("SERVICE :", context.service)
-        print("----------------------------------------")
-
-        metric_result = metric_agent.analyze(context)
-        log_result = log_agent.analyze(context)
-        trace_result = trace_agent.analyze(context)
-
-        # Chỉ gọi 1 lần với đầy đủ context và kết quả 3 agent
-        final_output = reasoning_agent.analyze(
-            context,
-            metric_result,
-            log_result,
-            trace_result
-        )
-
-        # 1. Lưu kết quả nguyên nhân gốc rễ (RCA) vào bảng rca_results
-        save_rca_result(
-            investigation_id= investigation_id,
-            root_cause=final_output.get("reason", "unknown"),
-            confidence=float(final_output.get("confidence", 0.0)),
-            explanation=final_output.get("reasoning", "")
-        )
-
-        # 2. Lưu kết quả bằng chứng Metric vào bảng evidence_records
-        for metric in final_output.get("metrics", []):
-            insert_evidence(
-                investigation_id= investigation_id,
-                service=context.service,
-                evidence_type="metric",
-                description=metric.get("description",""),
-                score=float(metric.get("value", 0.0))
-            )
-        # 3. Lưu kết quả bằng chứng Log vào bảng evidence_records
-        for log in final_output.get("logs", []):
-            insert_evidence(
-                investigation_id= investigation_id,
-                service=context.service,
-                evidence_type="log",
-                description=log.get("message",""),
-                score=float(log.get("count", 1.0))
-            )
-        # 4. Lưu kết quả bằng chứng Trace vào bảng evidence_records
-        for trace in final_output.get("traces", []):
-            insert_evidence(
-                investigation_id= investigation_id,
-                service=context.service,
-                evidence_type="trace",
-                description=trace.get("description",""),
-                score=float(trace.get("latency_ms", 0.0))
-            )
-        print("\nFinal Output JSON format:")
-        print(json.dumps(final_output, indent=4, default=str))
+    agent_results = {}
 
 
     # =====================================================
-    # FINISH
+    # STEP 10: METRIC AGENT
     # =====================================================
 
     print("\n========================================")
-    print("PIPELINE COMPLETED")
+    print("STEP 10: METRIC AGENT")
     print("========================================")
 
+    for context in selected_contexts.values():
+
+        print("\n----------------------------------------")
+        print("METRIC ANALYSIS")
+        print("----------------------------------------")
+
+        print({
+            "investigation_id": context.investigation_id,
+            "service": context.service,
+            "incident_time": context.incident_time
+        })
+
+        metric_result = metric_agent.analyze(context)
+
+        print("\nMETRIC RESULT")
+        print(json.dumps(
+            metric_result,
+            indent=2,
+            default=str
+        ))
+
+        agent_results[context.service] = {
+            "metric": metric_result
+        }
+
+    # =====================================================
+    # STEP 11: LOG AGENT
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 11: LOG AGENT")
+    print("========================================")
+
+    for context in selected_contexts.values():
+
+        print("\n----------------------------------------")
+        print("LOG ANALYSIS")
+        print("----------------------------------------")
+
+        log_result = log_agent.analyze(context)
+
+        print("\nLOG RESULT")
+        print(json.dumps(
+            log_result,
+            indent=2,
+            default=str
+        ))
+
+        agent_results[context.service]["log"] = log_result
+
+    # =====================================================
+    # STEP 12: TRACE AGENT
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 12: TRACE AGENT")
+    print("========================================")
+
+    for context in selected_contexts.values():
+
+        print("\n----------------------------------------")
+        print("TRACE ANALYSIS")
+        print("----------------------------------------")
+
+        trace_result = trace_agent.analyze(context)
+
+        print("\nTRACE RESULT")
+        print(json.dumps(
+            trace_result,
+            indent=2,
+            default=str
+        ))
+
+        agent_results[context.service]["trace"] = trace_result
+
+    # =====================================================
+    # STEP 13: EVIDENCE COLLECTION
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 13: EVIDENCE COLLECTION")
+    print("========================================")
+
+    for context in selected_contexts.values():
+
+        results = agent_results[context.service]
+
+        metric_result = results["metric"]
+        log_result = results["log"]
+        trace_result = results["trace"]
+
+        metric_anomalies = metric_result.get(
+            "anomalies",
+            []
+        )
+
+        log_entries = log_result.get(
+            "logs",
+            []
+        )
+
+        trace_entries = trace_result.get(
+            "traces",
+            []
+        )
+
+        for metric in metric_anomalies:
+
+            insert_evidence(
+                investigation_id=context.investigation_id,
+                service=metric.get(
+                    "service",
+                    context.service
+                ),
+                evidence_type="metric",
+                metric_name=metric.get("metric"),
+                description=metric.get("description"),
+                value=metric.get("value"),
+                baseline=metric.get("baseline"),
+                timestamp=metric.get("timestamp"),
+                score=metric.get("value"),
+                metadata=metric,
+                confidence=metric_result.get(
+                    "confidence",
+                    0
+                )
+            )
+
+        for log in log_entries:
+
+            insert_evidence(
+                investigation_id=context.investigation_id,
+                service=log.get(
+                    "service",
+                    context.service
+                ),
+                evidence_type="log",
+                description=log.get(
+                    "message",
+                    ""
+                ),
+                score=float(
+                    log.get(
+                        "count",
+                        0
+                    )
+                ),
+                timestamp=log.get("timestamp"),
+                value=float(
+                    log.get(
+                        "count",
+                        0
+                    )
+                ),
+                metadata=log,
+                confidence=log_result.get(
+                    "confidence",
+                    0
+                )
+            )
+
+        for trace in trace_entries:
+
+            insert_evidence(
+                investigation_id=context.investigation_id,
+                service=trace.get(
+                    "service",
+                    context.service
+                ),
+                evidence_type="trace",
+                trace_id=trace.get("trace_id"),
+                operation=trace.get("operation"),
+                description=trace.get("description"),
+                value=trace.get("latency_ms"),
+                baseline=trace.get("baseline_ms"),
+                score=trace.get("latency_ms"),
+                metadata=trace,
+                confidence=trace_result.get(
+                    "confidence",
+                    0
+                )
+            )
+
+        print(
+            f"{context.service}: "
+            f"metrics={len(metric_anomalies)}, "
+            f"logs={len(log_entries)}, "
+            f"traces={len(trace_entries)}"
+        )
+
+    # =====================================================
+    # STEP 14: EVIDENCE VALIDATION
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 14: EVIDENCE VALIDATION")
+    print("========================================")
+
+    evidence_validation = {}
+
+    for context in selected_contexts.values():
+
+        evidence_df = get_investigation_evidence(
+            context.investigation_id
+        )
+
+        count = (
+            0
+            if evidence_df is None
+            else len(evidence_df)
+        )
+
+        evidence_validation[context.service] = {
+            "valid": count > 0,
+            "count": count
+        }
+
+        print(
+            f"{context.service}: "
+            f"{count} evidence records"
+        )
+
+    # =====================================================
+    # STEP 15: EVIDENCE CORRELATION
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 15: EVIDENCE CORRELATION")
+    print("========================================")
+
+    correlation_results = {}
+
+    for context in selected_contexts.values():
+
+        results = agent_results[context.service]
+
+        metric_count = len(
+            results["metric"].get(
+                "anomalies",
+                []
+            )
+        )
+
+        log_count = len(
+            results["log"].get(
+                "logs",
+                []
+            )
+        )
+
+        trace_count = len(
+            results["trace"].get(
+                "traces",
+                []
+            )
+        )
+
+        correlation_results[context.service] = {
+            "metric": metric_count,
+            "log": log_count,
+            "trace": trace_count,
+            "total": (
+                metric_count
+                + log_count
+                + trace_count
+            )
+        }
+
+        print(
+            f"{context.service}: "
+            f"metric={metric_count}, "
+            f"log={log_count}, "
+            f"trace={trace_count}"
+        )
+
+    # =====================================================
+    # STEP 16: FAULT LOCALIZATION
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 16: FAULT LOCALIZATION")
+    print("========================================")
+
+    fault_candidates = {}
+
+    for context in selected_contexts.values():
+
+        correlation = correlation_results[
+            context.service
+        ]
+
+        evidence_types = []
+
+        if correlation["metric"] > 0:
+            evidence_types.append("metric")
+
+        if correlation["log"] > 0:
+            evidence_types.append("log")
+
+        if correlation["trace"] > 0:
+            evidence_types.append("trace")
+
+        fault_candidates[context.service] = {
+            "service": context.service,
+            "evidence_types": evidence_types,
+            "evidence_count": correlation["total"]
+        }
+
+        print(
+            f"{context.service}: "
+            f"{evidence_types}"
+        )
+
+    # =====================================================
+    # STEP 17: PREPARE REASONING CONTEXT
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 17: PREPARE REASONING CONTEXT")
+    print("========================================")
+
+    reasoning_contexts = {}
+
+    for context in selected_contexts.values():
+
+        evidence_df = get_investigation_evidence(
+            context.investigation_id
+        )
+
+        reasoning_contexts[context.service] = {
+            "context": context,
+            "evidence": evidence_df,
+            "agent_results": agent_results[
+                context.service
+            ],
+            "fault_candidate": fault_candidates[
+                context.service
+            ]
+        }
+
+        print(
+            f"Reasoning context ready: "
+            f"{context.service}"
+        )
+
+    # =====================================================
+    # STEP 18: REASONING AGENT
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 18: REASONING AGENT")
+    print("========================================")
+
+    reasoning_agent = ReasoningAgent()
+
+    rca_results = []
+
+    for service, reasoning_data in reasoning_contexts.items():
+
+        context = reasoning_data["context"]
+        evidence_df = reasoning_data["evidence"]
+
+        print("\n----------------------------------------")
+        print("REASONING CONTEXT")
+        print("----------------------------------------")
+
+        print({
+            "investigation_id": context.investigation_id,
+            "service": context.service,
+            "incident_time": context.incident_time
+        })
+
+        final_result = reasoning_agent.analyze(
+            context,
+            evidence_df
+        )
+
+        print("\n========== REASONING RESULT ==========")
+
+        print(json.dumps(
+            final_result,
+            indent=2,
+            default=str
+        ))
+
+        # =================================================
+        # STEP 19: PROCESS RCA RESULT
+        # =================================================
+
+        print("\n========================================")
+        print("STEP 19: PROCESS RCA RESULT")
+        print("========================================")
+
+        root_cause = final_result.get(
+            "root_cause",
+            final_result.get(
+                "reason",
+                ""
+            )
+        )
+
+        confidence = final_result.get(
+            "confidence",
+            0
+        )
+
+        explanation = final_result.get(
+            "explanation",
+            final_result.get(
+                "reasoning",
+                ""
+            )
+        )
+
+        try:
+            confidence = float(confidence)
+        except (
+            TypeError,
+            ValueError
+        ):
+            confidence = 0.0
+
+        if root_cause is None:
+            root_cause = ""
+
+        if explanation is None:
+            explanation = ""
+
+        print("Service    :", context.service)
+        print("Root Cause :", root_cause)
+        print("Confidence :", confidence)
+        print("Explanation:", explanation)
+
+        # =================================================
+        # STEP 20: SAVE RCA RESULT
+        # =================================================
+
+        print("\n========================================")
+        print("STEP 20: SAVE RCA RESULT")
+        print("========================================")
+
+        save_rca_result(
+            investigation_id=context.investigation_id,
+            service=context.service,
+            root_cause=root_cause,
+            confidence=confidence,
+            explanation=explanation
+        )
+
+        print(
+            f"RCA saved successfully for "
+            f"{context.service}"
+        )
+
+        rca_results.append({
+            "investigation_id":
+                context.investigation_id,
+            "service":
+                context.service,
+            "root_cause":
+                root_cause,
+            "confidence":
+                confidence,
+            "explanation":
+                explanation
+        })
+
+    # =====================================================
+    # STEP 21: OUTPUT
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 21: OUTPUT")
+    print("========================================")
+
+    print(
+        "RCA results generated:",
+        len(rca_results)
+    )
+
+    print("\nFINAL RCA OUTPUT")
+
+    print(json.dumps(
+        rca_results,
+        indent=2,
+        default=str
+    ))
+    update_investigation_status(
+        investigation_id,
+        "Completed"
+    )
+
+    print(
+        "Investigation Status: Completed"
+    )
+
+    # =====================================================
+    # STEP 22: INTEGRATION & DEMO
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 22: INTEGRATION & DEMO")
+    print("========================================")
+
+    print("Input      : Jira Issue")
+    print("Telemetry  : Metrics / Logs / Traces")
+    print("Agents     : Metric / Log / Trace")
+    print("Reasoning  : ReasoningAgent")
+    print("Database   : PostgreSQL")
+    print("Output     : RCA Result")
+
+    for result in rca_results:
+
+        print(
+            f"- {result['service']}: "
+            f"{result['root_cause']} "
+            f"(confidence={result['confidence']})"
+        )
+
+    # =====================================================
+    # PIPELINE COMPLETED
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 1-22 COMPLETED")
+    print("========================================")
+
+    print(json.dumps(
+        rca_results,
+        indent=2,
+        default=str
+    ))
+
+    return rca_results
 
 if __name__ == "__main__":
 
-    issue_key = input("Enter Jira Issue Key: ")
+    issue_key = input(
+        "Enter Jira Issue Key: "
+    )
 
     run_pipeline(
         issue_key,

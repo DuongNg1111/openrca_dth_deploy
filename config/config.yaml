@@ -10,4 +10,11 @@ use_mock: false
 
 default_date: "2021-03-25"
 
-top_k: 1
+dataset: "cloudbed-1"
+
+top_k: 3
+
+llm:
+  source: "Gemini"
+  model: "gemini-3.5-flash"
+  api_key_env: "GEMINI_API_KEY"

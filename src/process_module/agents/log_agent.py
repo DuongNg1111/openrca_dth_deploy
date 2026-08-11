@@ -1,111 +1,317 @@
 from __future__ import annotations
+
 import json
+import re
+
 from google import genai
 from google.genai import types
+
 from src.process_module.agents.base_agent import BaseAgent
-from src.config import load_config
+from src.database.repository import get_investigation_logs
+
 
 class LogAgent(BaseAgent):
+
     def __init__(self):
         super().__init__("Log Agent")
 
-        # Load cấu hình từ config.py (đã bao gồm đọc .env và file yaml)
-        self.config = load_config()
-        llm_cfg = self.config.get("llm", {})
-
-        # Lấy api_key và model từ config trung tâm
-        api_key = llm_cfg.get("api_key")
-        self.model_name = llm_cfg.get("model")
-
-        # Khởi tạo client Gemini
-        if api_key:
-            self.client = genai.Client(api_key=api_key)
-        else:
-            self.client = genai.Client()
-
     def analyze(self, context) -> dict:
-        logs = context.logs
-        raw_error_logs = []
-        error_count = 0
 
-        # 1. Trích xuất các dòng log lỗi từ DataFrame
-        for name, df in (logs.items() if logs else []):
-            if df is None or df.empty:
-                continue
+        investigation_id = getattr(
+            context,
+            "investigation_id",
+            None
+        )
 
-            text_columns = [col for col in df.columns if df[col].dtype == object]
-            for col in text_columns:
-                error_rows = df[df[col].astype(str).str.contains("error|exception|timeout|fail|slow", case=False, na=False)]
-                if not error_rows.empty:
-                    error_count += len(error_rows)
-                    for _, row in error_rows.head(10).iterrows():  # Lấy mẫu tối đa 10 dòng tiêu biểu
-                        raw_error_logs.append({
-                            "log_file": name,
-                            "content": row.to_dict()
-                        })
+        service = getattr(
+            context,
+            "service",
+            "unknown"
+        )
 
-        # 2. Nếu không tìm thấy log lỗi, trả về cấu trúc chuẩn với danh sách errors trống
-        if error_count == 0 or not raw_error_logs:
+        incident_time = getattr(
+            context,
+            "incident_time",
+            ""
+        )
+
+        # =====================================================
+        # 1. VALIDATE
+        # =====================================================
+
+        if investigation_id is None:
             return {
                 "agent": "Log Agent",
                 "evidence_type": "log",
-                "errors": [],
-                "summary": "No explicit error logs found in the given time window.",
+                "logs": [],
+                "summary": "Missing investigation_id.",
+                "confidence": 0.0
+            }
+
+        # =====================================================
+        # 2. LOAD LOGS FROM DATABASE
+        # =====================================================
+
+        try:
+            logs_df = get_investigation_logs(
+                investigation_id,
+                service=service
+            )
+
+        except Exception as e:
+            return {
+                "agent": "Log Agent",
+                "evidence_type": "log",
+                "logs": [],
+                "summary": f"Failed loading logs: {str(e)}",
+                "confidence": 0.0
+            }
+
+        # =====================================================
+        # 3. CHECK EMPTY
+        # =====================================================
+
+        if logs_df is None or logs_df.empty:
+            return {
+                "agent": "Log Agent",
+                "evidence_type": "log",
+                "logs": [],
+                "summary": (
+                    f"No log data found for service '{service}'."
+                ),
                 "confidence": 1.0
             }
 
-        # 3. Sử dụng GenAI để phân tích và chuẩn hóa các log thô thành cấu trúc mong muốn
-        prompt = f"""
-        You are an SRE Log Analysis Expert. Analyze the following raw error logs extracted from service '{context.service}' during the incident window.
-        Raw Error Logs Sample: {json.dumps(raw_error_logs[:10], default=str)}
-        Total error entries found: {error_count}
+        # =====================================================
+        # 4. FIND MESSAGE COLUMN
+        # =====================================================
 
-        You MUST respond ONLY with a valid JSON object matching this exact structure:
+        message_column = None
+
+        for column in [
+            "value",
+            "content",
+            "message",
+            "log",
+            "body",
+            "text"
+        ]:
+            if column in logs_df.columns:
+                message_column = column
+                break
+
+        if message_column is None:
+            return {
+                "agent": "Log Agent",
+                "evidence_type": "log",
+                "logs": [],
+                "summary": "No log message column found.",
+                "confidence": 0.5
+            }
+
+        # =====================================================
+        # 5. DETECT ERROR LOGS
+        # =====================================================
+
+        error_pattern = (
+            r"error|exception|timeout|"
+            r"failed|failure|fatal|"
+            r"critical|unavailable|"
+            r"refused|reset|"
+            r"retry|deadline|"
+            r"slow|latency|"
+            r"throttle"
+        )
+
+        error_mask = (
+            logs_df[message_column]
+            .astype(str)
+            .str.contains(
+                error_pattern,
+                case=False,
+                regex=True,
+                na=False
+            )
+        )
+
+        error_df = logs_df[
+            error_mask
+        ].copy()
+
+        # =====================================================
+        # 6. NO ERROR
+        # =====================================================
+
+        if error_df.empty:
+            return {
+                "agent": "Log Agent",
+                "evidence_type": "log",
+                "logs": [],
+                "summary": (
+                    f"No explicit error logs found "
+                    f"for service '{service}'."
+                ),
+                "confidence": 1.0
+            }
+
+        # =====================================================
+        # 7. GROUP ERROR MESSAGES
+        # =====================================================
+
+        grouped = (
+            error_df[message_column]
+            .astype(str)
+            .value_counts()
+            .head(10)
+        )
+
+        raw_logs = []
+
+        for message, count in grouped.items():
+
+            raw_logs.append(
+                {
+                "service": service,
+
+                "message": message,
+
+                "count": int(count),
+
+                "first_seen": str(
+                    error_df[
+                    error_df[message_column]==message
+                    ]["timestamp"]
+                    .min()
+                ),
+
+                "last_seen": str(
+                    error_df[
+                    error_df[message_column]==message
+                    ]["timestamp"]
+                    .max()
+                )
+
+                }
+                )
+
+        # =====================================================
+        # 8. TIMESTAMP
+        # =====================================================
+
+        timestamp = ""
+
+        if "timestamp" in error_df.columns:
+            timestamp = str(
+                error_df.iloc[0]["timestamp"]
+            )
+
+        # =====================================================
+        # 9. GEMINI PROMPT
+        # =====================================================
+
+        prompt = f"""
+You are an SRE Log Analysis Expert.
+
+Analyze ONLY the supplied log evidence.
+
+Investigation ID:
+{investigation_id}
+
+Service:
+{service}
+
+Incident Time:
+{incident_time}
+
+Grouped Error Evidence:
+
+{json.dumps(
+    raw_logs,
+    indent=2,
+    default=str
+)}
+
+Rules:
+
+1. Use ONLY supplied evidence.
+2. Do NOT invent error messages.
+3. Do NOT invent timestamps.
+4. Do NOT invent services.
+5. Group repeated errors together.
+6. Count must represent occurrences.
+7. Return ONLY valid JSON.
+
+Required format:
+
+{{
+    "agent": "Log Agent",
+    "evidence_type": "log",
+    "logs": [
         {{
-            "agent": "Log Agent",
-            "evidence_type": "log",
-            "errors": [
-                {{
-                    "service": "{context.service}",
-                    "timestamp": "{context.incident_time}",
-                    "level": "ERROR",
-                    "error_type": "<Extracted error type name, e.g., DatabaseConnectionTimeout>",
-                    "message": "<Summarized error message description>",
-                    "count": {error_count}
-                }}
-            ],
-            "summary": "<Short professional summary of log errors>",
-            "confidence": 0.9
+            "service": "{service}",
+            "timestamp": "{timestamp}",
+            "level": "ERROR",
+            "error_type": "",
+            "message": "",
+            "count": 0
         }}
-        """
+    ],
+    "summary": "",
+    "confidence": 0.0
+}}
+"""
+
+        # =====================================================
+        # 10. CALL GEMINI
+        # =====================================================
 
         try:
+
             response = self.client.models.generate_content(
-                model=self.model_name,  # Lấy hoàn toàn từ config chung đã load ở __init__
+                model=self.model_name,
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.1,
                     response_mime_type="application/json"
-                ),
+                )
             )
-            return json.loads(response.text)
+
+            text = response.text.strip()
+
+            print("\n========== LOG RESPONSE ==========")
+            print(text)
+            print("===================================")
+
+            return json.loads(text)
+
+        # =====================================================
+        # 11. FALLBACK
+        # =====================================================
 
         except Exception as e:
-            # Fallback gọn gàng
-            fallback_errors = [
-                {
-                    "service": context.service,
-                    "timestamp": context.incident_time,
-                    "level": "ERROR",
-                    "error_type": "LogAnalysisError",
-                    "message": f"Detected {total_errors} raw error entries. (API Rate Limit / Fallback)",
-                    "count": total_errors
-                }
-            ]
+
+            fallback_logs = []
+
+            for item in raw_logs:
+
+                fallback_logs.append(
+                    {
+                        "service": service,
+                        "timestamp": timestamp,
+                        "level": "ERROR",
+                        "error_type": "Unknown",
+                        "message": item["message"],
+                        "count": item["count"]
+                    }
+                )
+
             return {
                 "agent": "Log Agent",
                 "evidence_type": "log",
-                "errors": fallback_errors,
-                "summary": summary_text,
+                "logs": fallback_logs,
+                "summary": (
+                    f"Detected {len(error_df)} error logs "
+                    f"for service '{service}'."
+                ),
                 "confidence": 0.5
             }

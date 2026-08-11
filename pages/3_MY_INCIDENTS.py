@@ -4,7 +4,8 @@ import pandas as pd
 from src.auth.google_auth import require_login
 from src.database.repository import (
     get_user_incidents,
-    get_incident_detail
+    get_incident_detail,
+get_rca_results
 )
 
 
@@ -258,7 +259,7 @@ if st.session_state.selected_ticket is None:
 
         if col5.button(
             "View",
-            key=f"view_{row['issue_key']}"
+            key=f"view_{row['id']}_{row['issue_key']}"
         ):
 
             st.session_state.selected_ticket = (
@@ -299,7 +300,7 @@ else:
 
 
     incident = incident_df.iloc[0]
-
+    st.write("Investigation ID:", incident["id"])
 
 
     if st.button(
@@ -398,50 +399,92 @@ else:
 
     st.divider()
 
+    # =====================================================
+    # RCA RESULT
+    # =====================================================
 
     st.subheader(
-        "Investigation Progress"
+        "🔍 RCA Result"
     )
 
 
-    status = incident["status"]
+    rca_df = get_rca_results(
+        int(incident["id"])
+    )
 
 
-    if status == "Created":
-
-        st.info(
-            """
-🟢 Incident Created
-
-⏳ Waiting for RCA investigation
-"""
-        )
-
-
-    elif status == "Processing":
+    if rca_df.empty:
 
         st.info(
-            """
-🟢 Incident Created
-
-🟡 RCA Investigation Running
-"""
-        )
-
-
-    elif status == "Completed":
-
-        st.success(
-            """
-🟢 Incident Created
-
-🟢 RCA Investigation Completed
-"""
+            "RCA results are not available yet."
         )
 
 
     else:
 
-        st.warning(
-            f"Current status: {status}"
+        st.success(
+            f"RCA completed — "
+            f"{len(rca_df)} service(s) analyzed."
         )
+
+
+        for _, rca in rca_df.iterrows():
+
+            # -----------------------------
+            # SERVICE
+            # -----------------------------
+
+            st.markdown(
+                f"### {rca['service']}"
+            )
+
+
+            # -----------------------------
+            # ROOT CAUSE
+            # -----------------------------
+
+            st.markdown(
+                "**Root Cause**"
+            )
+
+            st.write(
+                rca["root_cause"]
+            )
+
+
+            # -----------------------------
+            # CONFIDENCE
+            # -----------------------------
+
+            st.markdown(
+                "**Confidence**"
+            )
+
+            confidence = float(
+                rca["confidence"]
+            )
+
+            st.progress(
+                confidence / 100
+            )
+
+            st.write(
+                f"{confidence:.0f}%"
+            )
+
+
+            # -----------------------------
+            # EXPLANATION
+            # -----------------------------
+
+            st.markdown(
+                "**Explanation**"
+            )
+
+            st.write(
+                rca["explanation"]
+            )
+
+
+            st.divider()
+

@@ -3,6 +3,16 @@ import pandas as pd
 
 from src.auth.google_auth import require_login
 
+from src.database.repository import (
+    get_dashboard_summary,
+    get_incident_trend,
+    get_recent_incidents
+)
+
+
+# ==========================================================
+# PAGE CONFIG
+# ==========================================================
 
 st.set_page_config(
     page_title="Home",
@@ -11,123 +21,191 @@ st.set_page_config(
 )
 
 
+# ==========================================================
+# AUTHENTICATION
+# ==========================================================
+
 require_login()
 
-# ==========================
-# PAGE TITLE
-# ==========================
 
-st.title("🏠 OpenRCA Dashboard")
-st.caption("Root Cause Analysis Monitoring Dashboard")
+# ==========================================================
+# CURRENT USER
+# ==========================================================
+
+reporter_email = st.user.email
+
+
+# ==========================================================
+# PAGE TITLE
+# ==========================================================
+
+st.title(
+    "🏠 OpenRCA Dashboard"
+)
+
+st.caption(
+    "Your Root Cause Analysis Dashboard"
+)
 
 st.divider()
 
-# ==========================
+
+# ==========================================================
+# LOAD DATA
+# ==========================================================
+
+summary = get_dashboard_summary(
+    reporter_email
+)
+
+trend = get_incident_trend(
+    reporter_email
+)
+
+recent = get_recent_incidents(
+    reporter_email,
+    limit=5
+)
+
+
+# ==========================================================
 # KPI CARDS
-# ==========================
+# ==========================================================
 
 col1, col2, col3, col4 = st.columns(4)
 
+
 with col1:
+
     st.metric(
         label="Total Incidents",
-        value=25
+        value=int(
+            summary["total_incidents"]
+        )
     )
+
 
 with col2:
+
     st.metric(
         label="Created",
-        value=6
+        value=int(
+            summary["created"]
+        )
     )
+
 
 with col3:
+
     st.metric(
         label="Processing",
-        value=4
+        value=int(
+            summary["processing"]
+        )
     )
+
 
 with col4:
+
     st.metric(
-        label="Done",
-        value=15
+        label="Completed",
+        value=int(
+            summary["completed"]
+        )
     )
 
+
 st.divider()
 
-# ==========================
+
+# ==========================================================
 # INCIDENT TREND
-# ==========================
+# ==========================================================
 
-st.subheader("📈 Incident Trend")
-
-trend = pd.DataFrame(
-    {
-        "Incidents": [3, 5, 4, 6, 2, 4, 1]
-    },
-    index=[
-        "Mon",
-        "Tue",
-        "Wed",
-        "Thu",
-        "Fri",
-        "Sat",
-        "Sun",
-    ],
+st.subheader(
+    "📈 My Incident Trend"
 )
 
-st.line_chart(trend)
+
+if trend.empty:
+
+    st.info(
+        "No incident data available yet."
+    )
+
+else:
+
+    trend["incident_date"] = pd.to_datetime(
+        trend["incident_date"]
+    )
+
+    trend = trend.set_index(
+        "incident_date"
+    )
+
+    st.line_chart(
+        trend["incidents"]
+    )
+
 
 st.divider()
 
-# ==========================
+
+# ==========================================================
 # RECENT INCIDENTS
-# ==========================
+# ==========================================================
 
-st.subheader("📋 Recent Incidents")
-
-recent = pd.DataFrame(
-    {
-        "Ticket": [
-            "RCA-001",
-            "RCA-002",
-            "RCA-003",
-        ],
-        "Date": [
-            "2026-07-28 15:42",
-            "2026-07-28 14:10",
-            "2026-07-27 18:25",
-        ],
-        "Affected System": [
-            "productcatalogservice",
-            "checkoutservice",
-            "paymentservice",
-        ],
-        "Status": [
-            "Created",
-            "Processing",
-            "Done",
-        ],
-    }
+st.subheader(
+    "📋 Recent Incidents"
 )
 
-st.dataframe(
-    recent,
-    use_container_width=True,
-    hide_index=True,
-)
 
-# ==========================
-# SYSTEM HEALTH
-# ==========================
+if recent.empty:
 
-st.subheader("🖥️ System Health")
+    st.info(
+        "You have not submitted any incidents yet."
+    )
 
-c1, c2 = st.columns(2)
+else:
 
-with c1:
-    st.success("🟢 PostgreSQL Connected")
-    st.success("🟢 Dataset Ready")
+    recent["created_at"] = pd.to_datetime(
+        recent["created_at"]
+    )
 
-with c2:
-    st.warning("🟡 Jira Waiting")
-    st.success("🟢 Pipeline Ready")
+
+    recent_display = recent.copy()
+
+
+    recent_display["created_at"] = (
+        recent_display["created_at"]
+        .dt.strftime("%Y-%m-%d %H:%M")
+    )
+
+
+    recent_display = recent_display.rename(
+        columns={
+            "issue_key": "Ticket",
+            "created_at": "Created Date",
+            "affected_system": "Affected System",
+            "status": "Status"
+        }
+    )
+
+
+    recent_display = recent_display[
+        [
+            "Ticket",
+            "Created Date",
+            "Affected System",
+            "Status"
+        ]
+    ]
+
+
+    st.dataframe(
+        recent_display,
+        use_container_width=True,
+        hide_index=True
+    )
+
+

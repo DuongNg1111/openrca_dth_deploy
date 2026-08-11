@@ -1,8 +1,8 @@
 from src.jira.jira_client import get_issue
 
-ISSUE_KEY = "DEV-105" #name of key issue on Jira
+issue_key = input("Enter Jira Issue Key: ")
 
-issue = get_issue(ISSUE_KEY)
+issue = get_issue(issue_key)
 
 print("Issue Key :", issue.key)
 print("Summary   :", issue.fields.summary)

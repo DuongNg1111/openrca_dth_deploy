@@ -144,9 +144,9 @@ def load_config():
     # ---------------------------------------------
 
     config.setdefault(
-        "system",
-        "Market"
-    )
+    "system",
+    "Market"
+)
 
     config.setdefault(
         "data_root",
@@ -162,6 +162,5 @@ def load_config():
         "top_k",
         1
     )
-
 
     return config

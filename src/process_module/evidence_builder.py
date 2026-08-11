@@ -1,126 +1,145 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict
-import pandas as pd
+
 from src.schemas import TimeWindow
 
 
 # ======================================================
-# STEP 8.3 SCHEMA
+# INVESTIGATION CONTEXT
 # ======================================================
 
 @dataclass
 class InvestigationContext:
     """
-    Investigation context for ONE service.
+    Investigation context for ONE logical service.
 
-    This object will be passed directly
-    to Metric / Log / Trace Agents.
+    Agents use investigation_id to query telemetry
+    directly from PostgreSQL.
     """
+
+    investigation_id: int
     dataset: str
     service: str
     incident_time: datetime
     time_window: TimeWindow
-    metrics: Dict[str, pd.DataFrame]
-    logs: Dict[str, pd.DataFrame]
-    traces: Dict[str, pd.DataFrame]
 
 
 # ======================================================
-# STEP 8.3
+# BUILD INVESTIGATION CONTEXT
 # ======================================================
-
 
 def build_investigation_context(
     telemetry,
     service_links,
     parsed_query,
+    investigation_id,
 ):
     """
-    Build investigation context for every service.
+    Build investigation context for every logical service.
 
-    Parameters
-    ----------
-    telemetry
-        Output from Step 7 (preprocess).
+    IMPORTANT:
+    This function does NOT pass preprocessed telemetry
+    DataFrames to agents.
 
-    service_links
-        Output from Step 8.2.
-
-    parsed_query
-        Parsed incident information.
-
-    Returns
-    -------
-    dict
-
-    {
-        "shippingservice":
-            InvestigationContext(...),
-
-        "paymentservice":
-            InvestigationContext(...),
-    }
+    Agents must query PostgreSQL using investigation_id.
     """
-    print("==============================")
-    print("TELEMETRY METRIC KEYS")
-    print(telemetry.metrics.keys())
 
     contexts = {}
 
-    for service, links in service_links.items():
+    # ==================================================
+    # Debug
+    # ==================================================
 
-        print("==============================")
+    print("\n==============================")
+    print("BUILD INVESTIGATION CONTEXT")
+    print("==============================")
+
+    print(
+        "Investigation ID:",
+        investigation_id,
+    )
+
+    print(
+        "Dataset:",
+        telemetry.dataset,
+    )
+
+    print(
+        "Logical services:",
+        len(service_links),
+    )
+
+    # ==================================================
+    # Build context for each logical service
+    # ==================================================
+
+    for service in sorted(service_links.keys()):
+
+        print("\n------------------------------")
         print("SERVICE:", service)
-        print("LINK METRICS:", links["metrics"])
-
-        metric_dict = {}
-
-        log_dict = {}
-
-        trace_dict = {}
-
-        # ---------------------------------------
-        # Metrics
-        # ---------------------------------------
-
-        for metric_file in links["metrics"]:
-            if metric_file in telemetry.metrics:
-                metric_dict[metric_file] = (
-                    telemetry.metrics[metric_file]
-                )
-
-        # ---------------------------------------
-        # Logs
-        # ---------------------------------------
-
-        for log_file in links["logs"]:
-            if log_file in telemetry.logs:
-                log_dict[log_file] = (
-                    telemetry.logs[log_file]
-                )
-
-        # ---------------------------------------
-        # Traces
-        # ---------------------------------------
-
-        for trace_file in links["traces"]:
-            if trace_file in telemetry.traces:
-                trace_dict[trace_file] = (
-                    telemetry.traces[trace_file]
-                )
-
-        print(service)
-        print(metric_dict.keys())
 
         contexts[service] = InvestigationContext(
+            investigation_id=investigation_id,
             dataset=telemetry.dataset,
             service=service,
             incident_time=parsed_query.incident_time,
             time_window=parsed_query.time_window,
-            metrics=metric_dict,
-            logs=log_dict,
-            traces=trace_dict,
         )
+
+        print(
+            "Investigation ID:",
+            contexts[service].investigation_id,
+        )
+
+        print(
+            "Incident Time:",
+            contexts[service].incident_time,
+        )
+
+        print(
+            "Window:",
+            contexts[service].time_window.start,
+            "->",
+            contexts[service].time_window.end,
+        )
+
+    # ==================================================
+    # Summary
+    # ==================================================
+
+    print("\n==============================")
+    print("INVESTIGATION CONTEXT RESULT")
+    print("==============================")
+
+    for service, context in sorted(contexts.items()):
+
+        print("\nSERVICE:", service)
+
+        print(
+            "Investigation ID:",
+            context.investigation_id,
+        )
+
+        print(
+            "Dataset:",
+            context.dataset,
+        )
+
+        print(
+            "Incident Time:",
+            context.incident_time,
+        )
+
+        print(
+            "Window:",
+            context.time_window.start,
+            "->",
+            context.time_window.end,
+        )
+
+    print(
+        "\nTotal contexts:",
+        len(contexts),
+    )
 
     return contexts

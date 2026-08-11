@@ -113,22 +113,23 @@ def receive_query(issue_key: str) -> RawQuery:
 
     return RawQuery(
 
-        issue_key=issue.key,
+    issue_key=issue.key,
 
-        incident_description=issue.fields.summary,
+    incident_description=issue.fields.summary,
 
-        environment=environment,
+    additional_information=issue.fields.description,
 
-        affected_system=affected_system,
+    environment=environment,
 
-        incident_time=incident_time,
+    affected_system=affected_system,
 
-        reporter=reporter,
+    incident_time=incident_time,
 
-        # reporter_email=reporter_email,
+    reporter=reporter,
 
-        status=issue.fields.status.name,
+    reporter_email=reporter_email,
 
-        created=issue.fields.created,
-        additional_information="",
-    )
+    status=issue.fields.status.name,
+
+    created=issue.fields.created,
+)
