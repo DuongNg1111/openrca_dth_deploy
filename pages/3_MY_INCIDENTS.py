@@ -458,6 +458,7 @@ else:
     rca_df = get_rca_results(
         int(incident["id"])
     )
+
     if rca_df.empty:
 
         st.info(
@@ -473,16 +474,45 @@ else:
         for _, rca in rca_df.iterrows():
 
             st.markdown(
-                f"### 🔧 {rca['root_cause']}"
+                f"### 🔧 {rca['service']}"
             )
 
-            col1, col2 = st.columns([4, 1])
+            # -----------------------------
+            # ROOT CAUSE
+            # -----------------------------
 
-            with col1:
+            st.markdown("**Root Cause**")
 
-                st.markdown("**Root Cause**")
+            st.write(
+                rca["root_cause"]
+            )
 
-                st.write(
-                    rca["root_cause"]
-                )
+            # -----------------------------
+            # CONFIDENCE
+            # -----------------------------
 
+            st.markdown("**Confidence**")
+
+            confidence = float(
+                rca["confidence"]
+            )
+
+            st.progress(
+                confidence / 100
+            )
+
+            st.write(
+                f"{confidence:.0f}%"
+            )
+
+            # -----------------------------
+            # EXPLANATION
+            # -----------------------------
+
+            st.markdown("**Explanation**")
+
+            st.write(
+                rca["explanation"]
+            )
+
+            st.divider()
