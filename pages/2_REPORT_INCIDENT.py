@@ -3,7 +3,7 @@ from datetime import datetime
 
 from src.auth.google_auth import require_login
 from src.jira.jira_client import create_issue
-from src.full_pipeline import run_pipeline
+import requests
 
 # =====================================================
 # PAGE CONFIG
@@ -266,51 +266,37 @@ if submitted:
                 reporter_email=st.user.email
             )
 
+            # =================================================
+            # START RCA PIPELINE ON AWS
+            # =================================================
+
+            response = requests.post(
+                "http://localhost:8000/run-pipeline",
+                json={
+                    "issue_key": issue_key
+                },
+                timeout=10
+            )
+
+            response.raise_for_status()
+
+            pipeline_result = response.json()
+
             st.success(
                 "✅ Incident submitted successfully!"
             )
 
             st.info(
                 f"""
-    **Ticket ID:** `{issue_key}`
+            **Ticket ID:** `{issue_key}`
 
-    Your incident has been recorded successfully.
+            Your incident has been recorded successfully.
 
-    The RCA investigation is starting automatically.
+            **RCA Status:** `{pipeline_result.get("status", "Processing")}`
 
-    Please wait while the RCA pipeline processes the incident.
-    """
-            )
-
-            # =================================================
-            # START RCA PIPELINE
-            # =================================================
-
-            with st.spinner(
-                f"🔍 Running RCA pipeline for {issue_key}..."
-            ):
-
-                rca_results = run_pipeline(
-                    issue_key,
-                    run_agents=True
-                )
-
-            # =================================================
-            # PIPELINE COMPLETED
-            # =================================================
-
-            st.success(
-                "✅ RCA investigation completed successfully!"
-            )
-
-            st.info(
-                f"""
-    **Ticket ID:** `{issue_key}`
-
-    **RCA Status:** Completed
-
-    You can view the investigation results in **My Incidents**.
-    """
+            The RCA investigation is now running automatically.
+            You can track its progress in **My Incidents**.
+            """
             )
 
         except Exception as e:
