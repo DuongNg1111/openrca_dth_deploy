@@ -34,6 +34,17 @@ from src.database.repository import (
     get_investigation_evidence
 )
 
+from src.database.repository import (
+    create_investigation,
+    update_investigation_status,
+    insert_metrics,
+    insert_logs,
+    insert_traces,
+    save_rca_result,
+    insert_evidence,
+    get_investigation_evidence
+)
+
 
 def run_pipeline(issue_key, run_agents=False):
 
@@ -219,7 +230,14 @@ def run_pipeline(issue_key, run_agents=False):
         investigation_id
     )
 
+    update_investigation_status(
+        investigation_id,
+        "Processing"
+    )
 
+    print(
+        "Investigation Status: Processing"
+    )
 
     # =====================================================
     # STEP 7.4: SAVE METRICS
@@ -846,6 +864,14 @@ def run_pipeline(issue_key, run_agents=False):
         indent=2,
         default=str
     ))
+    update_investigation_status(
+        investigation_id,
+        "Completed"
+    )
+
+    print(
+        "Investigation Status: Completed"
+    )
 
     # =====================================================
     # STEP 22: INTEGRATION & DEMO

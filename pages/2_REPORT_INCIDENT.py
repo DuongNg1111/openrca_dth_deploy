@@ -3,17 +3,20 @@ from datetime import datetime
 
 from src.auth.google_auth import require_login
 from src.jira.jira_client import create_issue
-from src.database.repository import create_investigation
+from src.full_pipeline import run_pipeline
 
-
-require_login()
-
+# =====================================================
+# PAGE CONFIG
+# =====================================================
 
 st.set_page_config(
     page_title="Report Incident Form",
     page_icon="🚨",
     layout="wide"
 )
+
+
+require_login()
 
 
 # =====================================================
@@ -55,6 +58,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
 # =====================================================
 # FORM
 # =====================================================
@@ -64,9 +68,9 @@ with st.form(
     clear_on_submit=True
 ):
 
-    # ==========================
-    # Environment & Affected System
-    # ==========================
+    # =================================================
+    # ENVIRONMENT & AFFECTED SYSTEM
+    # =================================================
 
     col1, col2 = st.columns(2)
 
@@ -87,7 +91,6 @@ with st.form(
             ],
             label_visibility="collapsed"
         )
-
 
     with col2:
 
@@ -116,13 +119,11 @@ with st.form(
             label_visibility="collapsed"
         )
 
-
     st.write("")
 
-
-    # ==========================
-    # Incident Date & Time
-    # ==========================
+    # =================================================
+    # INCIDENT DATE & TIME
+    # =================================================
 
     col1, col2 = st.columns(2)
 
@@ -139,7 +140,6 @@ with st.form(
             label_visibility="collapsed"
         )
 
-
     with col2:
 
         st.markdown("### Incident Time *")
@@ -153,19 +153,16 @@ with st.form(
             label_visibility="collapsed"
         )
 
-
     incident_datetime = datetime.combine(
         incident_date,
         incident_time
     )
 
-
     st.write("")
 
-
-    # ==========================
-    # Incident Description (MOVED DOWN)
-    # ==========================
+    # =================================================
+    # INCIDENT DESCRIPTION
+    # =================================================
 
     st.divider()
 
@@ -177,18 +174,19 @@ with st.form(
 
     incident_description = st.text_area(
         label="",
-        placeholder="e.g., Cannot find product AAA or payment service timeout.",
+        placeholder=(
+            "e.g., Cannot find product AAA "
+            "or payment service timeout."
+        ),
         height=180,
         label_visibility="collapsed"
     )
 
-
     st.write("")
 
-
-    # ==========================
+    # =================================================
     # SUBMIT BUTTON
-    # ==========================
+    # =================================================
 
     st.markdown(
         """
@@ -210,19 +208,26 @@ with st.form(
         """,
         unsafe_allow_html=True
     )
-        
+
     left, button_col = st.columns([4, 1])
 
     with button_col:
+
         submitted = st.form_submit_button(
             "**SUBMIT INCIDENT**",
             type="primary"
         )
+
+
 # =====================================================
 # FORM VALIDATION
 # =====================================================
 
 if submitted:
+
+    # =================================================
+    # VALIDATE ENVIRONMENT
+    # =================================================
 
     if environment == "-- Select Environment --":
 
@@ -230,6 +235,9 @@ if submitted:
             "Please select an environment."
         )
 
+    # =================================================
+    # VALIDATE AFFECTED SYSTEM
+    # =================================================
 
     elif affected_system == "-- Select Affected System --":
 
@@ -237,41 +245,78 @@ if submitted:
             "Please select the affected system."
         )
 
+    # =================================================
+    # CREATE JIRA TICKET
+    # =================================================
 
     else:
 
-        issue_key = create_issue(
-            incident_description=incident_description,
-            environment=environment,
-            affected_system=affected_system,
-            incident_time=incident_datetime,
-            reporter_name=st.user.name,
-            reporter_email=st.user.email
-        )
+        try:
 
-        investigation_id = create_investigation(
-        issue_key=issue_key,
-        environment=environment,
-        affected_system=affected_system,
-        dataset="",
-        incident_time=incident_datetime,
-        window_start=None,
-        window_end=None,
-        incident_description=incident_description,
-        reporter=st.user.name,
-        reporter_email=st.user.email
-    )
-        st.success(
-            "✅ Incident submitted successfully!"
-        )
+            # =================================================
+            # CREATE JIRA TICKET
+            # =================================================
 
+            issue_key = create_issue(
+                incident_description=incident_description,
+                environment=environment,
+                affected_system=affected_system,
+                incident_time=incident_datetime,
+                reporter_name=st.user.name,
+                reporter_email=st.user.email
+            )
 
-        st.info(
-            f"""
-        **Ticket ID:** `{issue_key}`
+            st.success(
+                "✅ Incident submitted successfully!"
+            )
 
-        Your incident has been recorded successfully.
+            st.info(
+                f"""
+    **Ticket ID:** `{issue_key}`
 
-        Track its progress in **My Incidents**.
-        """
-        )
+    Your incident has been recorded successfully.
+
+    The RCA investigation is starting automatically.
+
+    Please wait while the RCA pipeline processes the incident.
+    """
+            )
+
+            # =================================================
+            # START RCA PIPELINE
+            # =================================================
+
+            with st.spinner(
+                f"🔍 Running RCA pipeline for {issue_key}..."
+            ):
+
+                rca_results = run_pipeline(
+                    issue_key,
+                    run_agents=True
+                )
+
+            # =================================================
+            # PIPELINE COMPLETED
+            # =================================================
+
+            st.success(
+                "✅ RCA investigation completed successfully!"
+            )
+
+            st.info(
+                f"""
+    **Ticket ID:** `{issue_key}`
+
+    **RCA Status:** Completed
+
+    You can view the investigation results in **My Incidents**.
+    """
+            )
+
+        except Exception as e:
+
+            st.error(
+                "❌ Failed to process incident."
+            )
+
+            st.exception(e)

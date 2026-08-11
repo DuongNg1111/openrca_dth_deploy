@@ -104,6 +104,37 @@ def create_investigation(
 
 
 # =====================================================
+# UPDATE INVESTIGATION STATUS
+# =====================================================
+
+def update_investigation_status(
+    investigation_id: int,
+    status: str
+):
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    sql = """
+        UPDATE investigations
+        SET status = %s
+        WHERE id = %s;
+    """
+
+    cur.execute(
+        sql,
+        (
+            status,
+            investigation_id
+        )
+    )
+
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+# =====================================================
 # RAW METRICS
 # =====================================================
 
