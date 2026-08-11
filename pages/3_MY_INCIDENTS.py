@@ -259,7 +259,7 @@ if st.session_state.selected_ticket is None:
 
         if col5.button(
             "View",
-            key=f"view_{row['issue_key']}"
+            key=f"view_{row['id']}_{row['issue_key']}"
         ):
 
             st.session_state.selected_ticket = (

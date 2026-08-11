@@ -821,11 +821,12 @@ def run_pipeline(issue_key, run_agents=False):
 
         save_rca_result(
             investigation_id=context.investigation_id,
+            service=context.service,
             root_cause=root_cause,
             confidence=confidence,
             explanation=explanation
         )
-
+        
         print(
             f"RCA saved successfully for "
             f"{context.service}"

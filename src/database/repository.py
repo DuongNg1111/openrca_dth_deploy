@@ -667,11 +667,11 @@ def insert_evidence(
 
 def save_rca_result(
     investigation_id,
+    service,
     root_cause,
     confidence,
     explanation
 ):
-
     conn = get_connection()
     cur = conn.cursor()
 
@@ -679,19 +679,21 @@ def save_rca_result(
         INSERT INTO rca_results
         (
             investigation_id,
+            service,
             root_cause,
             confidence,
             explanation
         )
 
         VALUES
-        (%s,%s,%s,%s)
+        (%s, %s, %s, %s, %s)
     """
 
     cur.execute(
         sql,
         (
             investigation_id,
+            service,
             root_cause,
             confidence,
             explanation
@@ -789,6 +791,7 @@ def get_rca_results(investigation_id):
         SELECT
             id,
             investigation_id,
+            service,
             root_cause,
             confidence,
             explanation
