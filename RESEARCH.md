@@ -95,7 +95,7 @@
 2. **Trace-graph-aware retrieval** that walks the service dependency graph to localize the failing logistics service faster.
 3. **Domain-transfer framing** of microservice RCA as a logistics fulfillment pipeline (order -> warehouse -> shipment -> tracking) and measure if domain priors help.
 
-## 4. Glossary (Metric / KPI / Log / Trace)
+## 4. Glossary (metric / log / trace)
 
 ### Metric / KPI
 
