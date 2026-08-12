@@ -34,11 +34,8 @@ def ensure_datetime(df):
         )
 
     return df
-<<<<<<< HEAD
-=======
 
 
->>>>>>> 50e312bc6544b4bedc3e7da97ca54a572ec6a9fb
 # =====================================================
 # INVESTIGATION
 # =====================================================
@@ -251,12 +248,6 @@ def insert_logs(
         if content_col in df.columns and pd.notna(row[content_col]):
             log_content = str(row[content_col])
 
-<<<<<<< HEAD
-        try:
-            ts_val = int(pd.to_datetime(row["timestamp"]).timestamp()) if pd.notna(row["timestamp"]) else 0
-        except Exception:
-            ts_val = 0
-=======
         if (
             content_col in df.columns
             and pd.notna(row[content_col])
@@ -265,17 +256,12 @@ def insert_logs(
             log_content = str(
                 row[content_col]
             )
->>>>>>> 50e312bc6544b4bedc3e7da97ca54a572ec6a9fb
 
         records.append(
             (
                 investigation_id,
                 row.get("log_id", ""),
-<<<<<<< HEAD
-                ts_val,  # <--- Thay row["timestamp"] thành ts_val
-=======
                 row["timestamp"],
->>>>>>> 50e312bc6544b4bedc3e7da97ca54a572ec6a9fb
                 row.get("cmdb_id", ""),
                 row.get("log_name", ""),
                 log_content
@@ -334,19 +320,6 @@ def insert_traces(
     records = []
 
     for _, row in df.iterrows():
-<<<<<<< HEAD
-        raw_status = row["status_code"]
-        try:
-            status_code_val = int(float(raw_status)) if pd.notna(raw_status) else 0
-        except (ValueError, TypeError):
-            status_code_val = 0
-
-        try:
-            ts_val = int(pd.to_datetime(row["timestamp"]).timestamp()) if pd.notna(row["timestamp"]) else 0
-        except Exception:
-            ts_val = 0
-
-=======
 
         raw_status = row["status_code"]
 
@@ -365,7 +338,6 @@ def insert_traces(
 
             status_code_val = 0
 
->>>>>>> 50e312bc6544b4bedc3e7da97ca54a572ec6a9fb
         records.append(
             (
                 investigation_id,
