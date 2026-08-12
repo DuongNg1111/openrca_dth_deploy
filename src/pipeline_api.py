@@ -40,6 +40,7 @@ def run_pipeline_background(issue_key: str):
         )
 
         print(e)
+        traceback.print_exc()
 
 
 @app.post("/run-pipeline")
