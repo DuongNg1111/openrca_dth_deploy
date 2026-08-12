@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import json
-import pandas as pd
 
-from google import genai
+import pandas as pd
 from google.genai import types
 
-from src.process_module.agents.base_agent import BaseAgent
 from src.database.repository import get_investigation_traces
+from src.process_module.agents.base_agent import BaseAgent
 
 
 class TraceAgent(BaseAgent):
 
-    def __init__(self):
-        super().__init__("Trace Agent")
+    def __init__(self, config=None):
+        super().__init__("Trace Agent", config=config)
 
 
     def analyze(self, context) -> dict:
@@ -396,13 +395,16 @@ class TraceAgent(BaseAgent):
 
             result = json.loads(text)
 
+            if not isinstance(result, dict):
+                raise ValueError("Trace Agent response must be a JSON object")
+
             return result
 
         # ============================================
         # 8. FALLBACK
         # ============================================
 
-        except Exception as e:
+        except Exception:
 
 
             fallback = []

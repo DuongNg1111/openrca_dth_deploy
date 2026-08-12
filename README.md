@@ -29,6 +29,25 @@ python tests/test_pipeline_smoke.py   # or: python -m pytest -q
 python experiments/run_experiment.py --config experiments/configs/baseline.yaml
 ```
 
+To validate a local Market dataset without Jira, Gemini, or database writes,
+save `issue_key`, `incident_description`, `environment`, `affected_system`, and
+`incident_time` as a `RawQuery` JSON object and run:
+
+```bash
+python -m src.full_pipeline \
+  --raw-query-file local-query.json \
+  --data-root /path/to/Market \
+  --dataset cloudbed-1 \
+  --timestamp-offset-hours 8
+```
+
+This full-pipeline command is a dry run by default. Database persistence
+requires the explicit `--write-database` flag, and agents additionally require
+`--run-agents`. The Python `run_pipeline()` API is also non-writing by default;
+programmatic persistence requires an explicit `dry_run=False`. `--dataset`
+is treated as an explicit source override, and windows crossing midnight load
+every covered date folder or fail with a missing-coverage error.
+
 ## Where to start (read these in order)
 1. [`docs/00_capstone_handbook.md`](docs/00_capstone_handbook.md) — the whole journey, milestones, how Jira maps to the repo.
 2. [`docs/01_git_workflow.md`](docs/01_git_workflow.md) — branch / commit / PR rules (read before you push anything!).

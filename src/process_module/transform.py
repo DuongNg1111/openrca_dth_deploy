@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pandas as pd
 
-
 # =====================================================
 # Aggregate Metrics
 # =====================================================
@@ -151,6 +150,22 @@ def to_features(telemetry) -> dict:
     result = {}
 
     if telemetry is None:
+        return result
+
+    # Lightweight pipeline contract: ``load_mock`` returns a dictionary whose
+    # metric records are plain dictionaries. Keep this path flat because
+    # ``rank_components`` consumes ``(component, kpi)`` feature keys directly.
+    if isinstance(telemetry, dict):
+        for row in telemetry.get("metric", []):
+            try:
+                key = (str(row["component"]), str(row["kpi"]))
+                value = float(row["value"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            result.setdefault(key, {"values": [], "n": 0})["values"].append(value)
+
+        for feature in result.values():
+            feature["n"] = len(feature["values"])
         return result
 
     metrics = getattr(

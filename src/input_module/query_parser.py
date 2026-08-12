@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timedelta
+
 from src.schemas import (
-    RawQuery,
     ParsedQuery,
+    RawQuery,
     TimeWindow,
 )
 
@@ -16,6 +17,9 @@ _DATETIME = re.compile(
     r"(\d{4})-(\d{2})-(\d{2})[ T]"
     r"(\d{2}):(\d{2}):(\d{2})"
 )
+_DATE = re.compile(r"(\d{4})[-/](\d{1,2})[-/](\d{1,2})")
+_TIME = re.compile(r"(\d{1,2}):(\d{2})")
+
 
 def _extract_keywords(text: str) -> list[str]:
     """
@@ -91,17 +95,52 @@ def _parse_incident_time(
     return dt, window
 
 
-def parse_query(
-    raw_query: RawQuery
-) -> ParsedQuery:
-    """
-    Convert RawQuery from Jira into ParsedQuery.
-    """
+def _parse_natural_language_query(
+    query: str,
+    default_date: str,
+) -> tuple[TimeWindow, list[str]]:
+    """Parse the simple natural-language query used by the mock quickstart."""
+    date_match = _DATE.search(query)
+    if date_match:
+        year, month, day = (int(value) for value in date_match.groups())
+    else:
+        year, month, day = (int(value) for value in default_date.split("-"))
+
+    times = _TIME.findall(query)
+    if len(times) >= 2:
+        start_hour, start_minute = (int(value) for value in times[0])
+        end_hour, end_minute = (int(value) for value in times[1])
+    elif len(times) == 1:
+        start_hour, start_minute = (int(value) for value in times[0])
+        start = datetime(year, month, day, start_hour, start_minute)
+        return TimeWindow(start=start, end=start + timedelta(minutes=30)), []
+    else:
+        start_hour, start_minute, end_hour, end_minute = 9, 0, 9, 30
+
+    start = datetime(year, month, day, start_hour, start_minute)
+    end = datetime(year, month, day, end_hour, end_minute)
+    if end <= start:
+        if start_hour >= 18 and end_hour <= 6:
+            end += timedelta(days=1)
+        else:
+            raise ValueError(
+                "Query end time must be after start time; only obvious "
+                "evening-to-early-morning ranges are treated as overnight."
+            )
+
+    return (
+        TimeWindow(start=start, end=end),
+        [],
+    )
+
+
+def _parse_raw_query(raw_query: RawQuery) -> ParsedQuery:
+    """Convert a Jira ``RawQuery`` into the full-pipeline contract."""
 
     incident_dt, window = _parse_incident_time(
-    raw_query.incident_time,
-    raw_query.created,
-)
+        raw_query.incident_time,
+        raw_query.created,
+    )
 
     combined_text = " ".join([
         raw_query.incident_description or "",
@@ -122,3 +161,19 @@ def parse_query(
     )
 
     return parsed
+
+
+def parse_query(
+    query: RawQuery | str,
+    default_date: str = "2021-03-25",
+) -> ParsedQuery | tuple[TimeWindow, list[str]]:
+    """Parse either a Jira query or the mock quickstart's text query.
+
+    Supporting both contracts keeps the full Jira pipeline intact while the
+    lightweight teaching pipeline remains runnable without Jira or a dataset.
+    """
+    if isinstance(query, str):
+        return _parse_natural_language_query(query, default_date)
+    if isinstance(query, RawQuery):
+        return _parse_raw_query(query)
+    raise TypeError("query must be a RawQuery or str")

@@ -1,7 +1,17 @@
+import os
+
+if __name__ != "__main__":
+    import pytest
+
+    pytest.skip("manual PostgreSQL integration script", allow_module_level=True)
+elif os.getenv("OPENRCA_RUN_MUTATING_TESTS") != "1":
+    raise SystemExit(
+        "Set OPENRCA_RUN_MUTATING_TESTS=1 to run this database-writing script."
+    )
+
 import pandas as pd
 
 from src.database.repository import insert_metrics
-
 
 df = pd.DataFrame(
     [

@@ -32,7 +32,16 @@ CREATE TABLE public.evidence_records (
     service text,
     evidence_type text,
     description text,
-    score double precision
+    score double precision,
+    metric_name text,
+    trace_id text,
+    operation text,
+    value double precision,
+    baseline double precision,
+    "timestamp" timestamp without time zone,
+    confidence double precision DEFAULT 0.0,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    metadata jsonb
 );
 
 
@@ -64,7 +73,7 @@ CREATE TABLE public.investigation_logs (
     id integer NOT NULL,
     investigation_id integer,
     log_id text,
-    "timestamp" bigint,
+    "timestamp" timestamp without time zone,
     cmdb_id text,
     log_name text,
     value text
@@ -98,7 +107,7 @@ ALTER SEQUENCE public.investigation_logs_id_seq OWNED BY public.investigation_lo
 CREATE TABLE public.investigation_metrics (
     id integer NOT NULL,
     investigation_id integer,
-    "timestamp" bigint,
+    "timestamp" timestamp without time zone,
     cmdb_id text,
     kpi_name text,
     value double precision
@@ -132,7 +141,7 @@ ALTER SEQUENCE public.investigation_metrics_id_seq OWNED BY public.investigation
 CREATE TABLE public.investigation_traces (
     id integer NOT NULL,
     investigation_id integer,
-    "timestamp" bigint,
+    "timestamp" timestamp without time zone,
     cmdb_id text,
     span_id text,
     trace_id text,
@@ -176,7 +185,12 @@ CREATE TABLE public.investigations (
     incident_time timestamp without time zone,
     window_start timestamp without time zone,
     window_end timestamp without time zone,
-    incident_description text
+    incident_description text,
+    reporter text,
+    reporter_email text,
+    status text DEFAULT 'Created'::text,
+    affected_system text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
 
@@ -474,4 +488,3 @@ ALTER TABLE ONLY public.rca_results
 --
 
 \unrestrict FllLqFrbpHFNZXYoR90E0WXi93netb3Bz9XipQL9GHSO2waakb0doJ0XrvMMmBJ
-

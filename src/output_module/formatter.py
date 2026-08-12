@@ -51,6 +51,10 @@ def build_output(candidates: list[dict[str, Any]]) -> Prediction:
 
     for item in candidates:
 
+        if isinstance(item, RootCauseCandidate):
+            prediction.candidates.append(item)
+            continue
+
         rc = RootCauseCandidate(
             component=item["component"],
             reason=item["reason"],

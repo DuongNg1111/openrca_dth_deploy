@@ -1,8 +1,9 @@
-from src.database.connection import get_connection
-import pandas as pd
-from psycopg2.extras import execute_values
 import json
 
+import pandas as pd
+from psycopg2.extras import execute_values
+
+from src.database.connection import get_connection
 
 # =====================================================
 # Helper: Normalize Timestamp For PostgreSQL TIMESTAMP
@@ -215,7 +216,8 @@ def insert_logs(
         "log",
         "message",
         "body",
-        "text"
+        "text",
+        "value",
     ]:
 
         if candidate in df.columns:
@@ -776,157 +778,5 @@ def get_incident_detail(
 
     return df
 
-# =====================================================
-# STREAMLIT - RCA RESULTS
-# =====================================================
 
-def get_rca_results(investigation_id):
-    """
-    Get RCA results for one investigation.
-    """
-    investigation_id = int(investigation_id)
-    conn = get_connection()
-
-    query = """
-        SELECT
-            id,
-            investigation_id,
-            service,
-            root_cause,
-            confidence,
-            explanation
-        FROM rca_results
-        WHERE investigation_id = %s
-        ORDER BY id ASC;
-    """
-
-    df = pd.read_sql(
-        query,
-        conn,
-        params=(investigation_id,)
-    )
-
-    conn.close()
-
-    return df
-
-# =====================================================
-# HOME - PERSONAL DASHBOARD
-# =====================================================
-
-def get_dashboard_summary(
-    reporter_email
-):
-    """
-    Get incident counts for the logged-in user.
-    """
-
-    conn = get_connection()
-
-    query = """
-        SELECT
-            COUNT(*) AS total_incidents,
-
-            COUNT(*) FILTER (
-                WHERE status = 'Created'
-            ) AS created,
-
-            COUNT(*) FILTER (
-                WHERE status = 'Processing'
-            ) AS processing,
-
-            COUNT(*) FILTER (
-                WHERE status = 'Completed'
-            ) AS completed
-
-        FROM investigations
-
-        WHERE reporter_email = %s;
-    """
-
-    df = pd.read_sql(
-        query,
-        conn,
-        params=(reporter_email,)
-    )
-
-    conn.close()
-
-    return df.iloc[0]
-
-
-def get_incident_trend(
-    reporter_email
-):
-    """
-    Get daily incident counts
-    for the logged-in user.
-    """
-
-    conn = get_connection()
-
-    query = """
-        SELECT
-            DATE(created_at) AS incident_date,
-            COUNT(*) AS incidents
-
-        FROM investigations
-
-        WHERE reporter_email = %s
-
-        GROUP BY DATE(created_at)
-
-        ORDER BY incident_date ASC;
-    """
-
-    df = pd.read_sql(
-        query,
-        conn,
-        params=(reporter_email,)
-    )
-
-    conn.close()
-
-    return df
-
-
-def get_recent_incidents(
-    reporter_email,
-    limit=5
-):
-    """
-    Get the most recent incidents
-    submitted by the logged-in user.
-    """
-
-    conn = get_connection()
-
-    query = """
-        SELECT
-            id,
-            issue_key,
-            created_at,
-            affected_system,
-            status
-
-        FROM investigations
-
-        WHERE reporter_email = %s
-
-        ORDER BY created_at DESC
-
-        LIMIT %s;
-    """
-
-    df = pd.read_sql(
-        query,
-        conn,
-        params=(
-            reporter_email,
-            limit
-        )
-    )
-
-    conn.close()
-
-    return df
+#

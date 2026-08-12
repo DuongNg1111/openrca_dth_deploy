@@ -12,6 +12,9 @@ default_date: "2021-03-25"
 
 dataset: "cloudbed-1"
 
+# Market epoch timestamps are UTC while incident text uses UTC+8 local time.
+timestamp_offset_hours: 8
+
 top_k: 3
 
 llm:
