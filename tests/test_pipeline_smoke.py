@@ -15,6 +15,7 @@ from src.schemas import Prediction
 
 def test_pipeline_runs_and_returns_prediction():
     cfg = load_config()
+    cfg["use_mock"] = True
     pred = run(cfg["example_query"], cfg)
     assert isinstance(pred, Prediction)
     assert len(pred.candidates) >= 1
@@ -29,6 +30,7 @@ def test_pipeline_runs_and_returns_prediction():
 
 def test_pipeline_finds_injected_root_cause():
     cfg = load_config()
+    cfg["use_mock"] = True
     pred = run(cfg["example_query"], cfg)
     assert pred.candidates[0].component == "order-service"
 

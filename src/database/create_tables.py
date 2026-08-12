@@ -1,6 +1,7 @@
+import os
+
 from src.database.connection import get_connection
 from src.database.table_schemas import TABLE_SCHEMAS
-
 
 
 def create_sql(table_name, schema):
@@ -51,4 +52,8 @@ def create_tables():
 
 
 if __name__ == "__main__":
+    if os.getenv("OPENRCA_RUN_MUTATING_TESTS") != "1":
+        raise SystemExit(
+            "Set OPENRCA_RUN_MUTATING_TESTS=1 to initialize the configured database."
+        )
     create_tables()
