@@ -72,6 +72,22 @@ def _load_raw_query_file(path: str | Path) -> RawQuery:
         raise ValueError("Raw query JSON must contain an object")
     return RawQuery(**payload)
 
+def _has_telemetry_data(preprocessed):
+    """
+    Check whether the investigation window
+    contains at least one telemetry record.
+    """
+
+    for telemetry_group in (
+        preprocessed.metrics,
+        preprocessed.logs,
+        preprocessed.traces,
+    ):
+        for df in telemetry_group.values():
+            if df is not None and not df.empty:
+                return True
+
+    return False
 
 def run_pipeline(
     issue_key=None,
@@ -317,7 +333,38 @@ def run_pipeline(
     print(
         "Investigation Status: Processing"
     )
+    # =====================================================
+    # CHECK TELEMETRY DATA
+    # =====================================================
 
+    print("\n========================================")
+    print("CHECK TELEMETRY DATA")
+    print("========================================")
+
+    if not _has_telemetry_data(preprocessed):
+
+        print("\nNO DATA FOUND")
+
+        update_investigation_status(
+            investigation_id,
+            "No Data"
+        )
+
+        print(
+            "Investigation Status: No Data"
+        )
+
+        return {
+            "issue_key": parsed_query.issue_key,
+            "status": "No Data",
+            "message": "No telemetry data found.",
+            "investigation_id": investigation_id,
+        }
+
+    print(
+        "Telemetry data found. Continuing pipeline..."
+    )
+    
     # =====================================================
     # STEP 7.4: SAVE METRICS
     # =====================================================
@@ -338,8 +385,6 @@ def run_pipeline(
     print(
         "Metrics Saved"
     )
-
-
 
     # =====================================================
     # STEP 7.5: SAVE LOGS

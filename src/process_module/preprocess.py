@@ -307,7 +307,6 @@ def preprocess_traces(metadata, window, timestamp_offset_hours=0):
 
     traces = {}
 
-
     for file in metadata.trace.files:
 
         df = preprocess_table(
