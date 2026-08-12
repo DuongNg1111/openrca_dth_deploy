@@ -2,17 +2,16 @@ from __future__ import annotations
 
 import json
 
-from google import genai
 from google.genai import types
 
-from src.process_module.agents.base_agent import BaseAgent
 from src.database.repository import get_investigation_metrics
+from src.process_module.agents.base_agent import BaseAgent
 
 
 class MetricAgent(BaseAgent):
 
-    def __init__(self):
-        super().__init__("Metric Agent")
+    def __init__(self, config=None):
+        super().__init__("Metric Agent", config=config)
 
     def analyze(self, context) -> dict:
         """
@@ -464,13 +463,16 @@ class MetricAgent(BaseAgent):
 
             result = json.loads(text)
 
+            if not isinstance(result, dict):
+                raise ValueError("Metric Agent response must be a JSON object")
+
             return result
 
         # =====================================================
         # 10. FALLBACK
         # =====================================================
 
-        except Exception as e:
+        except Exception:
 
             fallback_anomalies = []
 
@@ -486,17 +488,17 @@ class MetricAgent(BaseAgent):
                     "service": service,
 
                     "value": item.get(
-                        "max_value",
+                        "peak_value",
                         0.0
                     ),
 
                     "baseline": item.get(
-                        "mean_value",
+                        "baseline_mean",
                         0.0
                     ),
 
                     "timestamp": item.get(
-                        "max_timestamp",
+                        "peak_timestamp",
                         ""
                     ),
 
@@ -504,9 +506,9 @@ class MetricAgent(BaseAgent):
 
                     "description": (
                         f"Observed peak value "
-                        f"{item.get('max_value', 0.0)} "
+                        f"{item.get('peak_value', 0.0)} "
                         f"with mean "
-                        f"{item.get('mean_value', 0.0)}."
+                        f"{item.get('baseline_mean', 0.0)}."
                     )
                 }
             )

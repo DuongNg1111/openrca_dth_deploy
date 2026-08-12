@@ -1,19 +1,17 @@
 from __future__ import annotations
 
 import json
-import re
 
-from google import genai
 from google.genai import types
 
-from src.process_module.agents.base_agent import BaseAgent
 from src.database.repository import get_investigation_logs
+from src.process_module.agents.base_agent import BaseAgent
 
 
 class LogAgent(BaseAgent):
 
-    def __init__(self):
-        super().__init__("Log Agent")
+    def __init__(self, config=None):
+        super().__init__("Log Agent", config=config)
 
     def analyze(self, context) -> dict:
 
@@ -282,13 +280,16 @@ Required format:
             print(text)
             print("===================================")
 
-            return json.loads(text)
+            result = json.loads(text)
+            if not isinstance(result, dict):
+                raise ValueError("Log Agent response must be a JSON object")
+            return result
 
         # =====================================================
         # 11. FALLBACK
         # =====================================================
 
-        except Exception as e:
+        except Exception:
 
             fallback_logs = []
 

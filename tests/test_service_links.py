@@ -1,8 +1,12 @@
-from src.database.connection import get_connection
-from src.process_module.service_links import build_service_links
+if __name__ != "__main__":
+    import pytest
+
+    pytest.skip("manual PostgreSQL integration script", allow_module_level=True)
 
 import pandas as pd
+from src.process_module.service_links import build_service_links
 
+from src.database.connection import get_connection
 
 ISSUE_KEY = "DEV-128"
 

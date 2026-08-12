@@ -1,8 +1,9 @@
-from src.database.connection import get_connection
-import pandas as pd
-from psycopg2.extras import execute_values
 import json
 
+import pandas as pd
+from psycopg2.extras import execute_values
+
+from src.database.connection import get_connection
 
 # =====================================================
 # Helper: Normalize Timestamp For PostgreSQL TIMESTAMP
@@ -219,7 +220,8 @@ def insert_logs(
         "log",
         "message",
         "body",
-        "text"
+        "text",
+        "value",
     ]:
 
         if candidate in df.columns:
@@ -781,6 +783,7 @@ def get_incident_detail(
 
     return df
 
+
 # =====================================================
 # STREAMLIT - RCA RESULTS
 # =====================================================
@@ -789,12 +792,11 @@ def get_rca_results(investigation_id):
     """
     Get RCA results for one investigation.
     """
-    investigation_id = int(investigation_id)
+
     conn = get_connection()
 
     query = """
         SELECT
-            id,
             investigation_id,
             service,
             root_cause,
@@ -814,16 +816,13 @@ def get_rca_results(investigation_id):
     conn.close()
 
     return df
-
 # =====================================================
-# HOME - PERSONAL DASHBOARD
+# STREAMLIT - HOME DASHBOARD SUMMARY
 # =====================================================
 
-def get_dashboard_summary(
-    reporter_email
-):
+def get_dashboard_summary(reporter_email):
     """
-    Get incident counts for the logged-in user.
+    Get incident summary for one user.
     """
 
     conn = get_connection()
@@ -842,10 +841,13 @@ def get_dashboard_summary(
 
             COUNT(*) FILTER (
                 WHERE status = 'Completed'
-            ) AS completed
+            ) AS completed,
+
+            COUNT(*) FILTER (
+                WHERE status = 'No Data'
+            ) AS no_data
 
         FROM investigations
-
         WHERE reporter_email = %s;
     """
 
@@ -857,15 +859,24 @@ def get_dashboard_summary(
 
     conn.close()
 
-    return df.iloc[0]
+    if df.empty:
+        return {
+            "total_incidents": 0,
+            "created": 0,
+            "processing": 0,
+            "completed": 0,
+            "no_data": 0
+        }
 
+    return df.iloc[0].to_dict()
 
-def get_incident_trend(
-    reporter_email
-):
+# =====================================================
+# STREAMLIT - HOME INCIDENT TREND
+# =====================================================
+
+def get_incident_trend(reporter_email):
     """
-    Get daily incident counts
-    for the logged-in user.
+    Get daily incident count for one user.
     """
 
     conn = get_connection()
@@ -874,14 +885,10 @@ def get_incident_trend(
         SELECT
             DATE(created_at) AS incident_date,
             COUNT(*) AS incidents
-
         FROM investigations
-
         WHERE reporter_email = %s
-
         GROUP BY DATE(created_at)
-
-        ORDER BY incident_date ASC;
+        ORDER BY incident_date;
     """
 
     df = pd.read_sql(
@@ -895,41 +902,36 @@ def get_incident_trend(
     return df
 
 
+# =====================================================
+# STREAMLIT - HOME RECENT INCIDENTS
+# =====================================================
+
 def get_recent_incidents(
     reporter_email,
     limit=5
 ):
     """
-    Get the most recent incidents
-    submitted by the logged-in user.
+    Get recent incidents submitted by one user.
     """
 
     conn = get_connection()
 
     query = """
         SELECT
-            id,
             issue_key,
             created_at,
             affected_system,
             status
-
         FROM investigations
-
         WHERE reporter_email = %s
-
         ORDER BY created_at DESC
-
         LIMIT %s;
     """
 
     df = pd.read_sql(
         query,
         conn,
-        params=(
-            reporter_email,
-            limit
-        )
+        params=(reporter_email, limit)
     )
 
     conn.close()

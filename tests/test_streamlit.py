@@ -1,3 +1,8 @@
+if __name__ != "__main__":
+    import pytest
+
+    pytest.skip("manual PostgreSQL integration script", allow_module_level=True)
+
 # # from src.database.repository import get_user_incidents
 
 # # df = get_user_incidents(
@@ -41,7 +46,7 @@ conn = get_connection()
 cur = conn.cursor()
 
 cur.execute("""
-SELECT 
+SELECT
     inet_server_addr(),
     inet_server_port(),
     current_database();

@@ -1,52 +1,166 @@
-from dataclasses import asdict
+import argparse
 import json
-import pandas as pd
+from dataclasses import asdict
+from pathlib import Path
 
-from src.jira.receive_query import receive_query
-
-# from src.input_module.validate_query import validate_query
-from src.input_module.query_parser import parse_query
-from src.input_module.telemetry_loader import connect_data_source
-from src.input_module.metadata_loader import load_metadata
-
-from src.process_module.preprocess import preprocess
-from src.process_module.link_telemetry import build_service_links
-from src.process_module.evidence_builder import (
-    build_investigation_context,
-)
-
-from src.process_module.service_selector import (
-    select_services,
-)
-
-# Import Agents
-from src.process_module.agents.metric_agent import MetricAgent
-from src.process_module.agents.log_agent import LogAgent
-from src.process_module.agents.trace_agent import TraceAgent
-from src.process_module.agents.reasoning_agent import ReasoningAgent
-from src.database.repository import (
-    create_investigation,
-    insert_metrics,
-    insert_logs,
-    insert_traces,
-    save_rca_result,
-    insert_evidence,
-    get_investigation_evidence
-)
+from src.config import load_config
 
 from src.database.repository import (
     create_investigation,
     update_investigation_status,
-    insert_metrics,
+    get_investigation_evidence,
+    insert_evidence,
     insert_logs,
+    insert_metrics,
     insert_traces,
     save_rca_result,
-    insert_evidence,
-    get_investigation_evidence
+)
+
+from src.input_module.metadata_loader import load_metadata
+from src.input_module.query_parser import parse_query
+from src.input_module.telemetry_loader import connect_data_source
+from src.jira.receive_query import receive_query
+
+from src.process_module.agents.log_agent import LogAgent
+from src.process_module.agents.metric_agent import MetricAgent
+from src.process_module.agents.reasoning_agent import ReasoningAgent
+from src.process_module.agents.trace_agent import TraceAgent
+
+from src.process_module.evidence_builder import (
+    build_investigation_context,
+)
+
+from src.process_module.evidence_checker import validate
+from src.process_module.link_telemetry import build_service_links
+from src.process_module.preprocess import preprocess
+from src.process_module.service_selector import select_services
+
+from src.schemas import RawQuery
+
+
+FULL_PIPELINE_REQUIRED_MODALITIES = (
+    "metric",
+    "log",
+    "trace",
 )
 
 
-def run_pipeline(issue_key, run_agents=False):
+class EvidenceValidationError(RuntimeError):
+    """
+    Raised when prepared telemetry is incomplete
+    after confirming that telemetry data exists.
+    """
+
+
+def _require_prepared_evidence(
+    parsed_query,
+    preprocessed,
+    metadata,
+):
+    validation = validate(
+        parsed_query,
+        preprocessed,
+        metadata,
+        required_modalities=FULL_PIPELINE_REQUIRED_MODALITIES,
+    )
+
+    if validation.ready_for_reasoning:
+        return validation
+
+    missing = (
+        ", ".join(validation.missing_evidence)
+        or "unknown evidence"
+    )
+
+    actions = " ".join(
+        validation.next_actions
+    )
+
+    raise EvidenceValidationError(
+        "Evidence validation failed before database writes. "
+        f"Missing: {missing}. {actions}"
+    )
+
+
+def _load_raw_query_file(
+    path: str | Path,
+) -> RawQuery:
+
+    payload = json.loads(
+        Path(path).read_text(
+            encoding="utf-8"
+        )
+    )
+
+    if not isinstance(payload, dict):
+        raise ValueError(
+            "Raw query JSON must contain an object"
+        )
+
+    return RawQuery(**payload)
+
+
+def _has_telemetry_data(
+    preprocessed,
+):
+    """
+    Check whether the investigation window
+    contains at least one telemetry record
+    across metric, log, or trace data.
+    """
+
+    for telemetry_group in (
+        preprocessed.metrics,
+        preprocessed.logs,
+        preprocessed.traces,
+    ):
+
+        for df in telemetry_group.values():
+
+            if (
+                df is not None
+                and not df.empty
+            ):
+                return True
+
+    return False
+
+
+def run_pipeline(
+    issue_key=None,
+    run_agents=False,
+    *,
+    dry_run=True,
+    raw_query=None,
+    config=None,
+):
+    """
+    Prepare or execute the full pipeline.
+
+    The Python API is non-writing by default.
+    Database persistence requires:
+        dry_run=False
+
+    Agent execution additionally requires:
+        run_agents=True
+    """
+
+    if type(dry_run) is not bool:
+        raise TypeError(
+            "dry_run must be an actual bool; "
+            "only exact False permits writes"
+        )
+
+    if type(run_agents) is not bool:
+        raise TypeError(
+            "run_agents must be an actual bool; "
+            "only exact True permits agents"
+        )
+
+    if dry_run and run_agents:
+        raise ValueError(
+            "dry_run cannot be combined with run_agents"
+        )
 
     # =====================================================
     # STEP 1
@@ -56,24 +170,35 @@ def run_pipeline(issue_key, run_agents=False):
     print("STEP 1: RECEIVE USER QUERY")
     print("========================================")
 
+    if raw_query is None:
 
-    raw_query = receive_query(issue_key)
+        if not issue_key:
+            raise ValueError(
+                "issue_key or raw_query is required"
+            )
 
-    ...
-
+        raw_query = receive_query(
+            issue_key
+        )
 
     print("\nRaw Query")
 
-    raw_data = asdict(raw_query)
+    raw_data = asdict(
+        raw_query
+    )
 
     for key, value in raw_data.items():
 
-        if key == "additional_information":
+        if key in {
+            "additional_information",
+            "reporter_email",
+        }:
             continue
 
         print(
             f"{key:<25}: {value}"
         )
+
     # =====================================================
     # STEP 2
     # =====================================================
@@ -106,22 +231,25 @@ def run_pipeline(issue_key, run_agents=False):
     )
 
     # =====================================================
-    # STEP 3
+    # STEP 3-4
     # =====================================================
 
     print("\n========================================")
     print("STEP 3-4: LOAD TELEMETRY")
     print("========================================")
 
-    from src.config import load_config
-    config = load_config() # Gọi hàm load_config để lấy đúng data_root đã cấu hình trong config.py
+    if config is None:
+        config = load_config()
 
     data_source = connect_data_source(
         parsed_query,
         config,
     )
 
-    print("Data Source:", data_source)
+    print(
+        "Data Source:",
+        data_source,
+    )
 
     # =====================================================
     # STEP 5
@@ -136,11 +264,30 @@ def run_pipeline(issue_key, run_agents=False):
         parsed_query,
     )
 
-    print("Date Folder :", metadata.date)
-    print("Metric Files:", metadata.metric.count)
-    print("Log Files   :", metadata.log.count)
-    print("Trace Files :", metadata.trace.count)
-    print("Total Files :", metadata.total_files)
+    print(
+        "Date Folder :",
+        metadata.date,
+    )
+
+    print(
+        "Metric Files:",
+        metadata.metric.count,
+    )
+
+    print(
+        "Log Files   :",
+        metadata.log.count,
+    )
+
+    print(
+        "Trace Files :",
+        metadata.trace.count,
+    )
+
+    print(
+        "Total Files :",
+        metadata.total_files,
+    )
 
     # =====================================================
     # STEP 6
@@ -153,9 +300,15 @@ def run_pipeline(issue_key, run_agents=False):
     preprocessed = preprocess(
         metadata,
         parsed_query,
+        timestamp_offset_hours=config.get(
+            "timestamp_offset_hours",
+            0,
+        ),
     )
 
-    print("\nPreprocess Completed")
+    print(
+        "\nPreprocess Completed"
+    )
 
     # =====================================================
     # STEP 7
@@ -165,50 +318,13 @@ def run_pipeline(issue_key, run_agents=False):
     print("STEP 7: BUILD READY-TO-CALL DATABASE")
     print("========================================")
 
-
     # =====================================================
-    # STEP 7.1: BUILD SERVICE LINKS
-    # =====================================================
-
-    print("\n========================================")
-    print("STEP 7.1: BUILD SERVICE LINKS")
-    print("========================================")
-
-
-    service_links = build_service_links(
-        preprocessed
-    )
-
-
-    print(
-        "Service Links Built:",
-        len(service_links)
-    )
-
-
-    # =====================================================
-    # STEP 7.2: PREPARE AGENT CONTEXT
+    # STEP 7.1: CREATE INVESTIGATION
     # =====================================================
 
     print("\n========================================")
-    print("STEP 7.2: PREPARE AGENT CONTEXT")
+    print("STEP 7.1: SAVE INVESTIGATION")
     print("========================================")
-
-
-    print(
-        "Ready-To-Call Context Prepared"
-    )
-
-
-
-    # =====================================================
-    # STEP 7.3: SAVE INVESTIGATION
-    # =====================================================
-
-    print("\n========================================")
-    print("STEP 7.3: SAVE INVESTIGATION")
-    print("========================================")
-
 
     investigation_id = create_investigation(
         issue_key=parsed_query.issue_key,
@@ -223,16 +339,14 @@ def run_pipeline(issue_key, run_agents=False):
         reporter_email=raw_query.reporter_email,
     )
 
-
-
     print(
         "Investigation ID:",
-        investigation_id
+        investigation_id,
     )
 
     update_investigation_status(
         investigation_id,
-        "Processing"
+        "Processing",
     )
 
     print(
@@ -240,78 +354,191 @@ def run_pipeline(issue_key, run_agents=False):
     )
 
     # =====================================================
-    # STEP 7.4: SAVE METRICS
+    # STEP 7.2: CHECK TELEMETRY DATA
     # =====================================================
 
     print("\n========================================")
-    print("STEP 7.4: SAVE METRICS")
+    print("CHECK TELEMETRY DATA")
     print("========================================")
 
+    if not _has_telemetry_data(
+        preprocessed
+    ):
+
+        print(
+            "\nNO DATA FOUND"
+        )
+
+        update_investigation_status(
+            investigation_id,
+            "No Data",
+        )
+
+        print(
+            "Investigation Status: No Data"
+        )
+
+        return {
+            "issue_key": parsed_query.issue_key,
+            "status": "No Data",
+            "message": "No telemetry data found.",
+            "investigation_id": investigation_id,
+        }
+
+    print(
+        "Telemetry data found. "
+        "Continuing pipeline..."
+    )
+
+    # =====================================================
+    # STEP 7.3: EVIDENCE VALIDATION
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 7.3: EVIDENCE VALIDATION")
+    print("========================================")
+
+    preparation_validation = (
+        _require_prepared_evidence(
+            parsed_query,
+            preprocessed,
+            metadata,
+        )
+    )
+
+    print(
+        "Evidence validation:",
+        preparation_validation.status,
+        f"(confidence={preparation_validation.confidence:.2f})",
+    )
+
+    # =====================================================
+    # STEP 7.4: BUILD SERVICE LINKS
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 7.4: BUILD SERVICE LINKS")
+    print("========================================")
+
+    service_links = build_service_links(
+        preprocessed
+    )
+
+    print(
+        "Service Links Built:",
+        len(service_links),
+    )
+
+    if not service_links:
+
+        raise EvidenceValidationError(
+            "Evidence validation failed before "
+            "database writes. "
+            "No logical service could be mapped "
+            "from telemetry cmdb_id values."
+        )
+
+    # =====================================================
+    # DRY RUN
+    # =====================================================
+
+    if dry_run:
+
+        print("\n========================================")
+        print(
+            "DRY RUN COMPLETE — "
+            "NO DATABASE WRITES"
+        )
+        print("========================================")
+
+        return {
+            "raw_query": raw_query,
+            "parsed_query": parsed_query,
+            "metadata": metadata,
+            "preprocessed": preprocessed,
+            "evidence_validation":
+                preparation_validation,
+            "service_links":
+                service_links,
+        }
+
+    # =====================================================
+    # STEP 7.5: PREPARE AGENT CONTEXT
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 7.5: PREPARE AGENT CONTEXT")
+    print("========================================")
+
+    print(
+        "Ready-To-Call Context Prepared"
+    )
+
+    # =====================================================
+    # STEP 7.6: SAVE METRICS
+    # =====================================================
+
+    print("\n========================================")
+    print("STEP 7.6: SAVE METRICS")
+    print("========================================")
 
     for df in preprocessed.metrics.values():
 
         insert_metrics(
             investigation_id,
-            df
+            df,
         )
-
 
     print(
         "Metrics Saved"
     )
 
-
-
     # =====================================================
-    # STEP 7.5: SAVE LOGS
+    # STEP 7.7: SAVE LOGS
     # =====================================================
 
     print("\n========================================")
-    print("STEP 7.5: SAVE LOGS")
-    # =====================================================
-
+    print("STEP 7.7: SAVE LOGS")
+    print("========================================")
 
     for df in preprocessed.logs.values():
 
         insert_logs(
             investigation_id,
-            df
+            df,
         )
-
 
     print(
         "Logs Saved"
     )
 
-
-
     # =====================================================
-    # STEP 7.6: SAVE TRACES
+    # STEP 7.8: SAVE TRACES
     # =====================================================
 
     print("\n========================================")
-    print("STEP 7.6: SAVE TRACES")
+    print("STEP 7.8: SAVE TRACES")
     print("========================================")
-
 
     for df in preprocessed.traces.values():
 
         insert_traces(
             investigation_id,
-            df
+            df,
         )
-
 
     print(
         "Traces Saved"
     )
 
     # =====================================================
-    # STEP 7.7: BUILD INVESTIGATION CONTEXT
+    # STEP 7.9: BUILD INVESTIGATION CONTEXT
     # =====================================================
 
     print("\n========================================")
-    print("STEP 7.7: BUILD INVESTIGATION CONTEXT")
+    print(
+        "STEP 7.9: BUILD INVESTIGATION CONTEXT"
+    )
     print("========================================")
 
     contexts = build_investigation_context(
@@ -323,8 +550,9 @@ def run_pipeline(issue_key, run_agents=False):
 
     print(
         "Contexts Built:",
-        len(contexts)
+        len(contexts),
     )
+
     # =====================================================
     # STEP 8
     # =====================================================
@@ -338,14 +566,27 @@ def run_pipeline(issue_key, run_agents=False):
         contexts,
     )
 
-    print("Affected System :", parsed_query.affected_system)
-    print("Keywords        :", parsed_query.keywords)
+    print(
+        "Affected System :",
+        parsed_query.affected_system,
+    )
 
-    print("\nSelected Services :", len(selected_contexts))
+    print(
+        "Keywords        :",
+        parsed_query.keywords,
+    )
+
+    print(
+        "\nSelected Services :",
+        len(selected_contexts),
+    )
 
     for service in selected_contexts.values():
 
-        print("-", service.service)
+        print(
+            "-",
+            service.service,
+        )
 
     if not run_agents:
 
@@ -355,7 +596,7 @@ def run_pipeline(issue_key, run_agents=False):
         print("========================================")
 
         return selected_contexts
-
+    
     # =====================================================
     # STEP 9: MULTI-AGENT ANALYSIS
     # =====================================================
@@ -364,9 +605,17 @@ def run_pipeline(issue_key, run_agents=False):
     print("STEP 9: MULTI-AGENT ANALYSIS")
     print("========================================")
 
-    metric_agent = MetricAgent()
-    log_agent = LogAgent()
-    trace_agent = TraceAgent()
+    metric_agent = MetricAgent(
+        config=config
+    )
+
+    log_agent = LogAgent(
+        config=config
+    )
+
+    trace_agent = TraceAgent(
+        config=config
+    )
 
     agent_results = {}
 
@@ -385,24 +634,34 @@ def run_pipeline(issue_key, run_agents=False):
         print("METRIC ANALYSIS")
         print("----------------------------------------")
 
-        print({
-            "investigation_id": context.investigation_id,
-            "service": context.service,
-            "incident_time": context.incident_time
-        })
+        print(
+            {
+                "investigation_id": context.investigation_id,
+                "service": context.service,
+                "incident_time": context.incident_time,
+            }
+        )
 
-        metric_result = metric_agent.analyze(context)
+        metric_result = metric_agent.analyze(
+            context
+        )
 
         print("\nMETRIC RESULT")
-        print(json.dumps(
-            metric_result,
-            indent=2,
-            default=str
-        ))
 
-        agent_results[context.service] = {
+        print(
+            json.dumps(
+                metric_result,
+                indent=2,
+                default=str,
+            )
+        )
+
+        agent_results[
+            context.service
+        ] = {
             "metric": metric_result
         }
+
 
     # =====================================================
     # STEP 11: LOG AGENT
@@ -418,16 +677,24 @@ def run_pipeline(issue_key, run_agents=False):
         print("LOG ANALYSIS")
         print("----------------------------------------")
 
-        log_result = log_agent.analyze(context)
+        log_result = log_agent.analyze(
+            context
+        )
 
         print("\nLOG RESULT")
-        print(json.dumps(
-            log_result,
-            indent=2,
-            default=str
-        ))
 
-        agent_results[context.service]["log"] = log_result
+        print(
+            json.dumps(
+                log_result,
+                indent=2,
+                default=str,
+            )
+        )
+
+        agent_results[
+            context.service
+        ]["log"] = log_result
+
 
     # =====================================================
     # STEP 12: TRACE AGENT
@@ -443,16 +710,24 @@ def run_pipeline(issue_key, run_agents=False):
         print("TRACE ANALYSIS")
         print("----------------------------------------")
 
-        trace_result = trace_agent.analyze(context)
+        trace_result = trace_agent.analyze(
+            context
+        )
 
         print("\nTRACE RESULT")
-        print(json.dumps(
-            trace_result,
-            indent=2,
-            default=str
-        ))
 
-        agent_results[context.service]["trace"] = trace_result
+        print(
+            json.dumps(
+                trace_result,
+                indent=2,
+                default=str,
+            )
+        )
+
+        agent_results[
+            context.service
+        ]["trace"] = trace_result
+
 
     # =====================================================
     # STEP 13: EVIDENCE COLLECTION
@@ -464,7 +739,9 @@ def run_pipeline(issue_key, run_agents=False):
 
     for context in selected_contexts.values():
 
-        results = agent_results[context.service]
+        results = agent_results[
+            context.service
+        ]
 
         metric_result = results["metric"]
         log_result = results["log"]
@@ -472,18 +749,22 @@ def run_pipeline(issue_key, run_agents=False):
 
         metric_anomalies = metric_result.get(
             "anomalies",
-            []
+            [],
         )
 
         log_entries = log_result.get(
             "logs",
-            []
+            [],
         )
 
         trace_entries = trace_result.get(
             "traces",
-            []
+            [],
         )
+
+        # -------------------------------------------------
+        # METRIC EVIDENCE
+        # -------------------------------------------------
 
         for metric in metric_anomalies:
 
@@ -491,21 +772,37 @@ def run_pipeline(issue_key, run_agents=False):
                 investigation_id=context.investigation_id,
                 service=metric.get(
                     "service",
-                    context.service
+                    context.service,
                 ),
                 evidence_type="metric",
-                metric_name=metric.get("metric"),
-                description=metric.get("description"),
-                value=metric.get("value"),
-                baseline=metric.get("baseline"),
-                timestamp=metric.get("timestamp"),
-                score=metric.get("value"),
+                metric_name=metric.get(
+                    "metric"
+                ),
+                description=metric.get(
+                    "description"
+                ),
+                value=metric.get(
+                    "value"
+                ),
+                baseline=metric.get(
+                    "baseline"
+                ),
+                timestamp=metric.get(
+                    "timestamp"
+                ),
+                score=metric.get(
+                    "value"
+                ),
                 metadata=metric,
                 confidence=metric_result.get(
                     "confidence",
-                    0
-                )
+                    0,
+                ),
             )
+
+        # -------------------------------------------------
+        # LOG EVIDENCE
+        # -------------------------------------------------
 
         for log in log_entries:
 
@@ -513,32 +810,38 @@ def run_pipeline(issue_key, run_agents=False):
                 investigation_id=context.investigation_id,
                 service=log.get(
                     "service",
-                    context.service
+                    context.service,
                 ),
                 evidence_type="log",
                 description=log.get(
                     "message",
-                    ""
+                    "",
                 ),
                 score=float(
                     log.get(
                         "count",
-                        0
+                        0,
                     )
                 ),
-                timestamp=log.get("timestamp"),
+                timestamp=log.get(
+                    "timestamp"
+                ),
                 value=float(
                     log.get(
                         "count",
-                        0
+                        0,
                     )
                 ),
                 metadata=log,
                 confidence=log_result.get(
                     "confidence",
-                    0
-                )
+                    0,
+                ),
             )
+
+        # -------------------------------------------------
+        # TRACE EVIDENCE
+        # -------------------------------------------------
 
         for trace in trace_entries:
 
@@ -546,20 +849,32 @@ def run_pipeline(issue_key, run_agents=False):
                 investigation_id=context.investigation_id,
                 service=trace.get(
                     "service",
-                    context.service
+                    context.service,
                 ),
                 evidence_type="trace",
-                trace_id=trace.get("trace_id"),
-                operation=trace.get("operation"),
-                description=trace.get("description"),
-                value=trace.get("latency_ms"),
-                baseline=trace.get("baseline_ms"),
-                score=trace.get("latency_ms"),
+                trace_id=trace.get(
+                    "trace_id"
+                ),
+                operation=trace.get(
+                    "operation"
+                ),
+                description=trace.get(
+                    "description"
+                ),
+                value=trace.get(
+                    "latency_ms"
+                ),
+                baseline=trace.get(
+                    "baseline_ms"
+                ),
+                score=trace.get(
+                    "latency_ms"
+                ),
                 metadata=trace,
                 confidence=trace_result.get(
                     "confidence",
-                    0
-                )
+                    0,
+                ),
             )
 
         print(
@@ -568,6 +883,7 @@ def run_pipeline(issue_key, run_agents=False):
             f"logs={len(log_entries)}, "
             f"traces={len(trace_entries)}"
         )
+
 
     # =====================================================
     # STEP 14: EVIDENCE VALIDATION
@@ -591,9 +907,11 @@ def run_pipeline(issue_key, run_agents=False):
             else len(evidence_df)
         )
 
-        evidence_validation[context.service] = {
+        evidence_validation[
+            context.service
+        ] = {
             "valid": count > 0,
-            "count": count
+            "count": count,
         }
 
         print(
@@ -654,6 +972,7 @@ def run_pipeline(issue_key, run_agents=False):
             f"trace={trace_count}"
         )
 
+
     # =====================================================
     # STEP 16: FAULT LOCALIZATION
     # =====================================================
@@ -692,13 +1011,14 @@ def run_pipeline(issue_key, run_agents=False):
             f"{evidence_types}"
         )
 
+
     # =====================================================
     # STEP 17: PREPARE REASONING CONTEXT
     # =====================================================
 
     print("\n========================================")
     print("STEP 17: PREPARE REASONING CONTEXT")
-    print("========================================")
+    # =====================================================
 
     reasoning_contexts = {}
 
@@ -723,7 +1043,6 @@ def run_pipeline(issue_key, run_agents=False):
             f"Reasoning context ready: "
             f"{context.service}"
         )
-
     # =====================================================
     # STEP 18: REASONING AGENT
     # =====================================================
@@ -732,7 +1051,7 @@ def run_pipeline(issue_key, run_agents=False):
     print("STEP 18: REASONING AGENT")
     print("========================================")
 
-    reasoning_agent = ReasoningAgent()
+    reasoning_agent = ReasoningAgent(config=config)
 
     rca_results = []
 
@@ -748,7 +1067,7 @@ def run_pipeline(issue_key, run_agents=False):
         print({
             "investigation_id": context.investigation_id,
             "service": context.service,
-            "incident_time": context.incident_time
+            "incident_time": context.incident_time,
         })
 
         final_result = reasoning_agent.analyze(
@@ -758,11 +1077,13 @@ def run_pipeline(issue_key, run_agents=False):
 
         print("\n========== REASONING RESULT ==========")
 
-        print(json.dumps(
-            final_result,
-            indent=2,
-            default=str
-        ))
+        print(
+            json.dumps(
+                final_result,
+                indent=2,
+                default=str
+            )
+        )
 
         # =================================================
         # STEP 19: PROCESS RCA RESULT
@@ -825,7 +1146,7 @@ def run_pipeline(issue_key, run_agents=False):
             service=context.service,
             root_cause=root_cause,
             confidence=confidence,
-            explanation=explanation
+            explanation=explanation,
         )
 
         print(
@@ -834,17 +1155,13 @@ def run_pipeline(issue_key, run_agents=False):
         )
 
         rca_results.append({
-            "investigation_id":
-                context.investigation_id,
-            "service":
-                context.service,
-            "root_cause":
-                root_cause,
-            "confidence":
-                confidence,
-            "explanation":
-                explanation
+            "investigation_id": context.investigation_id,
+            "service": context.service,
+            "root_cause": root_cause,
+            "confidence": confidence,
+            "explanation": explanation,
         })
+
 
     # =====================================================
     # STEP 21: OUTPUT
@@ -861,19 +1178,37 @@ def run_pipeline(issue_key, run_agents=False):
 
     print("\nFINAL RCA OUTPUT")
 
-    print(json.dumps(
-        rca_results,
-        indent=2,
-        default=str
-    ))
-    update_investigation_status(
-        investigation_id,
-        "Completed"
+    print(
+        json.dumps(
+            rca_results,
+            indent=2,
+            default=str
+        )
     )
 
-    print(
-        "Investigation Status: Completed"
-    )
+    # Only mark Completed when RCA results actually exist.
+    if rca_results:
+
+        update_investigation_status(
+            investigation_id,
+            "Completed"
+        )
+
+        print(
+            "Investigation Status: Completed"
+        )
+
+    else:
+
+        update_investigation_status(
+            investigation_id,
+            "No Data"
+        )
+
+        print(
+            "Investigation Status: No Data"
+        )
+
 
     # =====================================================
     # STEP 22: INTEGRATION & DEMO
@@ -898,6 +1233,7 @@ def run_pipeline(issue_key, run_agents=False):
             f"(confidence={result['confidence']})"
         )
 
+
     # =====================================================
     # PIPELINE COMPLETED
     # =====================================================
@@ -906,21 +1242,135 @@ def run_pipeline(issue_key, run_agents=False):
     print("STEP 1-22 COMPLETED")
     print("========================================")
 
-    print(json.dumps(
-        rca_results,
-        indent=2,
-        default=str
-    ))
+    print(
+        json.dumps(
+            rca_results,
+            indent=2,
+            default=str
+        )
+    )
 
     return rca_results
 
-if __name__ == "__main__":
 
-    issue_key = input(
-        "Enter Jira Issue Key: "
-    )
+    # =====================================================
+    # COMMAND LINE INTERFACE
+    # =====================================================
 
-    run_pipeline(
-        issue_key,
-        run_agents=True
-    )
+    def main(argv=None):
+
+        parser = argparse.ArgumentParser(
+            description="Run the OpenRCA full pipeline"
+        )
+
+        source = parser.add_mutually_exclusive_group(
+            required=True
+        )
+
+        source.add_argument(
+            "--issue",
+            help="Read a Jira issue by key"
+        )
+
+        source.add_argument(
+            "--raw-query-file",
+            type=Path,
+            help="Read a local RawQuery JSON file instead of contacting Jira"
+        )
+
+        parser.add_argument(
+            "--config",
+            type=Path,
+            help="Path to a YAML configuration file"
+        )
+
+        parser.add_argument(
+            "--data-root",
+            type=Path,
+            help="Override the local Market data root"
+        )
+
+        parser.add_argument(
+            "--dataset",
+            help="Override the dataset name"
+        )
+
+        parser.add_argument(
+            "--timestamp-offset-hours",
+            type=float,
+            help="Convert numeric UTC telemetry timestamps into incident-local time"
+        )
+
+        parser.add_argument(
+            "--write-database",
+            action="store_true",
+            help="Allow PostgreSQL writes; omitted by default for safety"
+        )
+
+        parser.add_argument(
+            "--run-agents",
+            action="store_true",
+            help="Run Gemini-backed agents after database persistence"
+        )
+
+        args = parser.parse_args(argv)
+
+        if args.run_agents and not args.write_database:
+
+            parser.error(
+                "--run-agents requires --write-database"
+            )
+
+        local_query = (
+            _load_raw_query_file(args.raw_query_file)
+            if args.raw_query_file is not None
+            else None
+        )
+
+        runtime_config = load_config(
+            args.config
+        )
+
+        if args.data_root is not None:
+            runtime_config["data_root"] = str(
+                args.data_root
+            )
+
+        if args.dataset is not None:
+            runtime_config["dataset_override"] = args.dataset
+
+        if args.timestamp_offset_hours is not None:
+            runtime_config["timestamp_offset_hours"] = (
+                args.timestamp_offset_hours
+            )
+
+        result = run_pipeline(
+            args.issue,
+            run_agents=args.run_agents,
+            dry_run=not args.write_database,
+            raw_query=local_query,
+            config=runtime_config,
+        )
+
+        if not args.write_database:
+
+            validation = result["evidence_validation"]
+
+            print(
+                json.dumps(
+                    {
+                        "status": validation.status,
+                        "confidence": validation.confidence,
+                        "dataset": result["preprocessed"].dataset,
+                        "services": sorted(
+                            result["service_links"]
+                        ),
+                        "database_writes": False,
+                    },
+                    indent=2,
+                )
+            )
+
+
+    if __name__ == "__main__":
+        main()

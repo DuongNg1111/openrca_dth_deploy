@@ -1,26 +1,27 @@
+if __name__ != "__main__":
+    import pytest
+
+    pytest.skip("manual Jira/dataset/Gemini integration script", allow_module_level=True)
+
 from dataclasses import asdict
 
-from src.jira.receive_query import receive_query
-
-from src.input_module.validate_query import validate_query
+from src.input_module.metadata_loader import load_metadata
 from src.input_module.query_parser import parse_query
 from src.input_module.telemetry_loader import connect_data_source
-from src.input_module.metadata_loader import load_metadata
-
-from src.process_module.preprocess import preprocess
-from src.process_module.link_telemetry import build_service_links
+from src.input_module.validate_query import validate_query
+from src.jira.receive_query import receive_query
+from src.process_module.agents.log_agent import LogAgent
+from src.process_module.agents.metric_agent import MetricAgent
+from src.process_module.agents.reasoning_agent import ReasoningAgent
+from src.process_module.agents.trace_agent import TraceAgent
 from src.process_module.evidence_builder import (
     build_investigation_context,
 )
-
+from src.process_module.link_telemetry import build_service_links
+from src.process_module.preprocess import preprocess
 from src.process_module.service_selector import (
     select_services,
 )
-
-from src.process_module.agents.metric_agent import MetricAgent
-from src.process_module.agents.log_agent import LogAgent
-from src.process_module.agents.trace_agent import TraceAgent
-from src.process_module.agents.reasoning_agent import ReasoningAgent
 
 
 def main():

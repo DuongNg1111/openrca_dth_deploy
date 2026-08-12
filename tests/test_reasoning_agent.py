@@ -1,8 +1,13 @@
-
-import pandas as pd
+import os
 from types import SimpleNamespace
 
+import pandas as pd
+import pytest
+
 from src.process_module.agents.reasoning_agent import ReasoningAgent
+
+if os.getenv("OPENRCA_RUN_INTEGRATION_TESTS") != "1":
+    pytest.skip("requires explicit Gemini integration opt-in", allow_module_level=True)
 
 
 def test_reasoning_agent():

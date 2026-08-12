@@ -1,3 +1,8 @@
+if __name__ != "__main__":
+    import pytest
+
+    pytest.skip("manual Jira integration script", allow_module_level=True)
+
 from src.jira.receive_query import receive_query
 
 issue_key = input("Enter Jira Issue Key: ")

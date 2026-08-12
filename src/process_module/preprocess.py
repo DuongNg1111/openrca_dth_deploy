@@ -2,7 +2,6 @@ import pandas as pd
 
 from src.schemas import PreprocessedTelemetry
 
-
 # =====================================================
 # STEP 7.1 Build Investigation Window
 # =====================================================
@@ -36,7 +35,7 @@ def build_investigation_window(parsed_query):
 # STEP 7.2 Normalize Timestamp
 # =====================================================
 
-def normalize_timestamp(df):
+def normalize_timestamp(df, timestamp_offset_hours=0):
 
     df = df.copy()
 
@@ -50,17 +49,12 @@ def normalize_timestamp(df):
         return df
 
 
-    value = str(int(sample.iloc[0]))
+    try:
+        value = str(int(float(sample.iloc[0])))
+    except (TypeError, ValueError):
+        value = ""
 
-
-    if len(value) == 10:
-        unit = "s"
-
-    elif len(value) == 13:
-        unit = "ms"
-
-    else:
-        unit = None
+    unit = {10: "s", 13: "ms"}.get(len(value))
 
 
     if unit:
@@ -69,6 +63,17 @@ def normalize_timestamp(df):
             df["timestamp"],
             unit=unit,
             errors="coerce"
+        )
+
+        if timestamp_offset_hours:
+            df["timestamp"] = df["timestamp"] + pd.Timedelta(
+                hours=timestamp_offset_hours
+            )
+
+    else:
+        df["timestamp"] = pd.to_datetime(
+            df["timestamp"],
+            errors="coerce",
         )
 
 
@@ -137,7 +142,12 @@ def clean_dataframe(df):
 # STEP 7.5 Process One Table
 # =====================================================
 
-def preprocess_table(file, window):
+def preprocess_table(
+    file,
+    window,
+    chunksize=100_000,
+    timestamp_offset_hours=0,
+):
 
     print(
         "Processing:",
@@ -145,19 +155,25 @@ def preprocess_table(file, window):
     )
 
 
-    df = pd.read_csv(file)
+    processed_chunks = []
+    columns = []
+    for chunk in pd.read_csv(file, chunksize=chunksize):
+        if not columns:
+            columns = chunk.columns.tolist()
+        chunk = normalize_timestamp(
+            chunk,
+            timestamp_offset_hours=timestamp_offset_hours,
+        )
+        chunk = filter_time_window(chunk, window)
+        chunk = clean_dataframe(chunk)
+        if not chunk.empty:
+            processed_chunks.append(chunk)
 
-
-    df = normalize_timestamp(df)
-
-
-    df = filter_time_window(
-        df,
-        window
-    )
-
-
-    df = clean_dataframe(df)
+    if processed_chunks:
+        df = pd.concat(processed_chunks, ignore_index=True)
+        df = clean_dataframe(df)
+    else:
+        df = pd.DataFrame(columns=columns)
 
 
     print(
@@ -224,7 +240,7 @@ def normalize_metric_schema(df):
 # STEP 7.6 Process Metrics
 # =====================================================
 
-def preprocess_metrics(metadata, window):
+def preprocess_metrics(metadata, window, timestamp_offset_hours=0):
 
     metrics = {}
 
@@ -233,7 +249,8 @@ def preprocess_metrics(metadata, window):
 
         df = preprocess_table(
             file,
-            window
+            window,
+            timestamp_offset_hours=timestamp_offset_hours,
         )
 
 
@@ -242,7 +259,12 @@ def preprocess_metrics(metadata, window):
         )
 
 
-        metrics[file.stem] = df
+        if file.stem in metrics:
+            metrics[file.stem] = clean_dataframe(
+                pd.concat([metrics[file.stem], df], ignore_index=True)
+            )
+        else:
+            metrics[file.stem] = df
 
 
     return metrics
@@ -252,17 +274,25 @@ def preprocess_metrics(metadata, window):
 # STEP 7.7 Process Logs
 # =====================================================
 
-def preprocess_logs(metadata, window):
+def preprocess_logs(metadata, window, timestamp_offset_hours=0):
 
     logs = {}
 
 
     for file in metadata.log.files:
 
-        logs[file.stem] = preprocess_table(
+        df = preprocess_table(
             file,
-            window
+            window,
+            timestamp_offset_hours=timestamp_offset_hours,
         )
+
+        if file.stem in logs:
+            logs[file.stem] = clean_dataframe(
+                pd.concat([logs[file.stem], df], ignore_index=True)
+            )
+        else:
+            logs[file.stem] = df
 
 
     return logs
@@ -273,17 +303,24 @@ def preprocess_logs(metadata, window):
 # STEP 7.8 Process Traces
 # =====================================================
 
-def preprocess_traces(metadata, window):
+def preprocess_traces(metadata, window, timestamp_offset_hours=0):
 
     traces = {}
 
-
     for file in metadata.trace.files:
 
-        traces[file.stem] = preprocess_table(
+        df = preprocess_table(
             file,
-            window
+            window,
+            timestamp_offset_hours=timestamp_offset_hours,
         )
+
+        if file.stem in traces:
+            traces[file.stem] = clean_dataframe(
+                pd.concat([traces[file.stem], df], ignore_index=True)
+            )
+        else:
+            traces[file.stem] = df
 
 
     return traces
@@ -297,6 +334,7 @@ def preprocess_traces(metadata, window):
 def preprocess(
     metadata,
     parsed_query,
+    timestamp_offset_hours=0,
 ):
 
     window = build_investigation_window(
@@ -315,17 +353,20 @@ def preprocess(
 
     metrics = preprocess_metrics(
         metadata,
-        window
+        window,
+        timestamp_offset_hours=timestamp_offset_hours,
     )
 
     logs = preprocess_logs(
         metadata,
-        window
+        window,
+        timestamp_offset_hours=timestamp_offset_hours,
     )
 
     traces = preprocess_traces(
         metadata,
-        window
+        window,
+        timestamp_offset_hours=timestamp_offset_hours,
     )
 
     dataset_folder = metadata.metric.folder.parent.parent.parent.name

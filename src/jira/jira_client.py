@@ -11,9 +11,11 @@ JIRA_URL = jira_cfg["url"]
 JIRA_EMAIL = jira_cfg["email"]
 JIRA_API_TOKEN = jira_cfg["token"]
 
+# Existing Epic for OpenRCA_DTH incidents
+OPENRCA_EPIC_KEY = "DEV-167"
+
 
 def connect_jira():
-
     return JIRA(
         server=JIRA_URL,
         basic_auth=(
@@ -43,6 +45,10 @@ def create_issue(
 ):
     """
     Create a new Jira issue and return its issue key.
+
+    All incident tickets created by OpenRCA_DTH
+    are automatically assigned to the existing
+    OpenRCA_DTH Epic.
     """
 
     jira = connect_jira()
@@ -79,6 +85,9 @@ Incident Description:
         "description": description,
         "issuetype": {
             "name": "Task"
+        },
+        "parent": {
+            "key": OPENRCA_EPIC_KEY
         }
     }
 

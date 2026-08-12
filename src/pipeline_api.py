@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from threading import Thread
+import traceback
 
 from src.full_pipeline import run_pipeline
 
@@ -24,7 +25,8 @@ def run_pipeline_background(issue_key: str):
 
         result = run_pipeline(
             issue_key,
-            run_agents=True
+            run_agents=True,
+            dry_run=False
         )
 
         print(
@@ -40,6 +42,7 @@ def run_pipeline_background(issue_key: str):
         )
 
         print(e)
+        traceback.print_exc()
 
 
 @app.post("/run-pipeline")

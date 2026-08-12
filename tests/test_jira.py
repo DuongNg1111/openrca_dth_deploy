@@ -1,4 +1,11 @@
+import os
+
+import pytest
+
 from src.jira.jira_client import connect_jira
+
+if os.getenv("OPENRCA_RUN_INTEGRATION_TESTS") != "1":
+    pytest.skip("requires explicit Jira integration opt-in", allow_module_level=True)
 
 
 def test_jira_connection():
@@ -17,6 +24,10 @@ def test_jira_connection():
 
 
 
+@pytest.mark.skipif(
+    os.getenv("OPENRCA_RUN_MUTATING_TESTS") != "1",
+    reason="creating a Jira issue requires separate mutating-test opt-in",
+)
 def test_create_issue():
 
     jira = connect_jira()
@@ -47,4 +58,5 @@ if __name__ == "__main__":
 
     test_jira_connection()
 
-    test_create_issue()
+    if os.getenv("OPENRCA_RUN_MUTATING_TESTS") == "1":
+        test_create_issue()
