@@ -35,6 +35,8 @@ def ensure_datetime(df):
         )
 
     return df
+
+
 # =====================================================
 # INVESTIGATION
 # =====================================================
@@ -248,16 +250,20 @@ def insert_logs(
         if content_col in df.columns and pd.notna(row[content_col]):
             log_content = str(row[content_col])
 
-        try:
-            ts_val = int(pd.to_datetime(row["timestamp"]).timestamp()) if pd.notna(row["timestamp"]) else 0
-        except Exception:
-            ts_val = 0
+        if (
+            content_col in df.columns
+            and pd.notna(row[content_col])
+        ):
+
+            log_content = str(
+                row[content_col]
+            )
 
         records.append(
             (
                 investigation_id,
                 row.get("log_id", ""),
-                ts_val,  # <--- Thay row["timestamp"] thành ts_val
+                row["timestamp"],
                 row.get("cmdb_id", ""),
                 row.get("log_name", ""),
                 log_content
@@ -316,16 +322,23 @@ def insert_traces(
     records = []
 
     for _, row in df.iterrows():
+
         raw_status = row["status_code"]
-        try:
-            status_code_val = int(float(raw_status)) if pd.notna(raw_status) else 0
-        except (ValueError, TypeError):
-            status_code_val = 0
 
         try:
-            ts_val = int(pd.to_datetime(row["timestamp"]).timestamp()) if pd.notna(row["timestamp"]) else 0
-        except Exception:
-            ts_val = 0
+
+            status_code_val = (
+                int(float(raw_status))
+                if pd.notna(raw_status)
+                else 0
+            )
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
+            status_code_val = 0
 
         records.append(
             (
