@@ -717,42 +717,6 @@ else:
         )
 
     # =====================================================
-    # EVIDENCE COUNTS
-    # =====================================================
-
-    metric_df = pd.DataFrame()
-    log_df = pd.DataFrame()
-    trace_df = pd.DataFrame()
-
-    if not evidence_df.empty:
-
-        metric_df = evidence_df[
-            evidence_df["evidence_type"].str.contains(
-                "metric",
-                na=False
-            )
-        ]
-
-        log_df = evidence_df[
-            evidence_df["evidence_type"].str.contains(
-                "log",
-                na=False
-            )
-        ]
-
-        trace_df = evidence_df[
-            evidence_df["evidence_type"].str.contains(
-                "trace",
-                na=False
-            )
-        ]
-
-    metric_count = len(metric_df)
-    log_count = len(log_df)
-    trace_count = len(trace_df)
-    total_evidence = len(evidence_df)
-
-
     st.markdown("## 🤖 AI Incident Investigation")
 
     st.caption(
@@ -967,7 +931,202 @@ else:
                 font-size: 13px;
                 line-height: 1.5;
             }
-            </style>
+            
+              /* ==============================
+                 Development Timeline
+              ============================== */
+
+              .development-summary {
+                  margin: 8px 0 14px 0 !important;
+                  font-size: 13px !important;
+                  color: #667085 !important;
+              }
+
+              .development-summary b {
+                  color: #1f2937 !important;
+                  font-weight: 700 !important;
+              }
+
+              .development-scroll {
+                  width: 100% !important;
+                  max-height: 620px !important;
+                  overflow-y: auto !important;
+                  overflow-x: hidden !important;
+                  padding: 4px 8px 12px 0 !important;
+                  box-sizing: border-box !important;
+              }
+
+              .development-item {
+                  display: grid !important;
+                  grid-template-columns: 72px 34px minmax(0, 1fr) !important;
+                  column-gap: 10px !important;
+                  width: 100% !important;
+                  min-width: 0 !important;
+                  margin-bottom: 18px !important;
+                  box-sizing: border-box !important;
+              }
+
+              .development-time {
+                  padding-top: 4px !important;
+                  color: #667085 !important;
+                  font-size: 12px !important;
+                  font-weight: 600 !important;
+                  white-space: nowrap !important;
+                  text-align: right !important;
+              }
+
+              .development-marker {
+                  position: relative !important;
+                  display: flex !important;
+                  justify-content: center !important;
+                  min-height: 100% !important;
+              }
+
+              .development-dot {
+                  position: relative !important;
+                  z-index: 2 !important;
+                  width: 30px !important;
+                  height: 30px !important;
+                  display: flex !important;
+                  align-items: center !important;
+                  justify-content: center !important;
+                  border: 1px solid #dbe3ef !important;
+                  border-radius: 50% !important;
+                  background: #ffffff !important;
+                  font-size: 14px !important;
+                  box-sizing: border-box !important;
+              }
+
+              .development-line {
+                  position: absolute !important;
+                  top: 30px !important;
+                  bottom: -18px !important;
+                  left: 50% !important;
+                  width: 1px !important;
+                  transform: translateX(-50%) !important;
+                  background: #d9dee8 !important;
+              }
+
+              .development-content {
+                  min-width: 0 !important;
+                  padding: 13px 15px !important;
+                  border: 1px solid #e5e7eb !important;
+                  border-radius: 9px !important;
+                  background: #ffffff !important;
+                  box-sizing: border-box !important;
+                  overflow: visible !important;
+              }
+
+              .development-meta {
+                  display: flex !important;
+                  align-items: center !important;
+                  gap: 7px !important;
+                  margin-bottom: 7px !important;
+                  flex-wrap: wrap !important;
+              }
+
+              .development-phase {
+                  display: inline-flex !important;
+                  align-items: center !important;
+                  padding: 3px 7px !important;
+                  border-radius: 5px !important;
+                  font-size: 10px !important;
+                  line-height: 1.3 !important;
+                  font-weight: 700 !important;
+                  letter-spacing: .035em !important;
+              }
+
+              .development-phase.before {
+                  background: #eff6ff !important;
+                  color: #1d4ed8 !important;
+              }
+
+              .development-phase.during {
+                  background: #fff7ed !important;
+                  color: #c2410c !important;
+              }
+
+              .development-phase.after {
+                  background: #f3f4f6 !important;
+                  color: #4b5563 !important;
+              }
+
+              .development-type {
+                  display: inline-flex !important;
+                  align-items: center !important;
+                  padding: 3px 7px !important;
+                  border-radius: 5px !important;
+                  background: #f3f4f6 !important;
+                  color: #667085 !important;
+                  font-size: 10px !important;
+                  line-height: 1.3 !important;
+                  font-weight: 700 !important;
+                  letter-spacing: .035em !important;
+              }
+
+              .development-title {
+                  margin-bottom: 5px !important;
+                  color: #1f2937 !important;
+                  font-size: 14px !important;
+                  line-height: 1.4 !important;
+                  font-weight: 700 !important;
+              }
+
+              .development-description {
+                  margin-bottom: 0 !important;
+                  color: #667085 !important;
+                  font-size: 12.5px !important;
+                  line-height: 1.5 !important;
+              }
+                .development-values {
+                    display: flex !important;
+                    align-items: center !important;
+                    flex-wrap: wrap !important;
+                    gap: 8px !important;
+                    margin-top: 10px !important;
+                    margin-bottom: 5px !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    height: auto !important;
+                    max-height: none !important;
+                    overflow: visible !important;
+                    position: relative !important;
+                    z-index: 10 !important;
+                }
+
+                .development-values span {
+                  display: inline-flex !important;
+                  align-items: center !important;
+                  padding: 5px 9px !important;
+                  border: 1px solid #e5e7eb !important;
+                  border-radius: 6px !important;
+                  background: #f8fafc !important;
+                  color: #4b5563 !important;
+                  font-size: 12px !important;
+                  line-height: 1.4 !important;
+                  visibility: visible !important;
+                  opacity: 1 !important;
+              }
+
+              .development-values b {
+                  margin-left: 3px !important;
+                  color: #111827 !important;
+                  font-weight: 700 !important;
+              }
+
+              .development-deviation {
+                  display: inline-block !important;
+                  margin-top: 2px !important;
+                  margin-bottom: 2px !important;
+                  color: #b45309 !important;
+                  font-size: 12px !important;
+                  line-height: 1.4 !important;
+                  font-weight: 650 !important;
+                  visibility: visible !important;
+                  opacity: 1 !important;
+              }
+
+</style>
             """,
             unsafe_allow_html=True,
         )
@@ -1088,145 +1247,7 @@ else:
 
         st.markdown(
             """
-            <style>
-
-            .evidence-timeline {
-                position: relative;
-                margin: 10px 0 30px 0;
-                padding: 16px 20px 16px 42px;
-                max-height: 520px;
-                overflow-y: auto;
-                overflow-x: hidden;
-                border: 1px solid #e4e7ec;
-                border-radius: 10px;
-                background: #ffffff;
-                box-sizing: border-box;
-            }
-
-            .evidence-timeline::-webkit-scrollbar {
-                width: 7px;
-            }
-
-            .evidence-timeline::-webkit-scrollbar-track {
-                background: #f2f4f7;
-                border-radius: 10px;
-            }
-
-            .evidence-timeline::-webkit-scrollbar-thumb {
-                background: #c4c9d1;
-                border-radius: 10px;
-            }
-
-            .evidence-timeline::-webkit-scrollbar-thumb:hover {
-                background: #98a2b3;
-            }
-
-            .evidence-timeline::before {
-                content: "";
-                position: absolute;
-                left: 15px;
-                top: 8px;
-                bottom: 8px;
-                width: 2px;
-                background: #d9dee7;
-            }
-
-            .evidence-event {
-                position: relative;
-                padding: 4px 0 24px 0;
-                margin: 0;
-            }
-
-            .evidence-dot {
-                position: absolute;
-                left: -34px;
-                top: 7px;
-                width: 15px;
-                height: 15px;
-                border-radius: 50%;
-                background: #ffffff;
-                border: 3px solid #2563eb;
-                box-sizing: border-box;
-                z-index: 2;
-            }
-
-            .evidence-time {
-                font-size: 12px;
-                font-weight: 650;
-                color: #667085;
-                margin-bottom: 5px;
-            }
-
-            .evidence-event-title {
-                font-size: 15px;
-                font-weight: 700;
-                color: #1f2937;
-                margin-bottom: 3px;
-            }
-
-            .evidence-service {
-                display: inline-block;
-                font-size: 13px;
-                font-weight: 650;
-                color: #344054;
-                margin-right: 8px;
-            }
-
-            .evidence-operation {
-                display: inline-block;
-                font-size: 12px;
-                color: #667085;
-                margin-bottom: 8px;
-            }
-
-            .evidence-metrics {
-                display: flex;
-                gap: 30px;
-                flex-wrap: wrap;
-                margin: 5px 0 7px 0;
-            }
-
-            .evidence-metric-label {
-                font-size: 10px;
-                text-transform: uppercase;
-                letter-spacing: .04em;
-                color: #98a2b3;
-            }
-
-            .evidence-metric-value {
-                font-size: 14px;
-                font-weight: 700;
-                color: #1f2937;
-            }
-
-            .evidence-anomaly {
-                display: inline-block;
-                padding: 3px 8px;
-                border-radius: 4px;
-                background: #fff4e5;
-                color: #b54708;
-                font-size: 11px;
-                font-weight: 700;
-                margin: 2px 0 6px 0;
-            }
-
-            .evidence-event-description {
-                font-size: 13px;
-                line-height: 1.5;
-                color: #667085;
-                max-width: 850px;
-            }
-
-            .evidence-empty-timeline {
-                padding: 18px;
-                border: 1px dashed #d0d5dd;
-                border-radius: 8px;
-                background: #fafafa;
-                color: #667085;
-                font-size: 13px;
-            }
-
-            </style>
+            
             """,
             unsafe_allow_html=True,
         )
@@ -1399,48 +1420,30 @@ else:
         )
 
         # -------------------------------------------------
+        # -------------------------------------------------
         # Incident reference time
         # -------------------------------------------------
+        # Always use the exact incident timestamp stored
+        # in the investigation record.
+        # Never infer incident time from telemetry.
 
         incident_time = None
 
-        if isinstance(incident, dict):
+        try:
+            candidate = incident.get("incident_time", None)
 
-            for candidate in (
-                incident.get("incident_time"),
-                incident.get("created_at"),
-                incident.get("timestamp"),
-            ):
+            if pd.notna(candidate):
+                incident_time = pd.Timestamp(candidate)
 
-                if candidate:
-
-                    try:
-                        incident_time = pd.Timestamp(candidate)
-                        break
-                    except Exception:
-                        pass
-
-        # Fallback: use earliest telemetry event
-        if incident_time is None:
-
-            for event in timeline_events:
-
-                ts = event.get("timestamp")
-
-                if ts is None:
-                    continue
-
-                try:
-                    incident_time = pd.Timestamp(ts)
-                    break
-                except Exception:
-                    continue
+        except Exception:
+            incident_time = None
 
         if incident_time is None:
-            incident_time = pd.Timestamp.now()
+            raise ValueError("Incident record does not contain a valid incident_time.")
 
         # -------------------------------------------------
         # 30-minute window
+        # -------------------------------------------------
         # -------------------------------------------------
 
         window_start = (
@@ -1651,765 +1654,856 @@ else:
                 return str(value)
 
         # -------------------------------------------------
-        # Build timeline
+        # -------------------------------------------------
+        # -------------------------------------------------
+        # Build human-readable incident story timeline
         # -------------------------------------------------
 
         timeline_html = ""
 
-        for event in window_events:
+        # Group telemetry into fixed incident development phases.
+        # Always render all five phases so the user can understand
+        # how the incident developed across the full investigation window.
 
-            event_time = event["_parsed_timestamp"]
+        story_groups = []
 
-            # -------------------------------------------------
-            # Safe defaults for timeline rendering
-            # -------------------------------------------------
+        phase_boundaries = [
+            (
+                incident_time - pd.Timedelta(minutes=15),
+                incident_time - pd.Timedelta(minutes=10),
+                "Initial signs",
+                "before",
+            ),
+            (
+                incident_time - pd.Timedelta(minutes=10),
+                incident_time - pd.Timedelta(minutes=5),
+                "Degradation increased",
+                "before",
+            ),
+            (
+                incident_time - pd.Timedelta(minutes=5),
+                incident_time + pd.Timedelta(minutes=5),
+                "Incident",
+                "during",
+            ),
+            (
+                incident_time + pd.Timedelta(minutes=5),
+                incident_time + pd.Timedelta(minutes=10),
+                "Impact continued",
+                "after",
+            ),
+            (
+                incident_time + pd.Timedelta(minutes=10),
+                incident_time + pd.Timedelta(minutes=15),
+                "Impact persisted",
+                "after",
+            ),
+        ]
 
-            title = "Performance signal detected"
+        # Make sure telemetry is ordered by timestamp.
+        sorted_window_events = sorted(
+            window_events,
+            key=lambda event: event["_parsed_timestamp"],
+        )
 
-            description = (
-                "The service showed an abnormal performance signal."
+        for (
+            phase_start,
+            phase_end,
+            phase_name,
+            phase_class,
+        ) in phase_boundaries:
+
+            phase_events = [
+                event
+                for event in sorted_window_events
+                if phase_start
+                <= event["_parsed_timestamp"]
+                < phase_end
+            ]
+
+            # IMPORTANT:
+            # Do not skip empty phases.
+            # Every phase must appear in the incident story.
+            story_groups.append(
+                {
+                    "first_time": phase_start,
+                    "last_time": phase_end,
+                    "events": phase_events,
+                    "phase": phase_name,
+                    "phase_class": phase_class,
+                }
             )
 
-            # DEBUG: inspect actual timeline metric fields
-            if str(event.get("evidence_type", "")).lower() == "metric":
-                print(
-                    "\n[TIMELINE METRIC DEBUG]",
-                    {
-                        "metric_name": event.get("metric_name"),
-                        "metric": event.get("metric"),
-                        "name": event.get("name"),
-                        "operation": event.get("operation"),
-                        "title": event.get("title"),
-                        "description": event.get("description"),
-                        "current": event.get("current"),
-                        "value": event.get("value"),
-                        "baseline": event.get("baseline"),
-                        "normal": event.get("normal"),
-                    }
-                )
+        # -------------------------------------------------
+        # Build one story card per group
+        # -------------------------------------------------
 
-            event_type = str(
-                event.get(
-                    "evidence_type",
+        for group in story_groups:
+
+            # -------------------------------------------------
+            # Incident development phase
+            # -------------------------------------------------
+            # IMPORTANT:
+            # Always render every phase, even when there is
+            # no telemetry event in that period.
+            #
+            # This makes the timeline tell the full incident
+            # story instead of showing only the phase containing
+            # telemetry records.
+
+            events = group["events"]
+
+            event_time = group["first_time"]
+
+            # Use the phase defined above.
+            # Do NOT recalculate it from event_time because that
+            # would collapse different development phases together.
+
+            phase = group["phase"]
+            phase_class = group["phase_class"]
+
+            # -------------------------------------------------
+            # Collect evidence
+            # -------------------------------------------------
+
+            metric_events = []
+            log_events = []
+            trace_events = []
+
+            services = []
+            operations = []
+
+            has_latency = False
+            has_cpu = False
+            has_memory = False
+            has_network = False
+            has_volume = False
+
+            # Keep only useful numeric evidence.
+            numeric_details = []
+
+            for event in events:
+
+                event_type = str(
                     event.get(
-                        "type",
-                        "metric"
+                        "evidence_type",
+                        event.get("type", "metric"),
                     )
-                )
-                or "metric"
-            ).lower()
-
-            service = _timeline_service_name(
-                event.get(
-                    "service",
-                    "Unknown service"
-                )
-            )
-
-            # -------------------------------------------------
-            # SAFE DEFAULTS
-            #
-            # Every timeline event gets a title and description
-            # before metric/log/trace-specific mapping runs.
-            # -------------------------------------------------
-
-            title = "Performance signal detected"
-
-            description = (
-                f"{service} showed an abnormal signal "
-                f"compared with its normal behavior."
-            )
-
-
-            # -------------------------------------------------
-            # Get the real evidence name.
-            #
-            # Reasoning Agent evidence normally contains:
-            #   evidence_type
-            #   metric_name
-            #   operation
-            #   description
-            #   value
-            #   baseline
-            #
-            # Some older timeline records use "metric"
-            # instead of "metric_name", so support both.
-            # -------------------------------------------------
-
-            metric_name = str(
-                event.get("metric_name")
-                or event.get("metric")
-                or event.get("name")
-                or event.get("title")
-                or ""
-            ).strip()
-
-            # If this is a metric but the metric name was not
-            # copied into timeline_events, try the metadata object.
-            metadata = event.get("metadata")
-
-            if (
-                not metric_name
-                and isinstance(metadata, dict)
-            ):
-                metric_name = str(
-                    metadata.get("metric")
-                    or metadata.get("metric_name")
-                    or ""
-                ).strip()
-
-            raw_name = metric_name.lower()
-
-            operation = _timeline_operation_name(
-                event.get(
-                    "operation",
-                    ""
-                )
-            )
-
-            raw_name = metric_name.lower()
-
-            # -------------------------------------------------
-            # Phase
-            # -------------------------------------------------
-
-            if event_time < incident_time:
-
-                phase = "BEFORE INCIDENT"
-                phase_class = "before"
-
-            elif event_time > incident_time:
-
-                phase = "AFTER INCIDENT"
-                phase_class = "after"
-
-            else:
-
-                phase = "INCIDENT"
-                phase_class = "incident"
-
-            # -------------------------------------------------
-            # Human-readable title
-            # -------------------------------------------------
-
-            # Read every possible source because evidence records
-            # can come from different stages of the pipeline.
-
-            evidence_text = " ".join(
-                str(
-                    event.get(key, "")
-                    or ""
-                )
-                for key in (
-                    "metric_name",
-                    "metric",
-                    "name",
-                    "title",
-                    "description",
-                )
-            ).lower()
-
-            metadata = event.get("metadata")
-
-            if isinstance(metadata, dict):
-
-                evidence_text += " " + " ".join(
-                    str(value or "")
-                    for value in metadata.values()
+                    or "metric"
                 ).lower()
 
-            # -------------------------------------------------
-            # METRIC
-            # -------------------------------------------------
+                if event_type == "metric":
 
-            elif event_type == "metric":
+                    metric_events.append(event)
 
-                # -------------------------------------------------
-                # Normalize metric name
-                # -------------------------------------------------
+                elif event_type == "log":
+
+                    log_events.append(event)
+
+                elif event_type == "trace":
+
+                    trace_events.append(event)
+
+                # ---------------------------------------------
+                # Service
+                # ---------------------------------------------
+
+                service = _timeline_service_name(
+                    event.get(
+                        "service",
+                        "Unknown service",
+                    )
+                )
+
+                if (
+                    service
+                    and service != "Unknown service"
+                    and service not in services
+                ):
+
+                    services.append(service)
+
+                # ---------------------------------------------
+                # Metric name
+                # ---------------------------------------------
 
                 metric_name = str(
-                    event.get("metric_name")
-                    or event.get("metric")
-                    or event.get("name")
-                    or metadata.get("metric_name")
-                    or metadata.get("metric")
+                    event.get(
+                        "metric_name",
+                        event.get(
+                            "metric",
+                            event.get(
+                                "name",
+                                event.get(
+                                    "title",
+                                    "",
+                                ),
+                            ),
+                        ),
+                    )
                     or ""
                 ).strip()
 
-                raw_name = metric_name.lower()
-
-                normalized_name = re.sub(
-                    r"[^a-z0-9_]+",
-                    "_",
-                    raw_name,
+                normalized_name = (
+                    metric_name
+                    .lower()
+                    .replace("_", " ")
+                    .replace(".", " ")
+                    .replace("-", " ")
                 )
 
-                # -------------------------------------------------
-                # Request latency
-                # -------------------------------------------------
+                # ---------------------------------------------
+                # Operation
+                # ---------------------------------------------
+
+                operation = _timeline_operation_name(
+                    event.get(
+                        "operation",
+                        "",
+                    )
+                )
 
                 if (
-                    "request_duration" in normalized_name
-                    or "request_latency" in normalized_name
+                    operation
+                    and operation not in operations
                 ):
 
-                    title = (
-                        f"{service} — Request latency increased"
-                    )
+                    operations.append(operation)
 
-                    description = (
-                        f"{service} requests were taking longer "
-                        f"than usual."
-                    )
+                # ---------------------------------------------
+                # Detect problem category
+                # ---------------------------------------------
 
-                # -------------------------------------------------
-                # Response latency
-                # -------------------------------------------------
-
-                elif (
-                    "response_duration" in normalized_name
-                    or "response_latency" in normalized_name
+                if (
+                    "request duration" in normalized_name
+                    or "request latency" in normalized_name
+                    or "response duration" in normalized_name
+                    or "response latency" in normalized_name
+                    or "duration milliseconds" in normalized_name
+                    or "latency" in normalized_name
                 ):
 
-                    title = (
-                        f"{service} — Response latency increased"
+                    has_latency = True
+
+                if (
+                    "cpu" in normalized_name
+                    and (
+                        "thrott" in normalized_name
+                        or "usage" in normalized_name
+                        or "user" in normalized_name
                     )
-
-                    description = (
-                        f"{service} responses were taking longer "
-                        f"than usual."
-                    )
-
-                # -------------------------------------------------
-                # Request traffic
-                # -------------------------------------------------
-
-                elif (
-                    "request_bytes" in normalized_name
-                    or "request_size" in normalized_name
                 ):
 
-                    title = (
-                        f"{service} — Request traffic increased"
-                    )
+                    has_cpu = True
 
-                    description = (
-                        f"{service} received more request data "
-                        f"than usual."
-                    )
-
-                # -------------------------------------------------
-                # Response traffic
-                # -------------------------------------------------
-
-                elif (
-                    "response_bytes" in normalized_name
-                    or "response_size" in normalized_name
-                ):
-
-                    title = (
-                        f"{service} — Response traffic increased"
-                    )
-
-                    description = (
-                        f"{service} returned more response data "
-                        f"than usual."
-                    )
-
-                # -------------------------------------------------
-                # Request volume
-                # -------------------------------------------------
-
-                elif (
-                    "request_messages" in normalized_name
-                    or "request_count" in normalized_name
-                    or normalized_name.endswith("_requests")
-                    or normalized_name == "requests"
-                ):
-
-                    title = (
-                        f"{service} — Request volume increased"
-                    )
-
-                    description = (
-                        f"{service} received more requests "
-                        f"than usual."
-                    )
-
-                # -------------------------------------------------
-                # Response volume
-                # -------------------------------------------------
-
-                elif (
-                    "response_messages" in normalized_name
-                    or "response_count" in normalized_name
-                    or normalized_name.endswith("_responses")
-                    or normalized_name == "responses"
-                ):
-
-                    title = (
-                        f"{service} — Response volume increased"
-                    )
-
-                    description = (
-                        f"{service} produced more responses "
-                        f"than usual."
-                    )
-
-                # -------------------------------------------------
-                # CPU throttling
-                # -------------------------------------------------
-
-                elif (
-                    "cpu_cfs_throttled" in normalized_name
-                    or "cpu_throttled" in normalized_name
-                    or "cpu_throttling" in normalized_name
-                ):
-
-                    title = (
-                        f"{service} — CPU throttling increased"
-                    )
-
-                    description = (
-                        f"{service} experienced more CPU throttling "
-                        f"than usual."
-                    )
-
-                # -------------------------------------------------
-                # CPU usage
-                # -------------------------------------------------
-
-                elif (
-                    "cpu_usage" in normalized_name
-                    or "cpu_utilization" in normalized_name
-                ):
-
-                    title = (
-                        f"{service} — CPU usage increased"
-                    )
-
-                    description = (
-                        f"{service} was using more CPU resources "
-                        f"than usual."
-                    )
-
-                # -------------------------------------------------
-                # Memory
-                # -------------------------------------------------
-
-                elif (
+                if (
                     "memory" in normalized_name
                     or "pgfault" in normalized_name
-                    or "page_fault" in normalized_name
                 ):
 
-                    title = (
-                        f"{service} — Memory usage increased"
-                    )
-
-                    description = (
-                        f"{service} was using more memory resources "
-                        f"than usual."
-                    )
-
-                # -------------------------------------------------
-                # Network
-                # -------------------------------------------------
-
-                elif (
-                    "network_receive" in normalized_name
-                    or "receive_packets" in normalized_name
-                ):
-
-                    title = (
-                        f"{service} — Incoming network traffic increased"
-                    )
-
-                    description = (
-                        f"{service} received more network traffic "
-                        f"than usual."
-                    )
-
-                elif (
-                    "network_transmit" in normalized_name
-                    or "transmit_packets" in normalized_name
-                ):
-
-                    title = (
-                        f"{service} — Outgoing network traffic increased"
-                    )
-
-                    description = (
-                        f"{service} sent more network traffic "
-                        f"than usual."
-                    )
-
-                # -------------------------------------------------
-                # Generic metric fallback
-                # -------------------------------------------------
-
-                else:
-
-                    title = (
-                        f"{service} — Performance signal detected"
-                    )
-
-                    description = (
-                        f"{service} showed an abnormal performance "
-                        f"signal compared with its normal behavior."
-                    )
-
-            elif event_type == "log":
-
-                title = (
-                    f"{service} — "
-                    f"Application error detected"
-                )
-
-                raw_description = str(
-                    event.get("description", "")
-                    or ""
-                ).strip()
-
-                if raw_description:
-
-                    description = raw_description
-
-                else:
-
-                    description = (
-                        f"{service} produced an application "
-                        f"log indicating abnormal behavior."
-                    )
-
-            # -------------------------------------------------
-            # TRACE
-            # -------------------------------------------------
-
-            elif event_type == "trace":
-
-                if operation:
-
-                    title = (
-                        f"{service} — "
-                        f"{operation} became slower"
-                    )
-
-                    description = (
-                        f"{service} experienced higher latency "
-                        f"while running the {operation} operation."
-                    )
-
-                else:
-
-                    title = (
-                        f"{service} — "
-                        f"Application latency increased"
-                    )
-
-                    description = (
-                        f"{service} experienced higher "
-                        f"application latency than usual."
-                    )
-
-            # -------------------------------------------------
-            # Unknown evidence type
-            # -------------------------------------------------
-
-            else:
-
-                title = (
-                    f"{service} — "
-                    f"Performance signal detected"
-                )
-
-                description = (
-                    f"{service} showed a measurable change "
-                    f"from its normal behavior."
-                )
-
-            # -------------------------------------------------
-            # Human-readable description
-            # -------------------------------------------------
-
-            if event_type == "trace":
-
-                if operation:
-
-                    description = (
-                        f"{service} experienced higher latency "
-                        f"while running the {operation} operation."
-                    )
-
-                else:
-
-                    description = (
-                        f"{service} experienced higher "
-                        f"application latency than usual."
-                    )
-
-            elif "request duration" in raw_name:
-
-                description = (
-                    f"{service} requests were taking longer "
-                    f"than usual."
-                )
-
-            elif "response duration" in raw_name:
-
-                description = (
-                    f"{service} responses were taking longer "
-                    f"than usual."
-                )
-
-            elif "request bytes" in raw_name:
-
-                description = (
-                    f"{service} received more request data "
-                    f"than usual."
-                )
-
-            elif "response bytes" in raw_name:
-
-                description = (
-                    f"{service} returned more response data "
-                    f"than usual."
-                )
-
-            elif (
-                "request messages" in raw_name
-                or "requests." in raw_name
-                or raw_name == "requests"
-            ):
-
-                description = (
-                    f"{service} received more requests "
-                    f"than usual."
-                )
-
-            elif "response messages" in raw_name:
-
-                description = (
-                    f"{service} produced more response messages "
-                    f"than usual."
-                )
-
-            elif "cpu cfs throttled" in raw_name:
-
-                description = (
-                    f"{service} experienced more CPU throttling "
-                    f"than usual."
-                )
-
-            elif "cpu usage" in raw_name:
-
-                description = (
-                    f"{service} was using more CPU resources "
-                    f"than usual."
-                )
-
-            elif (
-                "memory" in raw_name
-                or "pgfault" in raw_name
-            ):
-
-                description = (
-                    f"{service} showed higher memory pressure "
-                    f"than usual."
-                )
-
-            elif "network receive" in raw_name:
-
-                description = (
-                    f"{service} received more network traffic "
-                    f"than usual."
-                )
-
-            elif "network transmit" in raw_name:
-
-                description = (
-                    f"{service} sent more network traffic "
-                    f"than usual."
-                )
-
-            else:
-
-                description = (
-                    f"{service} showed an abnormal "
-                    f"performance signal."
-                )
-
-            # -------------------------------------------------
-            # Current / baseline
-            # -------------------------------------------------
-
-            current = event.get(
-                "value",
-                event.get(
-                    "current"
-                )
-            )
-
-            baseline = event.get(
-                "baseline",
-                event.get(
-                    "normal"
-                )
-            )
-
-            current_text = _timeline_value(
-                current
-            )
-
-            baseline_text = _timeline_value(
-                baseline
-            )
-
-            values_html = ""
-
-            if current_text is not None:
-
-                values_html += f"""
-                    <span>
-                        Current:
-                        <b>{current_text}</b>
-                    </span>
-                """
-
-            if baseline_text is not None:
-
-                values_html += f"""
-                    <span>
-                        Normal:
-                        <b>{baseline_text}</b>
-                    </span>
-                """
-
-            # -------------------------------------------------
-            # Deviation
-            # -------------------------------------------------
-
-            deviation_text = ""
-
-            try:
+                    has_memory = True
 
                 if (
-                    current is not None
-                    and baseline is not None
-                    and float(baseline) != 0
+                    "network" in normalized_name
+                    or "receive packet" in normalized_name
+                    or "transmit packet" in normalized_name
+                    or "request bytes" in normalized_name
+                    or "response bytes" in normalized_name
                 ):
+
+                    has_network = True
+
+                if (
+                    "request message" in normalized_name
+                    or "response message" in normalized_name
+                    or normalized_name == "requests"
+                    or normalized_name.endswith(" requests")
+                ):
+
+                    has_volume = True
+
+                # ---------------------------------------------
+                # Useful numeric evidence
+                # ---------------------------------------------
+
+                if (
+                    event_type != "metric"
+                    or not metric_name
+                ):
+
+                    continue
+
+                current_value = event.get("current")
+
+                if current_value is None:
+
+                    current_value = event.get("value")
+
+                baseline_value = event.get("baseline")
+
+                if baseline_value is None:
+
+                    baseline_value = event.get("normal")
+
+                if (
+                    current_value is None
+                    or baseline_value is None
+                ):
+
+                    continue
+
+                try:
+
+                    current_num = float(current_value)
+                    baseline_num = float(baseline_value)
+
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+
+                    continue
+
+                # Do not show meaningless 0 vs 0 values.
+
+                if (
+                    current_num == 0
+                    and baseline_num == 0
+                ):
+
+                    continue
+
+                deviation = None
+
+                if baseline_num != 0:
 
                     deviation = (
                         (
-                            float(current)
-                            - float(baseline)
+                            current_num
+                            - baseline_num
                         )
-                        / abs(float(baseline))
+                        / abs(baseline_num)
                     ) * 100
 
-                    if deviation >= 0:
+                # Ignore tiny/non-useful changes.
 
-                        deviation_text = (
-                            f"{deviation:.0f}% above normal"
-                        )
+                if (
+                    deviation is not None
+                    and abs(deviation) < 5
+                ):
+
+                    continue
+
+                numeric_details.append(
+                    {
+                        "name": metric_name,
+                        "current": current_num,
+                        "baseline": baseline_num,
+                        "deviation": deviation,
+                    }
+                )
+
+            # -------------------------------------------------
+            # Human-readable service name
+            # -------------------------------------------------
+
+            if services:
+
+                service_text = ", ".join(
+                    services[:2]
+                )
+
+            else:
+
+                service_text = "Các dịch vụ liên quan"
+
+            # -------------------------------------------------
+            # Create story title
+
+            if has_latency and has_cpu:
+
+                title = (
+                    f"{service_text} experienced slower requests "
+                    f"and CPU pressure"
+                )
+
+                description = (
+                    "Requests were taking longer to process than normal. "
+                    "The service also showed signs of CPU throttling "
+                    "or high CPU usage."
+                )
+
+            elif has_latency:
+
+                title = (
+                    f"{service_text} was processing requests more slowly"
+                )
+
+                description = (
+                    "Request processing time increased compared with "
+                    "the normal baseline, indicating slower service response."
+                )
+
+            elif has_cpu:
+
+                title = (
+                    f"{service_text} experienced CPU pressure"
+                )
+
+                description = (
+                    "CPU usage increased or CPU throttling was detected. "
+                    "This can cause requests to wait longer for processing."
+                )
+
+            elif has_memory:
+
+                title = (
+                    f"{service_text} showed abnormal memory activity"
+                )
+
+                description = (
+                    "Memory activity was higher than the normal baseline."
+                )
+
+            elif has_network:
+
+                title = (
+                    f"{service_text} showed abnormal network activity"
+                )
+
+                description = (
+                    "Network traffic changed significantly compared "
+                    "with the normal baseline."
+                )
+
+            elif has_volume:
+
+                title = (
+                    f"{service_text} showed increased request activity"
+                )
+
+                description = (
+                    "Request or response volume changed compared "
+                    "with the normal baseline."
+                )
+
+            elif log_events:
+
+                title = (
+                    f"{service_text} reported an application error"
+                )
+
+                description = (
+                    "Application logs reported abnormal activity "
+                    "within the service."
+                )
+
+            elif trace_events:
+
+                title = (
+                    f"{service_text} showed abnormal request behavior"
+                )
+
+                description = (
+                    "Request traces showed increased latency or "
+                    "different request processing behavior."
+                )
+
+            else:
+
+                title = (
+                    f"{service_text} showed abnormal behavior"
+                )
+
+                description = (
+                    "Telemetry showed activity that differed "
+                    "from the normal baseline."
+                )
+
+
+            # -------------------------------------------------
+            # Add operation context
+            # -------------------------------------------------
+
+            operation_html = ""
+
+            if operations:
+
+                operation_html = (
+                    '<div class="orc-context">'
+                    "<b>Affected operations:</b> "
+                    + ", ".join(operations[:2])
+                    + "</div>"
+                )
+
+
+            # -------------------------------------------------
+            # Evidence summary
+            # -------------------------------------------------
+
+            evidence_parts = []
+
+            if metric_events:
+
+                evidence_parts.append(
+                    f"{len(metric_events)} performance signals"
+                )
+
+            if trace_events:
+
+                evidence_parts.append(
+                    f"{len(trace_events)} request traces"
+                )
+
+            if log_events:
+
+                evidence_parts.append(
+                    f"{len(log_events)} application logs"
+                )
+
+            evidence_text = " · ".join(
+                evidence_parts
+            )
+
+
+            evidence_html = ""
+
+            if evidence_text:
+
+                evidence_html = (
+                    '<div class="orc-evidence">'
+                    "<b>Evidence:</b> "
+                    f"{evidence_text}"
+                    "</div>"
+                )
+
+
+            # -------------------------------------------------
+            # Numeric details
+            # -------------------------------------------------
+
+            values_html = ""
+
+            if numeric_details:
+
+                detail_html = []
+
+                # Show at most two meaningful measurements.
+                # Never expose raw telemetry metric names.
+
+                for detail in numeric_details[:2]:
+
+                    name = str(
+                        detail["name"]
+                    ).lower()
+
+                    if (
+                        "request duration" in name
+                        or "request latency" in name
+                        or "duration milliseconds" in name
+                        or "latency" in name
+                    ):
+
+                        readable_name = "Request latency"
+
+                    elif (
+                        "cpu" in name
+                        and "thrott" in name
+                    ):
+
+                        readable_name = "CPU throttling"
+
+                    elif "cpu" in name:
+
+                        readable_name = "CPU usage"
+
+                    elif "memory" in name:
+
+                        readable_name = "Memory usage"
+
+                    elif (
+                        "request bytes" in name
+                        or "response bytes" in name
+                        or "network" in name
+                    ):
+
+                        readable_name = "Network traffic"
+
+                    elif "request" in name:
+
+                        readable_name = "Request rate"
 
                     else:
 
-                        deviation_text = (
-                            f"{abs(deviation):.0f}% below normal"
-                        )
+                        readable_name = "Performance metric"
 
-            except Exception:
-                pass
 
-            deviation_html = ""
+                    deviation_text = ""
 
-            if deviation_text:
+                    if detail["deviation"] is not None:
 
-                deviation_html = f"""
-                    <span class="development-deviation">
-                        {deviation_text}
-                    </span>
-                """
+                        if detail["deviation"] > 0:
 
-            icon = {
+                            deviation_text = (
+                                f" — {abs(detail['deviation']):.0f}% above normal"
+                            )
 
-                "metric": "📈",
+                        elif detail["deviation"] < 0:
 
-                "log": "📋",
+                            deviation_text = (
+                                f" — {abs(detail['deviation']):.0f}% below normal"
+                            )
 
-                "trace": "🔗",
 
-            }.get(
-                event_type,
-                "📈"
+                    detail_html.append(
+                        "<span>"
+                        f"<b>{readable_name}</b>: "
+                        f"{detail['current']:,.2f} "
+                        f"vs. {detail['baseline']:,.2f} baseline"
+                        f"{deviation_text}"
+                        "</span>"
+                    )
+
+
+                values_html = "".join(
+                    detail_html
+                )
+            # Render one story card
+            # -------------------------------------------------
+
+            marker_icon = (
+                "🔴"
+                if phase == "Incident"
+                else "•"
             )
 
-            # -------------------------------------------------
-            # Timeline item
-            # -------------------------------------------------
-
             timeline_html += f"""
-            <div class="development-item">
+            <div class="orc-item">
 
-                <div class="development-time">
+                <div class="orc-time">
                     {event_time.strftime("%H:%M:%S")}
                 </div>
 
-                <div class="development-marker">
+                <div class="orc-marker">
 
-                    <div class="development-dot">
-                        {icon}
+                    <div class="orc-dot">
+                        {marker_icon}
                     </div>
 
-                    <div class="development-line"></div>
+                    <div class="orc-line"></div>
 
                 </div>
 
-                <div class="development-content">
+                <div class="orc-content">
 
-                    <div class="development-meta">
+                    <div class="orc-meta">
 
-                        <span class="
-                            development-phase
-                            {phase_class}
-                        ">
+                        <span class="orc-phase {phase_class}">
                             {phase}
                         </span>
 
-                        <span class="development-type">
-                            {event_type.upper()}
-                        </span>
-
                     </div>
 
-                    <div class="development-title">
+                    <div class="orc-title">
                         {title}
                     </div>
 
-                    <div class="development-description">
+                    <div class="orc-description">
                         {description}
                     </div>
 
-                    <div class="development-values">
-                        {values_html}
-                    </div>
+                    {operation_html}
 
-                    {deviation_html}
+                    {evidence_html}
+
+                    {
+                        f'<div class="orc-values">{values_html}</div>'
+                        if values_html
+                        else ""
+                    }
 
                 </div>
 
             </div>
             """
 
-        # -------------------------------------------------
-        # Render
+        # Render timeline
         # -------------------------------------------------
 
-        st.markdown(
-            f"""
-            <div class="development-summary">
+        timeline_css = """
+        <style>
+        .orc-timeline {
+              width: 100%;
+              margin-top: 12px;
+              box-sizing: border-box;
+          }
+
+          .orc-scroll {
+              height: 560px;
+              max-height: 560px;
+              overflow-y: auto;
+              overflow-x: hidden;
+              padding-right: 12px;
+              box-sizing: border-box;
+              scroll-behavior: smooth;
+          }
+
+
+        .orc-summary {
+            font-size: 13px;
+            color: #667085;
+            margin-bottom: 18px;
+        }
+
+        .orc-summary b {
+            color: #1f2937;
+        }
+
+        .orc-item {
+            display: grid;
+            grid-template-columns: 72px 36px minmax(0, 1fr);
+            column-gap: 10px;
+            width: 100%;
+            min-height: 100px;
+            box-sizing: border-box;
+        }
+
+        .orc-time {
+            text-align: right;
+            padding-top: 5px;
+            padding-right: 4px;
+            color: #667085;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .orc-marker {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            min-height: 100%;
+        }
+
+        .orc-dot {
+            position: relative;
+            z-index: 2;
+            width: 30px;
+            height: 30px;
+            border: 1px solid #d0d5dd;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .orc-line {
+            position: absolute;
+            top: 30px;
+            bottom: 0;
+            left: 50%;
+            width: 1px;
+            background: #e4e7ec;
+            transform: translateX(-50%);
+        }
+
+        .orc-content {
+            min-width: 0;
+            padding: 0 0 26px 4px;
+            box-sizing: border-box;
+        }
+
+        .orc-meta {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 7px;
+        }
+
+        .orc-phase {
+            display: inline-block;
+            padding: 4px 7px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .orc-phase.before {
+            background: #f2f4f7;
+            color: #475467;
+        }
+
+        .orc-phase.during {
+            background: #fff4e5;
+            color: #b54708;
+        }
+
+        .orc-phase.after {
+            background: #ecfdf3;
+            color: #027a48;
+        }
+
+        .orc-type {
+            font-size: 10px;
+            font-weight: 700;
+            color: #667085;
+        }
+
+        .orc-title {
+            font-size: 15px;
+            line-height: 1.4;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+
+        .orc-description {
+            font-size: 13px;
+            line-height: 1.5;
+            color: #667085;
+            margin-bottom: 9px;
+        }
+
+        .orc-values {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 8px 0 5px 0;
+        }
+
+        .orc-values span {
+            display: inline-flex;
+            padding: 5px 9px;
+            border: 1px solid #e4e7ec;
+            border-radius: 6px;
+            background: #f8fafc;
+            color: #667085;
+            font-size: 12px;
+        }
+
+        .orc-values b {
+            color: #1f2937;
+        }
+
+        .orc-deviation {
+            display: inline-block;
+            margin-top: 2px;
+            color: #b54708;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        </style>
+        """
+
+        timeline_render_html = f"""
+        {timeline_css}
+
+        <div class="orc-timeline">
+
+            <div class="orc-summary">
                 <b>{len(window_events)}</b>
                 abnormal signals detected
                 ·
@@ -2418,13 +2512,12 @@ else:
                 {window_end.strftime("%H:%M:%S")}
             </div>
 
-            <div class="development-scroll">
-                {timeline_html}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+            {timeline_html}
 
+        </div>
+        """
+
+        st.html(timeline_render_html)
 
         # RCA TYPOGRAPHY & CARD STYLES
         # =================================================
@@ -2643,6 +2736,59 @@ else:
             # ROOT CAUSE
             # =================================================
 
+            # =================================================
+            # SERVICE-SPECIFIC EVIDENCE
+            # =================================================
+            # Calculate evidence separately for the current RCA service.
+            # Related service instances are included automatically.
+
+            service_prefix = service.strip().lower()
+
+            if not evidence_df.empty:
+                service_evidence_df = evidence_df[
+                    evidence_df["service"]
+                    .fillna("")
+                    .astype(str)
+                    .str.lower()
+                    .str.startswith(service_prefix)
+                ].copy()
+            else:
+                service_evidence_df = pd.DataFrame()
+
+            if not service_evidence_df.empty:
+                service_metric_df = service_evidence_df[
+                    service_evidence_df["evidence_type"]
+                    .fillna("")
+                    .astype(str)
+                    .str.lower()
+                    .str.contains("metric", na=False)
+                ]
+
+                service_log_df = service_evidence_df[
+                    service_evidence_df["evidence_type"]
+                    .fillna("")
+                    .astype(str)
+                    .str.lower()
+                    .str.contains("log", na=False)
+                ]
+
+                service_trace_df = service_evidence_df[
+                    service_evidence_df["evidence_type"]
+                    .fillna("")
+                    .astype(str)
+                    .str.lower()
+                    .str.contains("trace", na=False)
+                ]
+            else:
+                service_metric_df = pd.DataFrame()
+                service_log_df = pd.DataFrame()
+                service_trace_df = pd.DataFrame()
+
+            metric_count = len(service_metric_df)
+            log_count = len(service_log_df)
+            trace_count = len(service_trace_df)
+            total_service_evidence = len(service_evidence_df)
+
             st.markdown("#### 🎯 Root Cause")
 
             # Clean legacy HTML that may already be stored
@@ -2705,7 +2851,6 @@ else:
             )
 
             st.info(simple_root_cause)
-
             # -------------------------------------------------
             # Why this happened
             # -------------------------------------------------
@@ -2715,71 +2860,46 @@ else:
                 unsafe_allow_html=True
             )
 
-            why_this_happened = ""
+            root_lower = clean_root_cause.lower()
 
-            # Try to derive a short explanation from the
-            # original RCA explanation.
-            if explanation:
-                clean_explanation = re.sub(
-                    r"<[^>]+>",
-                    "",
-                    str(explanation)
-                )
-
-                clean_explanation = (
-                    clean_explanation
-                    .replace("```html", "")
-                    .replace("```", "")
-                    .strip()
-                )
-
-                why_this_happened = clean_explanation
-
-            # If the explanation is too long, use a simpler
-            # explanation based on the root cause.
             if (
-                not why_this_happened
-                or len(why_this_happened) > 500
+                "downstream" in root_lower
+                or "dependent" in root_lower
+                or "dependency" in root_lower
             ):
-                if (
-                    "downstream" in root_lower
-                    or "dependent" in root_lower
-                    or "dependency" in root_lower
-                ):
-                    why_this_happened = (
-                        f"{service} depends on other services or "
-                        "operations. When those dependencies became "
-                        "slow, requests handled by the affected "
-                        "service also took longer."
-                    )
+                why_this_happened = (
+                    f"{service} depends on other services or operations. "
+                    "When those dependencies became slower, requests "
+                    "handled by this service also took longer."
+                )
 
-                elif (
-                    "cpu" in root_lower
-                    or "resource" in root_lower
-                    or "throttling" in root_lower
-                ):
-                    why_this_happened = (
-                        f"{service} did not have enough available "
-                        "CPU resources to handle the workload "
-                        "efficiently."
-                    )
+            elif (
+                "cpu" in root_lower
+                or "resource" in root_lower
+                or "throttling" in root_lower
+            ):
+                why_this_happened = (
+                    f"{service} was affected by CPU pressure or limited "
+                    "compute resources, which reduced its ability to "
+                    "process requests efficiently."
+                )
 
-                elif (
-                    "latency" in root_lower
-                    or "duration" in root_lower
-                    or "performance" in root_lower
-                ):
-                    why_this_happened = (
-                        f"One or more operations handled by "
-                        f"{service} became slower than normal, "
-                        "which increased the overall response time."
-                    )
+            elif (
+                "latency" in root_lower
+                or "duration" in root_lower
+                or "performance" in root_lower
+            ):
+                why_this_happened = (
+                    f"One or more operations handled by {service} "
+                    "became slower than normal, increasing the time "
+                    "required to complete requests."
+                )
 
-                else:
-                    why_this_happened = (
-                        f"The available telemetry shows that "
-                        f"{service} was performing slower than normal."
-                    )
+            else:
+                why_this_happened = (
+                    f"Telemetry shows that {service} was operating "
+                    "outside its normal performance baseline."
+                )
 
             st.markdown(
                 f'<div class="section-description">'
@@ -2788,146 +2908,228 @@ else:
                 unsafe_allow_html=True
             )
 
-            # SUPPORTING EVIDENCE SUMMARY
-            # =================================================
-
-            st.markdown("### 🔎 Evidence Summary")
-
-            total_evidence = (
-                int(metric_count)
-                + int(log_count)
-                + int(trace_count)
-            )
-
-            e1, e2, e3, e4 = st.columns(4)
-
-            with e1:
-                st.metric(
-                    "Total Evidence",
-                    total_evidence
-                )
-
-            with e2:
-                st.metric(
-                    "Metrics",
-                    int(metric_count)
-                )
-
-            with e3:
-                st.metric(
-                    "Logs",
-                    int(log_count)
-                )
-
-            with e4:
-                st.metric(
-                    "Traces",
-                    int(trace_count)
-                )
-
-            if (
-                metric_count == 0
-                and log_count == 0
-                and trace_count == 0
-            ):
-                st.info(
-                    "No telemetry evidence was available."
-                )
-
-
-            # =================================================
             # SUPPORTING EVIDENCE
             # =================================================
 
-            st.markdown(
-                '<div class="root-cause-label">'
-                'Supporting evidence'
-                '</div>',
-                unsafe_allow_html=True
+            st.markdown("### 🔎 Supporting Evidence")
+
+            st.caption(
+                f"Evidence collected specifically for **{service}** "
+                "and its related service instances."
             )
 
-            evidence_points = []
+            if service_evidence_df.empty:
 
-            # -------------------------------------------------
-            # Metric evidence
-            # -------------------------------------------------
-
-            if metric_count > 0:
-                evidence_points.append(
-                    f"{service} has {int(metric_count)} metric "
-                    "evidence record(s) showing abnormal performance."
+                st.info(
+                    f"No abnormal telemetry evidence was found for {service}."
                 )
 
-            # -------------------------------------------------
-            # Trace evidence
-            # -------------------------------------------------
+            else:
 
-            if trace_count > 0:
-                evidence_points.append(
-                    f"Trace data contains {int(trace_count)} "
-                    "trace evidence record(s) showing abnormal "
-                    "latency or operation duration."
-                )
+                # -------------------------------------------------
+                # Evidence summary
+                # -------------------------------------------------
 
-            # -------------------------------------------------
-            # Log evidence
-            # -------------------------------------------------
+                summary_cols = st.columns(3)
 
-            if log_count > 0:
-                evidence_points.append(
-                    f"Log data contains {int(log_count)} "
-                    "evidence record(s) related to the incident."
-                )
-
-            # -------------------------------------------------
-            # Extract useful numbers from the explanation
-            # -------------------------------------------------
-
-            if explanation:
-                explanation_text = re.sub(
-                    r"<[^>]+>",
-                    "",
-                    str(explanation)
-                )
-
-                # Find latency / duration values from the
-                # original RCA explanation.
-                number_matches = re.findall(
-                    r"(?:peak|up to|reached|spiked to|"
-                    r"duration|latency)[^.;]{0,100}?"
-                    r"([0-9]+(?:\.[0-9]+)?)\s*ms",
-                    explanation_text,
-                    flags=re.IGNORECASE
-                )
-
-                if number_matches:
-                    unique_values = list(
-                        dict.fromkeys(number_matches)
+                with summary_cols[0]:
+                    st.metric(
+                        "Metric signals",
+                        int(metric_count)
                     )
 
-                    for value in unique_values[:3]:
-                        evidence_points.append(
-                            f"A latency or request duration "
-                            f"of {value} ms was reported in the RCA evidence."
+                with summary_cols[1]:
+                    st.metric(
+                        "Trace signals",
+                        int(trace_count)
+                    )
+
+                with summary_cols[2]:
+                    st.metric(
+                        "Log records",
+                        int(log_count)
+                    )
+
+                # -------------------------------------------------
+                # Build readable evidence table
+                # -------------------------------------------------
+
+                evidence_rows = []
+
+                for _, evidence in service_evidence_df.iterrows():
+
+                    evidence_type = str(
+                        evidence.get(
+                            "evidence_type",
+                            ""
+                        )
+                    ).strip().lower()
+
+                    if evidence_type == "metric":
+
+                        evidence_label = "Metric"
+
+                        metric_name = str(
+                            evidence.get(
+                                "metric_name",
+                                "Unknown metric"
+                            )
                         )
 
-            # -------------------------------------------------
-            # Fallback
-            # -------------------------------------------------
+                        # Make technical metric names easier to read.
+                        metric_name = metric_name.replace(
+                            "istio_request_duration_milliseconds",
+                            "Request duration"
+                        )
 
-            if not evidence_points:
-                evidence_points.append(
-                    "The available telemetry supports the "
-                    "identified performance issue."
-                )
+                        metric_name = metric_name.replace(
+                            "container_cpu_cfs_throttled_periods",
+                            "CPU throttling"
+                        )
 
-            for point in evidence_points[:5]:
-                st.markdown(
-                    f"- {point}"
-                )
+                        description = str(
+                            evidence.get(
+                                "description",
+                                ""
+                            )
+                        ).strip()
+
+                        observed = evidence.get(
+                            "value",
+                            None
+                        )
+
+                        baseline = evidence.get(
+                            "baseline",
+                            None
+                        )
+
+                        if pd.notna(observed):
+                            observed_text = f"{float(observed):.2f}"
+                        else:
+                            observed_text = "—"
+
+                        if pd.notna(baseline):
+                            baseline_text = f"{float(baseline):.2f}"
+                        else:
+                            baseline_text = "—"
+
+                        detail = description or metric_name
+
+                        context = metric_name
+
+                    elif evidence_type == "trace":
+
+                        evidence_label = "Trace"
+
+                        operation = str(
+                            evidence.get(
+                                "operation",
+                                ""
+                            )
+                        ).strip()
+
+                        description = str(
+                            evidence.get(
+                                "description",
+                                ""
+                            )
+                        ).strip()
+
+                        observed = evidence.get(
+                            "value",
+                            None
+                        )
+
+                        baseline = evidence.get(
+                            "baseline",
+                            None
+                        )
+
+                        if pd.notna(observed):
+                            observed_text = f"{float(observed):.2f} ms"
+                        else:
+                            observed_text = "—"
+
+                        if pd.notna(baseline):
+                            baseline_text = f"{float(baseline):.2f} ms"
+                        else:
+                            baseline_text = "—"
+
+                        detail = description or "Abnormal trace latency detected."
+                        context = operation or "Unknown operation"
+
+                    elif evidence_type == "log":
+
+                        evidence_label = "Log"
+
+                        detail = str(
+                            evidence.get(
+                                "description",
+                                "Related log activity detected."
+                            )
+                        ).strip()
+
+                        observed_text = "—"
+                        baseline_text = "—"
+                        context = str(
+                            evidence.get(
+                                "operation",
+                                "Log record"
+                            )
+                        ).strip() or "Log record"
+
+                    else:
+                        continue
+
+                    evidence_rows.append({
+                        "Type": evidence_label,
+                        "What was detected": detail,
+                        "Observed": observed_text,
+                        "Normal": baseline_text,
+                        "Operation / Metric": context,
+                    })
+
+                if evidence_rows:
+
+                    evidence_display_df = pd.DataFrame(
+                        evidence_rows
+                    )
+
+                    st.dataframe(
+                        evidence_display_df,
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config={
+                            "Type": st.column_config.TextColumn(
+                                "Evidence type",
+                                width="small"
+                            ),
+                            "What was detected": st.column_config.TextColumn(
+                                "What was detected",
+                                width="large"
+                            ),
+                            "Observed": st.column_config.TextColumn(
+                                "Observed",
+                                width="small"
+                            ),
+                            "Normal": st.column_config.TextColumn(
+                                "Normal",
+                                width="small"
+                            ),
+                            "Operation / Metric": st.column_config.TextColumn(
+                                "Operation / Metric",
+                                width="medium"
+                            ),
+                        },
+                    )
+
+                else:
+                    st.info(
+                        "Evidence was found, but no readable evidence details are available."
+                    )
 
 
-            # =================================================
             # RECOMMENDED ACTIONS
             # =================================================
 
@@ -3048,39 +3250,6 @@ else:
                             f"- **Average response time:** {current} ms, "
                             f"higher than the normal {baseline} ms."
                         )
-
-                    # -------------------------------------------------
-                    # Overall performance
-                    # -------------------------------------------------
-                    st.markdown("**📊 Overall Performance**")
-
-                    st.markdown(
-                        f"- **{affected_service} became slower than normal.**"
-                    )
-
-                    # -------------------------------------------------
-                    # Trace latency
-                    # -------------------------------------------------
-                    trace_pattern = re.compile(
-                        r"(?:hipstershop\.)?"
-                        r"(PaymentService/Charge|"
-                        r"CartService/EmptyCart|"
-                        r"EmailService/SendOrderConfirmation)"
-                        r"\s*\((?:up to\s*)?"
-                        r"([0-9]+(?:\.[0-9]+)?)\s*ms\s*vs\s*"
-                        r"([0-9]+(?:\.[0-9]+)?)\s*ms\s*baseline\)",
-                        re.IGNORECASE,
-                    )
-
-                    trace_matches = trace_pattern.findall(clean_explanation)
-
-                    for operation, current, baseline in trace_matches:
-                        st.markdown(
-                            f"- **{operation}:** "
-                            f"{current} ms vs {baseline} ms normally."
-                        )
-
-                    # -------------------------------------------------
                     # Keep raw AI reasoning available for technical users
                     # -------------------------------------------------
                     with st.expander(

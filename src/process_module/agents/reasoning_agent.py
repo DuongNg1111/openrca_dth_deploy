@@ -590,6 +590,45 @@ REQUIRED OUTPUT FORMAT
 
         except Exception as e:
 
+            error_text = str(e)
+
+            # =================================================
+            # GEMINI QUOTA / RATE LIMIT
+            # =================================================
+
+            if (
+                "429" in error_text
+                or "RESOURCE_EXHAUSTED" in error_text
+                or "quota" in error_text.lower()
+                or "rate limit" in error_text.lower()
+            ):
+
+                return {
+                    "agent": "Reasoning Agent",
+
+                    "root_cause": (
+                        "AI reasoning unavailable"
+                    ),
+
+                    "confidence": 0.0,
+
+                    "explanation": (
+                        "Gemini AI reasoning could not be "
+                        "completed because the configured "
+                        "Gemini API quota or rate limit "
+                        "has been exceeded. "
+                        "The telemetry evidence was collected "
+                        "successfully, but an AI-generated "
+                        "root cause could not be produced."
+                    ),
+
+                    "supporting_evidence": evidence[:10]
+                }
+
+            # =================================================
+            # OTHER GEMINI / REASONING ERRORS
+            # =================================================
+
             return {
                 "agent": "Reasoning Agent",
 
@@ -601,7 +640,7 @@ REQUIRED OUTPUT FORMAT
 
                 "explanation": (
                     "Gemini reasoning failed: "
-                    f"{str(e)}"
+                    f"{error_text}"
                 ),
 
                 "supporting_evidence": evidence[:10]
