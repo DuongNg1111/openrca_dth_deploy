@@ -596,7 +596,7 @@ def run_pipeline(
         print("========================================")
 
         return selected_contexts
-    
+
     # =====================================================
     # STEP 9: MULTI-AGENT ANALYSIS
     # =====================================================
@@ -627,11 +627,24 @@ def run_pipeline(
     print("\n========================================")
     print("STEP 10: METRIC AGENT")
     print("========================================")
+    agent_results = {}
 
-    for context in selected_contexts.values():
+    # Sắp xếp và chỉ chọn ra Top các dịch vụ có dấu hiệu bất thường cao nhất (Outliers)
+    sorted_contexts = sorted(
+        selected_contexts.values(),
+        key=lambda c: getattr(c, 'anomaly_score', 0),
+        reverse=True
+    )
 
+    TOP_N = 3
+    target_contexts = sorted_contexts[:TOP_N] if len(sorted_contexts) > TOP_N else sorted_contexts
+
+    print(f"Tổng số dịch vụ ban đầu: {len(selected_contexts)}")
+    print(f"Đã chọn ra {len(target_contexts)} dịch vụ trọng điểm để phân tích.")
+
+    for context in target_contexts:
         print("\n----------------------------------------")
-        print("METRIC ANALYSIS")
+        print(f"METRIC ANALYSIS FOR: {context.service}")
         print("----------------------------------------")
 
         print(
@@ -642,26 +655,19 @@ def run_pipeline(
             }
         )
 
-        metric_result = metric_agent.analyze(
-            context
-        )
+        try:
+            metric_result = metric_agent.analyze(context)
+            print("\nMETRIC RESULT")
+            print(json.dumps(metric_result, indent=2, default=str))
 
-        print("\nMETRIC RESULT")
-
-        print(
-            json.dumps(
-                metric_result,
-                indent=2,
-                default=str,
-            )
-        )
-
-        agent_results[
-            context.service
-        ] = {
-            "metric": metric_result
-        }
-
+            agent_results[context.service] = {
+                "metric": metric_result
+            }
+        except Exception as e:
+            print(f"Lỗi metric service {context.service}: {str(e)}")
+            agent_results[context.service] = {
+                "metric": {"error": str(e), "anomalies": []}
+            }
 
     # =====================================================
     # STEP 11: LOG AGENT
@@ -671,30 +677,32 @@ def run_pipeline(
     print("STEP 11: LOG AGENT")
     print("========================================")
 
-    for context in selected_contexts.values():
+    for context in target_contexts:
 
         print("\n----------------------------------------")
-        print("LOG ANALYSIS")
+        print(f"LOG ANALYSIS FOR: {context.service}")
         print("----------------------------------------")
 
-        log_result = log_agent.analyze(
-            context
-        )
-
-        print("\nLOG RESULT")
-
-        print(
-            json.dumps(
+        try:
+            log_result = log_agent.analyze(context)
+            print("\nLOG RESULT")
+            print(json.dumps
+                (
                 log_result,
                 indent=2,
-                default=str,
-            )
-        )
+                default=str
+                )
+                )
+            # Đảm bảo key metric đã tồn tại trước khi gán thêm log
+            if context.service not in agent_results:
+                agent_results[context.service] = {}
 
-        agent_results[
-            context.service
-        ]["log"] = log_result
-
+            agent_results[
+                context.service
+            ]["log"] = log_result
+        except Exception as e:
+            print(f"Lỗi log service {context.service}: {str(e)}")
+            agent_results[context.service]["log"] = {"error": str(e), "logs": []}
 
     # =====================================================
     # STEP 12: TRACE AGENT
@@ -704,30 +712,32 @@ def run_pipeline(
     print("STEP 12: TRACE AGENT")
     print("========================================")
 
-    for context in selected_contexts.values():
+    for context in target_contexts:
 
         print("\n----------------------------------------")
-        print("TRACE ANALYSIS")
+        print(f"TRACE ANALYSIS FOR: {context.service}")
         print("----------------------------------------")
-
-        trace_result = trace_agent.analyze(
-            context
-        )
-
-        print("\nTRACE RESULT")
-
-        print(
-            json.dumps(
-                trace_result,
-                indent=2,
-                default=str,
+        try:
+            trace_result = trace_agent.analyze(
+                context
             )
-        )
 
-        agent_results[
-            context.service
-        ]["trace"] = trace_result
+            print("\nTRACE RESULT")
 
+            print(
+                json.dumps(
+                    trace_result,
+                    indent=2,
+                    default=str,
+                )
+            )
+
+            agent_results[
+                context.service
+            ]["trace"] = trace_result
+        except Exception as e:
+            print(f"Lỗi trace service {context.service}: {str(e)}")
+            agent_results[context.service]["trace"] = {"error": str(e), "traces": []}
 
     # =====================================================
     # STEP 13: EVIDENCE COLLECTION
@@ -737,15 +747,16 @@ def run_pipeline(
     print("STEP 13: EVIDENCE COLLECTION")
     print("========================================")
 
-    for context in selected_contexts.values():
+    for context in target_contexts:
 
-        results = agent_results[
-            context.service
-        ]
+        results = agent_results.get(
+            context.service,
+            {}
+        )
 
-        metric_result = results["metric"]
-        log_result = results["log"]
-        trace_result = results["trace"]
+        metric_result = results.get("metric", {})
+        log_result = results.get("log", {})
+        trace_result = results.get("trace", {})
 
         metric_anomalies = metric_result.get(
             "anomalies",
@@ -895,7 +906,7 @@ def run_pipeline(
 
     evidence_validation = {}
 
-    for context in selected_contexts.values():
+    for context in target_contexts:
 
         evidence_df = get_investigation_evidence(
             context.investigation_id
@@ -929,29 +940,23 @@ def run_pipeline(
 
     correlation_results = {}
 
-    for context in selected_contexts.values():
+    for context in target_contexts:
 
-        results = agent_results[context.service]
+        results = agent_results.get(context.service, {})
 
         metric_count = len(
-            results["metric"].get(
+            results.get("metric", {}).get(
                 "anomalies",
                 []
             )
         )
 
         log_count = len(
-            results["log"].get(
-                "logs",
-                []
-            )
+            results.get("log", {}).get("logs", [])
         )
 
         trace_count = len(
-            results["trace"].get(
-                "traces",
-                []
-            )
+            results.get("trace", {}).get("traces", [])
         )
 
         correlation_results[context.service] = {
@@ -983,11 +988,12 @@ def run_pipeline(
 
     fault_candidates = {}
 
-    for context in selected_contexts.values():
-
-        correlation = correlation_results[
-            context.service
-        ]
+    for context in target_contexts:
+        # Dùng .get() để tránh lỗi nếu key không tồn tại
+        correlation = correlation_results.get(
+            context.service,
+            {"metric": 0, "log": 0, "trace": 0, "total": 0}
+        )
 
         evidence_types = []
 
@@ -1022,7 +1028,7 @@ def run_pipeline(
 
     reasoning_contexts = {}
 
-    for context in selected_contexts.values():
+    for context in target_contexts:
 
         evidence_df = get_investigation_evidence(
             context.investigation_id
@@ -1031,12 +1037,12 @@ def run_pipeline(
         reasoning_contexts[context.service] = {
             "context": context,
             "evidence": evidence_df,
-            "agent_results": agent_results[
-                context.service
-            ],
-            "fault_candidate": fault_candidates[
-                context.service
-            ]
+            "agent_results": agent_results.get(
+                context.service, {}
+            ),
+            "fault_candidate": fault_candidates.get(
+                context.service, {}
+            )
         }
 
         print(
