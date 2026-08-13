@@ -1825,165 +1825,173 @@ else:
             elif event_type == "metric":
 
                 # -------------------------------------------------
-                # Use the real metric name from the evidence record.
-                # Examples:
-                #   istio_request_duration_milliseconds.grpc.200.0.0
-                #   container_cpu_usage_seconds
-                #   container_cpu_cfs_throttled_periods
+                # Normalize metric name
                 # -------------------------------------------------
 
-                metric_key = str(
-                    event.get(
-                        "metric_name",
-                        event.get(
-                            "metric",
-                            event.get(
-                                "operation",
-                                event.get("title", "")
-                            )
-                        )
-                    )
+                metric_name = str(
+                    event.get("metric_name")
+                    or event.get("metric")
+                    or event.get("name")
+                    or metadata.get("metric_name")
+                    or metadata.get("metric")
                     or ""
-                ).lower().strip()
+                ).strip()
+
+                raw_name = metric_name.lower()
+
+                normalized_name = re.sub(
+                    r"[^a-z0-9_]+",
+                    "_",
+                    raw_name,
+                )
 
                 # -------------------------------------------------
-                # Request / response performance
+                # Request latency
                 # -------------------------------------------------
 
-                if "request duration" in metric_key:
+                if (
+                    "request_duration" in normalized_name
+                    or "request_latency" in normalized_name
+                ):
+
                     title = (
-                        f"{service} — "
-                        f"Request latency increased"
+                        f"{service} — Request latency increased"
                     )
 
                     description = (
                         f"{service} requests were taking longer "
-                        f"than normally observed."
+                        f"than usual."
                     )
 
-                elif "response duration" in metric_key:
+                # -------------------------------------------------
+                # Response latency
+                # -------------------------------------------------
+
+                elif (
+                    "response_duration" in normalized_name
+                    or "response_latency" in normalized_name
+                ):
+
                     title = (
-                        f"{service} — "
-                        f"Response latency increased"
+                        f"{service} — Response latency increased"
                     )
 
                     description = (
                         f"{service} responses were taking longer "
-                        f"than normally observed."
+                        f"than usual."
                     )
 
-                elif "request bytes" in metric_key:
+                # -------------------------------------------------
+                # Request traffic
+                # -------------------------------------------------
+
+                elif (
+                    "request_bytes" in normalized_name
+                    or "request_size" in normalized_name
+                ):
+
                     title = (
-                        f"{service} — "
-                        f"Request traffic increased"
+                        f"{service} — Request traffic increased"
                     )
 
                     description = (
                         f"{service} received more request data "
-                        f"than normally observed."
+                        f"than usual."
                     )
 
-                elif "response bytes" in metric_key:
+                # -------------------------------------------------
+                # Response traffic
+                # -------------------------------------------------
+
+                elif (
+                    "response_bytes" in normalized_name
+                    or "response_size" in normalized_name
+                ):
+
                     title = (
-                        f"{service} — "
-                        f"Response traffic increased"
+                        f"{service} — Response traffic increased"
                     )
 
                     description = (
                         f"{service} returned more response data "
-                        f"than normally observed."
-                    )
-
-                elif "request messages" in metric_key:
-                    title = (
-                        f"{service} — "
-                        f"Request volume increased"
-                    )
-
-                    description = (
-                        f"{service} received more request messages "
-                        f"than normally observed."
-                    )
-
-                elif "response messages" in metric_key:
-                    title = (
-                        f"{service} — "
-                        f"Response volume increased"
-                    )
-
-                    description = (
-                        f"{service} produced more response messages "
-                        f"than normally observed."
-                    )
-
-                elif "requests" in metric_key:
-                    title = (
-                        f"{service} — "
-                        f"Request volume increased"
-                    )
-
-                    description = (
-                        f"{service} handled more requests "
-                        f"than normally observed."
+                        f"than usual."
                     )
 
                 # -------------------------------------------------
-                # CPU
+                # Request volume
                 # -------------------------------------------------
 
-                elif "cpu cfs throttled" in metric_key:
+                elif (
+                    "request_messages" in normalized_name
+                    or "request_count" in normalized_name
+                    or normalized_name.endswith("_requests")
+                    or normalized_name == "requests"
+                ):
+
                     title = (
-                        f"{service} — "
-                        f"CPU throttling increased significantly"
+                        f"{service} — Request volume increased"
                     )
 
                     description = (
-                        f"{service} experienced substantially more "
-                        f"CPU throttling than normal."
+                        f"{service} received more requests "
+                        f"than usual."
                     )
 
-                elif "cpu usage" in metric_key:
+                # -------------------------------------------------
+                # Response volume
+                # -------------------------------------------------
+
+                elif (
+                    "response_messages" in normalized_name
+                    or "response_count" in normalized_name
+                    or normalized_name.endswith("_responses")
+                    or normalized_name == "responses"
+                ):
+
                     title = (
-                        f"{service} — "
-                        f"CPU usage increased"
+                        f"{service} — Response volume increased"
+                    )
+
+                    description = (
+                        f"{service} produced more responses "
+                        f"than usual."
+                    )
+
+                # -------------------------------------------------
+                # CPU throttling
+                # -------------------------------------------------
+
+                elif (
+                    "cpu_cfs_throttled" in normalized_name
+                    or "cpu_throttled" in normalized_name
+                    or "cpu_throttling" in normalized_name
+                ):
+
+                    title = (
+                        f"{service} — CPU throttling increased"
+                    )
+
+                    description = (
+                        f"{service} experienced more CPU throttling "
+                        f"than usual."
+                    )
+
+                # -------------------------------------------------
+                # CPU usage
+                # -------------------------------------------------
+
+                elif (
+                    "cpu_usage" in normalized_name
+                    or "cpu_utilization" in normalized_name
+                ):
+
+                    title = (
+                        f"{service} — CPU usage increased"
                     )
 
                     description = (
                         f"{service} was using more CPU resources "
-                        f"than normally observed."
-                    )
-
-                elif "cpu user" in metric_key:
-                    title = (
-                        f"{service} — "
-                        f"CPU processing time increased"
-                    )
-
-                    description = (
-                        f"{service} spent more CPU time processing "
-                        f"application work than normal."
-                    )
-
-                elif "cpu system" in metric_key:
-                    title = (
-                        f"{service} — "
-                        f"System CPU activity increased"
-                    )
-
-                    description = (
-                        f"{service} spent more CPU time on system "
-                        f"operations than normal."
-                    )
-
-                elif "cpu cfs periods" in metric_key:
-                    title = (
-                        f"{service} — "
-                        f"CPU scheduling activity increased"
-                    )
-
-                    description = (
-                        f"{service} showed increased CPU scheduling "
-                        f"activity."
+                        f"than usual."
                     )
 
                 # -------------------------------------------------
@@ -1991,86 +1999,66 @@ else:
                 # -------------------------------------------------
 
                 elif (
-                    "memory failures" in metric_key
-                    or "pgfault" in metric_key
-                    or "memory" in metric_key
+                    "memory" in normalized_name
+                    or "pgfault" in normalized_name
+                    or "page_fault" in normalized_name
                 ):
+
                     title = (
-                        f"{service} — "
-                        f"Memory pressure increased"
+                        f"{service} — Memory usage increased"
                     )
 
                     description = (
-                        f"{service} experienced higher memory "
-                        f"activity than normally observed."
+                        f"{service} was using more memory resources "
+                        f"than usual."
                     )
 
                 # -------------------------------------------------
                 # Network
                 # -------------------------------------------------
 
-                elif "network receive packets" in metric_key:
+                elif (
+                    "network_receive" in normalized_name
+                    or "receive_packets" in normalized_name
+                ):
+
                     title = (
-                        f"{service} — "
-                        f"Incoming network packets increased"
-                    )
-
-                    description = (
-                        f"{service} received more network packets "
-                        f"than normally observed."
-                    )
-
-                elif "network transmit packets" in metric_key:
-                    title = (
-                        f"{service} — "
-                        f"Outgoing network packets increased"
-                    )
-
-                    description = (
-                        f"{service} sent more network packets "
-                        f"than normally observed."
-                    )
-
-                elif "network receive" in metric_key:
-                    title = (
-                        f"{service} — "
-                        f"Incoming network traffic increased"
+                        f"{service} — Incoming network traffic increased"
                     )
 
                     description = (
                         f"{service} received more network traffic "
-                        f"than normally observed."
+                        f"than usual."
                     )
 
-                elif "network transmit" in metric_key:
+                elif (
+                    "network_transmit" in normalized_name
+                    or "transmit_packets" in normalized_name
+                ):
+
                     title = (
-                        f"{service} — "
-                        f"Outgoing network traffic increased"
+                        f"{service} — Outgoing network traffic increased"
                     )
 
                     description = (
                         f"{service} sent more network traffic "
-                        f"than normally observed."
+                        f"than usual."
                     )
 
                 # -------------------------------------------------
-                # Generic fallback
+                # Generic metric fallback
                 # -------------------------------------------------
 
                 else:
+
                     title = (
-                        f"{service} — "
-                        f"Performance changed"
+                        f"{service} — Performance signal detected"
                     )
 
                     description = (
                         f"{service} showed an abnormal performance "
                         f"signal compared with its normal behavior."
                     )
-
-            # -------------------------------------------------
-            # LOG
-            # -------------------------------------------------
 
             elif event_type == "log":
 
