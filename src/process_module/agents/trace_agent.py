@@ -242,6 +242,12 @@ class TraceAgent(BaseAgent):
                         "operation":
                             str(row["operation_name"]),
 
+                        "timestamp":
+                            str(row["timestamp"])
+                            if "timestamp" in row
+                            and row["timestamp"] is not None
+                            else "",
+
                         "latency_ms":
                             float(row["duration_ms"]),
 
@@ -426,6 +432,10 @@ class TraceAgent(BaseAgent):
 
                         "operation":
                             item["operation"],
+
+
+                        "timestamp":
+                            item.get("timestamp", ""),
 
 
                         "latency_ms":

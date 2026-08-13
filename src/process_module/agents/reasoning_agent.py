@@ -534,28 +534,51 @@ REQUIRED OUTPUT FORMAT
                 )[:5]
 
                 result["supporting_evidence"] = [
-
                     {
                         "evidence_type": item.get(
                             "evidence_type",
                             ""
                         ),
-
                         "service": item.get(
                             "service",
                             ""
                         ),
-
+                        "metric_name": item.get(
+                            "metric_name",
+                            ""
+                        ),
+                        "operation": item.get(
+                            "operation",
+                            ""
+                        ),
+                        "trace_id": item.get(
+                            "trace_id",
+                            ""
+                        ),
                         "description": item.get(
                             "description",
                             ""
                         ),
-
+                        "value": item.get(
+                            "value"
+                        ),
+                        "baseline": item.get(
+                            "baseline"
+                        ),
+                        "timestamp": item.get(
+                            "timestamp"
+                        ),
                         "score": float(
                             item.get("score") or 0
-                        )
+                        ),
+                        "confidence": float(
+                            item.get("confidence") or 0
+                        ),
+                        "metadata": item.get(
+                            "metadata",
+                            {}
+                        ),
                     }
-
                     for item in strongest
                 ]
 
