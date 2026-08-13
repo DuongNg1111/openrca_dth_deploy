@@ -1,7 +1,6 @@
 import argparse
 import json
-from dataclasses import asdict
-from pathlib import Path
+import pandas as pd
 
 from src.config import load_config
 
@@ -35,13 +34,18 @@ from src.process_module.link_telemetry import build_service_links
 from src.process_module.preprocess import preprocess
 from src.process_module.service_selector import select_services
 
-from src.schemas import RawQuery
-
-
-FULL_PIPELINE_REQUIRED_MODALITIES = (
-    "metric",
-    "log",
-    "trace",
+# Import Agents
+from src.process_module.agents.metric_agent import MetricAgent
+from src.process_module.agents.log_agent import LogAgent
+from src.process_module.agents.trace_agent import TraceAgent
+from src.process_module.agents.reasoning_agent import ReasoningAgent
+from src.database.repository import (
+    create_investigation,
+    insert_metrics,
+    insert_logs,
+    insert_traces,
+    save_rca_result,
+    insert_evidence
 )
 
 
@@ -618,6 +622,72 @@ def run_pipeline(
     )
 
     agent_results = {}
+
+    print("==============================")
+    print("SELECTED CONTEXTS DEBUG")
+
+    for name, ctx in selected_contexts.items():
+        print("SERVICE:", name)
+        print("METRICS:", ctx.metrics.keys())
+        print("LOGS:", ctx.logs.keys())
+        print("TRACES:", ctx.traces.keys())
+
+
+
+    for context in selected_contexts.values():
+        print("\n----------------------------------------")
+        print("SERVICE :", context.service)
+        print("----------------------------------------")
+
+        metric_result = metric_agent.analyze(context)
+        log_result = log_agent.analyze(context)
+        trace_result = trace_agent.analyze(context)
+
+        # Chỉ gọi 1 lần với đầy đủ context và kết quả 3 agent
+        final_output = reasoning_agent.analyze(
+            context,
+            metric_result,
+            log_result,
+            trace_result
+        )
+
+        # 1. Lưu kết quả nguyên nhân gốc rễ (RCA) vào bảng rca_results
+        save_rca_result(
+            investigation_id= investigation_id,
+            root_cause=final_output.get("reason", "unknown"),
+            confidence=float(final_output.get("confidence", 0.0)),
+            explanation=final_output.get("reasoning", "")
+        )
+
+        # 2. Lưu kết quả bằng chứng Metric vào bảng evidence_records
+        for metric in final_output.get("metrics", []):
+            insert_evidence(
+                investigation_id= investigation_id,
+                service=context.service,
+                evidence_type="metric",
+                description=metric.get("description",""),
+                score=float(metric.get("value", 0.0))
+            )
+        # 3. Lưu kết quả bằng chứng Log vào bảng evidence_records
+        for log in final_output.get("logs", []):
+            insert_evidence(
+                investigation_id= investigation_id,
+                service=context.service,
+                evidence_type="log",
+                description=log.get("message",""),
+                score=float(log.get("count", 1.0))
+            )
+        # 4. Lưu kết quả bằng chứng Trace vào bảng evidence_records
+        for trace in final_output.get("traces", []):
+            insert_evidence(
+                investigation_id= investigation_id,
+                service=context.service,
+                evidence_type="trace",
+                description=trace.get("description",""),
+                score=float(trace.get("latency_ms", 0.0))
+            )
+        print("\nFinal Output JSON format:")
+        print(json.dumps(final_output, indent=4, default=str))
 
 
     # =====================================================

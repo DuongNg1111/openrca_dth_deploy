@@ -14,6 +14,15 @@ class TraceAgent(BaseAgent):
     def __init__(self, config=None):
         super().__init__("Trace Agent", config=config)
 
+        # Lấy api_key và model từ cấu hình chung
+        api_key = llm_cfg.get("api_key")
+        self.model_name = llm_cfg.get("model")
+
+        # Khởi tạo client Gemini với api_key (nếu có)
+        if api_key:
+            self.client = genai.Client(api_key=api_key)
+        else:
+            self.client = genai.Client()
 
     def analyze(self, context) -> dict:
 
@@ -381,78 +390,19 @@ class TraceAgent(BaseAgent):
                 )
             )
 
-            text = response.text.strip()
-
-            print("\n========== TRACE RESPONSE ==========")
-            print(text)
-            print("=====================================")
-
-            while text.count("{") > text.count("}"):
-                text += "}"
-
-            while text.count("[") > text.count("]"):
-                text += "]"
-
-            result = json.loads(text)
-
-            if not isinstance(result, dict):
-                raise ValueError("Trace Agent response must be a JSON object")
-
-            return result
-
-        # ============================================
-        # 8. FALLBACK
-        # ============================================
-
-        except Exception:
-
-
-            fallback = []
-
-
-            for item in raw_trace[:10]:
-
-
-                fallback.append(
-
-                    {
-                        "trace_id":
-                            item["trace_id"],
-
-
-                        "service":
-                            item["service"],
-
-
-                        "operation":
-                            item["operation"],
-
-
-                        "latency_ms":
-                            item["latency_ms"],
-
-
-                        "baseline_ms":
-                            median_latency,
-
-
-                        "dependency":
-                            "",
-
-
-                        "description":
-                            (
-                                f"High latency detected "
-                                f"in {item['service']} "
-                                f"operation "
-                                f"{item['operation']}"
-                            )
-
-                    }
-
-                )
-
-
+        except Exception as e:
+            # Fallback gọn gàng
+            fallback_traces = [
+                {
+                    "trace_id": "unknown_trace",
+                    "root_service": "frontend",
+                    "slow_service": context.service,
+                    "latency_ms": float(max_duration),
+                    "normal_latency_ms": float(max_duration) * 0.1 if max_duration > 0 else 100.0,
+                    "dependency": "unknown-dependency",
+                    "description": f"High latency span detected with duration {max_duration} ms. (API Rate Limit / Fallback)"
+                }
+            ]
             return {
 
 
