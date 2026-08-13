@@ -167,11 +167,15 @@ def insert_metrics(
     records = []
 
     for _, row in df.iterrows():
+        try:
+            ts_val = int(pd.to_datetime(row["timestamp"]).timestamp()) if pd.notna(row["timestamp"]) else 0
+        except Exception:
+            ts_val = 0
 
         records.append(
             (
                 investigation_id,
-                row["timestamp"],
+                ts_val,  # <--- Thay row["timestamp"] thành ts_val
                 row["cmdb_id"],
                 row["kpi_name"],
                 row["value"]
@@ -242,8 +246,9 @@ def insert_logs(
     records = []
 
     for _, row in df.iterrows():
-
         log_content = ""
+        if content_col in df.columns and pd.notna(row[content_col]):
+            log_content = str(row[content_col])
 
         if (
             content_col in df.columns
@@ -338,7 +343,7 @@ def insert_traces(
         records.append(
             (
                 investigation_id,
-                row["timestamp"],
+                ts_val,  # <--- Thay row["timestamp"] thành ts_val
                 row["cmdb_id"],
                 row["span_id"],
                 row["trace_id"],

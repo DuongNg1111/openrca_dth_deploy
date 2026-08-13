@@ -10,8 +10,19 @@ from src.process_module.agents.base_agent import BaseAgent
 
 class LogAgent(BaseAgent):
 
-    def __init__(self, config=None):
-        super().__init__("Log Agent", config=config)
+        # Load cấu hình từ config.py (đã bao gồm đọc .env và file yaml)
+        self.config = load_config()
+        llm_cfg = self.config.get("llm", {})
+
+        # Lấy api_key và model từ config trung tâm
+        api_key = llm_cfg.get("api_key")
+        self.model_name = llm_cfg.get("model")
+
+        # Khởi tạo client Gemini
+        if api_key:
+            self.client = genai.Client(api_key=api_key)
+        else:
+            self.client = genai.Client()
 
     def analyze(self, context) -> dict:
 
@@ -266,7 +277,7 @@ Required format:
         try:
 
             response = self.client.models.generate_content(
-                model=self.model_name,
+                model=self.model_name,  # Lấy hoàn toàn từ config chung đã load ở __init__
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.1,
@@ -274,45 +285,22 @@ Required format:
                 )
             )
 
-            text = response.text.strip()
-
-            print("\n========== LOG RESPONSE ==========")
-            print(text)
-            print("===================================")
-
-            result = json.loads(text)
-            if not isinstance(result, dict):
-                raise ValueError("Log Agent response must be a JSON object")
-            return result
-
-        # =====================================================
-        # 11. FALLBACK
-        # =====================================================
-
-        except Exception:
-
-            fallback_logs = []
-
-            for item in raw_logs:
-
-                fallback_logs.append(
-                    {
-                        "service": service,
-                        "timestamp": timestamp,
-                        "level": "ERROR",
-                        "error_type": "Unknown",
-                        "message": item["message"],
-                        "count": item["count"]
-                    }
-                )
-
+        except Exception as e:
+            # Fallback gọn gàng
+            fallback_errors = [
+                {
+                    "service": context.service,
+                    "timestamp": context.incident_time,
+                    "level": "ERROR",
+                    "error_type": "LogAnalysisError",
+                    "message": f"Detected {total_errors} raw error entries. (API Rate Limit / Fallback)",
+                    "count": total_errors
+                }
+            ]
             return {
                 "agent": "Log Agent",
                 "evidence_type": "log",
-                "logs": fallback_logs,
-                "summary": (
-                    f"Detected {len(error_df)} error logs "
-                    f"for service '{service}'."
-                ),
+                "errors": fallback_errors,
+                "summary": summary_text,
                 "confidence": 0.5
             }

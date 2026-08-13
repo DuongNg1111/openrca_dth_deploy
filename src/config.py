@@ -16,10 +16,78 @@ DEFAULT_EXAMPLE_QUERY = (
 
 _DEFAULTS: dict[str, Any] = {
     "system": "Market",
-    "data_root": "./data",
-    "use_mock": True,
-    "default_date": "2021-03-25",
-    "timestamp_offset_hours": 0,
+
+    "data_root": os.getenv(
+        "OPENRCA_DATA_ROOT",
+        "./data"
+    ),
+
+    "database": {
+
+        "host": os.getenv(
+            "POSTGRES_HOST",
+            "localhost"
+        ),
+
+        "port": int(
+            os.getenv(
+                "POSTGRES_PORT",
+                5432
+            )
+        ),
+
+        "database": os.getenv(
+            "POSTGRES_DB",
+            "openrca"
+        ),
+
+        "user": os.getenv(
+            "POSTGRES_USER",
+            "postgres"
+        ),
+
+        "password": os.getenv(
+            "POSTGRES_PASSWORD",
+            ""
+        ),
+
+    },
+
+    "jira": {
+
+        "project_key": "DEV",
+
+        "url": os.getenv(
+            "JIRA_URL",
+            ""
+        ),
+
+        "email": os.getenv(
+            "JIRA_EMAIL",
+            ""
+        ),
+
+        "token": os.getenv(
+            "JIRA_API_TOKEN",
+            ""
+        ),
+
+    },
+
+    "llm": {
+
+        "model": os.getenv(
+            "GEMINI_MODEL",
+            "gemini-3.5-flash-lite"
+        ),
+
+        "api_key": os.getenv(
+            "GEMINI_API_KEY",
+            ""
+        ),
+
+    },
+
     "top_k": 1,
     "example_query": DEFAULT_EXAMPLE_QUERY,
     "llm": {
