@@ -33,7 +33,7 @@ class PipelineRequest(BaseModel):
 # Các issue khác vẫn chạy pipeline bình thường.
 # =====================================================
 
-SAVE_OUTPUT_ISSUE = "DEV-220"
+SAVE_OUTPUT_ISSUE = "DEV-221"
 
 
 def run_pipeline_background(issue_key: str):
