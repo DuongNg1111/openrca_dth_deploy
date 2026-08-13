@@ -22,18 +22,8 @@ class PipelineRequest(BaseModel):
 # =====================================================
 # TEMPORARY PRESENTATION SETTING
 # =====================================================
-# Chỉ issue này mới được lưu pipeline output ra TXT.
-#
-# Ví dụ:
-# SAVE_OUTPUT_ISSUE = "DEV-205"
-#
-# Sau khi quay/chụp evidence xong:
-# SAVE_OUTPUT_ISSUE = None
-#
-# Các issue khác vẫn chạy pipeline bình thường.
-# =====================================================
 
-SAVE_OUTPUT_ISSUE = "DEV-222"
+SAVE_OUTPUT_ISSUE = "DEV-223"
 
 
 def run_pipeline_background(issue_key: str):
