@@ -53,9 +53,9 @@ from src.database.repository import (
 )
 
 FULL_PIPELINE_REQUIRED_MODALITIES = (
-    "metrics",
-    "logs",
-    "traces",
+    "metric",
+    "log",
+    "trace",
 )
 
 class EvidenceValidationError(RuntimeError):
