@@ -630,6 +630,10 @@ def run_pipeline(
         config=config
     )
 
+    reasoning_agent = ReasoningAgent(
+        config=config
+    )
+
     agent_results = {}
 
 
