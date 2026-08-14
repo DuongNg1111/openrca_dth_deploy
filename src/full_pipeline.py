@@ -1,8 +1,12 @@
 import argparse
 import json
+from pathlib import Path
+from dataclasses import asdict
+
 import pandas as pd
 
 from src.config import load_config
+from src.schemas import RawQuery
 
 from src.database.repository import (
     create_investigation,

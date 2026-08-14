@@ -2,23 +2,30 @@ from __future__ import annotations
 
 import json
 
+from google import genai
 from google.genai import types
 
+from src.config import load_config
 from src.database.repository import get_investigation_logs
 from src.process_module.agents.base_agent import BaseAgent
 
 
 class LogAgent(BaseAgent):
 
-        # Load cấu hình từ config.py (đã bao gồm đọc .env và file yaml)
-        self.config = load_config()
+    def __init__(self, config=None):
+        super().__init__("Log Agent", config=config)
+
+        # Load cấu hình từ config.py
+        # config.py đã chịu trách nhiệm đọc .env và config.yaml
+        self.config = config if config is not None else load_config()
+
         llm_cfg = self.config.get("llm", {})
 
-        # Lấy api_key và model từ config trung tâm
+        # Lấy API key và model từ config trung tâm
         api_key = llm_cfg.get("api_key")
         self.model_name = llm_cfg.get("model")
 
-        # Khởi tạo client Gemini
+        # Khởi tạo Gemini client
         if api_key:
             self.client = genai.Client(api_key=api_key)
         else:
@@ -143,9 +150,7 @@ class LogAgent(BaseAgent):
             )
         )
 
-        error_df = logs_df[
-            error_mask
-        ].copy()
+        error_df = logs_df[error_mask].copy()
 
         # =====================================================
         # 6. NO ERROR
@@ -178,30 +183,33 @@ class LogAgent(BaseAgent):
 
         for message, count in grouped.items():
 
+            matching_rows = error_df[
+                error_df[message_column].astype(str) == str(message)
+            ]
+
+            first_seen = ""
+            last_seen = ""
+
+            if "timestamp" in matching_rows.columns:
+                first_seen = str(
+                    matching_rows["timestamp"].min()
+                )
+                last_seen = str(
+                    matching_rows["timestamp"].max()
+                )
+
             raw_logs.append(
                 {
-                "service": service,
-
-                "message": message,
-
-                "count": int(count),
-
-                "first_seen": str(
-                    error_df[
-                    error_df[message_column]==message
-                    ]["timestamp"]
-                    .min()
-                ),
-
-                "last_seen": str(
-                    error_df[
-                    error_df[message_column]==message
-                    ]["timestamp"]
-                    .max()
-                )
-
+                    "service": service,
+                    "message": str(message),
+                    "count": int(count),
+                    "first_seen": first_seen,
+                    "last_seen": last_seen
                 }
-                )
+            )
+
+        # Total number of detected error entries
+        total_errors = int(error_df.shape[0])
 
         # =====================================================
         # 8. TIMESTAMP
@@ -277,7 +285,7 @@ Required format:
         try:
 
             response = self.client.models.generate_content(
-                model=self.model_name,  # Lấy hoàn toàn từ config chung đã load ở __init__
+                model=self.model_name,
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.1,
@@ -285,22 +293,61 @@ Required format:
                 )
             )
 
+            # =================================================
+            # 11. PARSE GEMINI RESPONSE
+            # =================================================
+
+            response_text = getattr(
+                response,
+                "text",
+                None
+            )
+
+            if not response_text:
+                raise ValueError(
+                    "Gemini returned an empty response."
+                )
+
+            result = json.loads(response_text)
+
+            # Ensure required fields exist
+            result.setdefault("agent", "Log Agent")
+            result.setdefault("evidence_type", "log")
+            result.setdefault("logs", [])
+            result.setdefault("summary", "")
+            result.setdefault("confidence", 0.0)
+
+            return result
+
         except Exception as e:
-            # Fallback gọn gàng
+
+            # =================================================
+            # 12. FALLBACK
+            # =================================================
+
+            summary_text = (
+                f"Detected {total_errors} raw error entries. "
+                f"Gemini analysis unavailable: {str(e)}"
+            )
+
             fallback_errors = [
                 {
-                    "service": context.service,
-                    "timestamp": context.incident_time,
+                    "service": service,
+                    "timestamp": timestamp or incident_time,
                     "level": "ERROR",
                     "error_type": "LogAnalysisError",
-                    "message": f"Detected {total_errors} raw error entries. (API Rate Limit / Fallback)",
+                    "message": (
+                        f"Detected {total_errors} raw error entries. "
+                        "Gemini analysis unavailable."
+                    ),
                     "count": total_errors
                 }
             ]
+
             return {
                 "agent": "Log Agent",
                 "evidence_type": "log",
-                "errors": fallback_errors,
+                "logs": fallback_errors,
                 "summary": summary_text,
                 "confidence": 0.5
             }

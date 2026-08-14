@@ -2,23 +2,30 @@ from __future__ import annotations
 
 import json
 
+from google import genai
 from google.genai import types
 
+from src.config import load_config
 from src.database.repository import get_investigation_metrics
 from src.process_module.agents.base_agent import BaseAgent
 
 
 class MetricAgent(BaseAgent):
 
-        # Load cấu hình từ config.py (đã bao gồm đọc .env và file yaml)
-        self.config = load_config()
+    def __init__(self, config=None):
+        super().__init__("Metric Agent", config=config)
+
+        # Load cấu hình từ config.py
+        # config.py đã chịu trách nhiệm đọc .env và config.yaml
+        self.config = config if config is not None else load_config()
+
         llm_cfg = self.config.get("llm", {})
 
-        # Lấy api_key và model từ cấu hình chung
+        # Lấy API key và model từ config trung tâm
         api_key = llm_cfg.get("api_key")
         self.model_name = llm_cfg.get("model")
 
-        # Khởi tạo client Gemini với api_key (nếu có)
+        # Khởi tạo Gemini client
         if api_key:
             self.client = genai.Client(api_key=api_key)
         else:
@@ -183,29 +190,24 @@ class MetricAgent(BaseAgent):
         # =====================================================
 
         raw_metric_evidence = []
-
         summaries = []
-
 
         grouped = df.groupby(
             ["cmdb_id", "kpi_name"],
             dropna=False
         )
 
-
         for (cmdb_id, kpi_name), kpi_df in grouped:
 
             if kpi_df.empty:
                 continue
 
-
-            # baseline
+            # Baseline
             mean_value = float(
                 kpi_df["value"].mean()
             )
 
-
-            # peak point
+            # Peak point
             max_row = (
                 kpi_df
                 .sort_values(
@@ -215,11 +217,9 @@ class MetricAgent(BaseAgent):
                 .iloc[0]
             )
 
-
             max_value = float(
                 max_row["value"]
             )
-
 
             deviation_ratio = (
                 max_value / mean_value
@@ -227,222 +227,140 @@ class MetricAgent(BaseAgent):
                 else 0
             )
 
-
             raw_metric_evidence.append(
-
                 {
-                    "cmdb_id":
-                        str(cmdb_id),
-
-                    "metric":
-                        str(kpi_name),
-
-                    "peak_value":
-                        max_value,
-
-                    "baseline_mean":
-                        mean_value,
-
-                    "deviation_ratio":
-                        round(
-                            deviation_ratio,
-                            2
-                        ),
-
-                    "peak_timestamp":
-                        str(
-                            max_row["timestamp"]
-                        ),
-
-                    "sample_count":
-                        int(
-                            len(kpi_df)
-                        )
+                    "cmdb_id": str(cmdb_id),
+                    "metric": str(kpi_name),
+                    "peak_value": max_value,
+                    "baseline_mean": mean_value,
+                    "deviation_ratio": round(
+                        deviation_ratio,
+                        2
+                    ),
+                    "peak_timestamp": str(
+                        max_row["timestamp"]
+                    ),
+                    "sample_count": int(
+                        len(kpi_df)
+                    )
                 }
-
             )
 
-
             summaries.append(
-
                 f"{kpi_name} "
                 f"(CMDB: {cmdb_id}) "
                 f"peak={max_value:.2f}, "
                 f"baseline={mean_value:.2f}"
-
             )
-
-
 
         # =====================================================
         # 7. NO STATISTICS
         # =====================================================
 
         if not raw_metric_evidence:
-
             return {
-
-                "agent":
-                    "Metric Agent",
-
-                "evidence_type":
-                    "metric",
-
-                "anomalies":
-                    [],
-
-                "summary":
-                    "No usable metric statistics were found.",
-
-                "confidence":
-                    1.0
-
+                "agent": "Metric Agent",
+                "evidence_type": "metric",
+                "anomalies": [],
+                "summary": (
+                    "No usable metric statistics were found."
+                ),
+                "confidence": 1.0
             }
 
-
-
         summary_text = (
-
-            " | ".join(
-                summaries
-            )
-
+            " | ".join(summaries)
             if summaries
-
             else "Metrics analyzed."
-
         )
 
         # =====================================================
         # 8. PREPARE GEMINI PROMPT
         # =====================================================
 
-
         prompt = f"""
+You are an SRE Metric Performance Analysis Expert.
 
-    You are an SRE Metric Performance Analysis Expert.
+Analyze ONLY the supplied metric statistics.
 
-    Analyze ONLY the supplied metric statistics.
+Investigation ID:
+{investigation_id}
 
-    Investigation ID:
-    {investigation_id}
+Target service:
+{service}
 
+Incident time:
+{incident_time}
 
-    Target service:
-    {service}
+Metric statistics generated directly from PostgreSQL
+investigation_metrics table:
 
+{json.dumps(
+    raw_metric_evidence,
+    indent=2,
+    default=str
+)}
 
-    Incident time:
-    {incident_time}
+Your task:
 
+Identify meaningful metric anomalies related to the incident.
 
-    Metric statistics generated directly from PostgreSQL
-    investigation_metrics table:
+STRICT RULES:
 
+1. Use ONLY supplied metric statistics.
+2. Do NOT invent metric names.
+3. Do NOT invent metric values.
+4. Do NOT invent timestamps.
+5. Do NOT rename services.
+6. Always use service name:
+"{service}"
 
-    {json.dumps(
-        raw_metric_evidence,
-        indent=2,
-        default=str
-    )}
+7. Output mapping:
+- value = peak_value
+- baseline = baseline_mean
+- timestamp = peak_timestamp
 
+8. Prioritize abnormal performance indicators:
+- request duration
+- latency
+- response time
+- timeout related metrics
+- error related metrics
 
+9. A metric should be considered suspicious when:
+- peak_value is significantly higher than baseline_mean
+- latency/request duration reaches unusually high values
+- the metric represents possible service degradation
 
-    Your task:
+10. Normal infrastructure metrics
+(CPU, memory, filesystem, network)
+should NOT be reported unless they show clear abnormal deviation.
 
-    Identify meaningful metric anomalies related to the incident.
+11. If no meaningful anomaly exists,
+return an empty anomalies list.
 
+12. Return ONLY valid JSON.
 
+Required JSON format:
 
-    STRICT RULES:
-
-    1. Use ONLY supplied metric statistics.
-
-    2. Do NOT invent metric names.
-
-    3. Do NOT invent metric values.
-
-    4. Do NOT invent timestamps.
-
-    5. Do NOT rename services.
-
-    6. Always use service name:
-    "{service}"
-
-
-    7. Output mapping:
-
-    - value = max_value
-    - baseline = mean_value
-    - timestamp = max_timestamp
-
-
-    8. Prioritize abnormal performance indicators:
-
-    - request duration
-    - latency
-    - response time
-    - timeout related metrics
-    - error related metrics
-
-
-    9. A metric should be considered suspicious when:
-
-    - max_value is significantly higher than mean_value
-    - latency/request duration reaches unusually high values
-    - the metric represents possible service degradation
-
-
-    10. Normal infrastructure metrics
-    (CPU, memory, filesystem, network)
-    should NOT be reported unless they show clear abnormal deviation.
-
-
-    11. If no meaningful anomaly exists,
-    return an empty anomalies list.
-
-
-    12. Return ONLY valid JSON.
-
-
-
-    Required JSON format:
-
-
-    {{
+{{
     "agent": "Metric Agent",
-
     "evidence_type": "metric",
-
-    "anomalies":
-    [
-
-    {{
-    "metric": "",
-
-    "service": "{service}",
-
-    "value": 0.0,
-
-    "baseline": 0.0,
-
-    "timestamp": "",
-
-    "severity": "",
-
-    "description": ""
-    }}
-
+    "anomalies": [
+        {{
+            "metric": "",
+            "service": "{service}",
+            "value": 0.0,
+            "baseline": 0.0,
+            "timestamp": "",
+            "severity": "",
+            "description": ""
+        }}
     ],
-
-
     "summary": "",
-
     "confidence": 0.0
-
-    }}
-
-    """
+}}
+"""
 
         # =====================================================
         # 9. CALL GEMINI
@@ -459,41 +377,95 @@ class MetricAgent(BaseAgent):
                 )
             )
 
+            # =================================================
+            # 10. PARSE GEMINI RESPONSE
+            # =================================================
+
+            response_text = getattr(
+                response,
+                "text",
+                None
+            )
+
+            if not response_text:
+                raise ValueError(
+                    "Gemini returned an empty response."
+                )
+
+            result = json.loads(response_text)
+
+            result.setdefault(
+                "agent",
+                "Metric Agent"
+            )
+
+            result.setdefault(
+                "evidence_type",
+                "metric"
+            )
+
+            result.setdefault(
+                "anomalies",
+                []
+            )
+
+            result.setdefault(
+                "summary",
+                summary_text
+            )
+
+            result.setdefault(
+                "confidence",
+                0.0
+            )
+
+            return result
+
         except Exception as e:
-            # Fallback gọn gàng, không nhét chuỗi JSON lỗi dài dòng của Google API vào description
+
+            # =================================================
+            # 11. FALLBACK
+            # =================================================
+
             fallback_anomalies = [
                 {
                     "metric": item.get(
                         "metric",
                         "unknown"
                     ),
-
                     "service": service,
-
                     "value": item.get(
                         "peak_value",
                         0.0
                     ),
-
                     "baseline": item.get(
                         "baseline_mean",
                         0.0
                     ),
-
                     "timestamp": item.get(
                         "peak_timestamp",
                         ""
                     ),
-
                     "severity": "warning",
-                    "description": f"Observed peak value {item.get('max_value', 0.0)} with mean {item.get('mean_value', 0.0)}. (API Rate Limit / Fallback)"
+                    "description": (
+                        f"Observed peak value "
+                        f"{item.get('peak_value', 0.0)} "
+                        f"with mean "
+                        f"{item.get('baseline_mean', 0.0)}. "
+                        "Gemini analysis unavailable."
+                    )
                 }
-            )
+                for item in raw_metric_evidence
+            ]
 
-        return {
-            "agent": "Metric Agent",
-            "evidence_type": "metric",
-            "anomalies": fallback_anomalies,
-            "summary": summary_text,
-            "confidence": 0.6
-        }
+            return {
+                "agent": "Metric Agent",
+                "evidence_type": "metric",
+                "anomalies": fallback_anomalies,
+                "summary": (
+                    f"{summary_text} "
+                    "Gemini analysis unavailable; "
+                    "fallback metric evidence was returned."
+                ),
+                "confidence": 0.6
+            }
