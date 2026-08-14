@@ -52,6 +52,11 @@ from src.database.repository import (
     insert_evidence
 )
 
+FULL_PIPELINE_REQUIRED_MODALITIES = (
+    "metrics",
+    "logs",
+    "traces",
+)
 
 class EvidenceValidationError(RuntimeError):
     """
