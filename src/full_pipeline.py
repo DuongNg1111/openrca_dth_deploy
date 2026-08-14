@@ -618,81 +618,67 @@ def run_pipeline(
     print("STEP 9: MULTI-AGENT ANALYSIS")
     print("========================================")
 
+    # -----------------------------------------------------
+    # Initialize Metric Agent
+    # -----------------------------------------------------
+
     metric_agent = MetricAgent(
         config=config
     )
+
+    # -----------------------------------------------------
+    # Initialize Log Agent
+    # -----------------------------------------------------
 
     log_agent = LogAgent(
         config=config
     )
 
+    # -----------------------------------------------------
+    # Initialize Trace Agent
+    # -----------------------------------------------------
+
     trace_agent = TraceAgent(
         config=config
     )
+
+    # -----------------------------------------------------
+    # Initialize Reasoning Agent
+    # -----------------------------------------------------
 
     reasoning_agent = ReasoningAgent(
         config=config
     )
 
+    # -----------------------------------------------------
+    # Store agent results
+    # -----------------------------------------------------
+
     agent_results = {}
 
+    print("\nAgents initialized successfully:")
 
-    for context in selected_contexts.values():
-        print("\n----------------------------------------")
-        print("SERVICE :", context.service)
-        print("----------------------------------------")
+    print(
+        "- Metric Agent"
+    )
 
-        metric_result = metric_agent.analyze(context)
-        log_result = log_agent.analyze(context)
-        trace_result = trace_agent.analyze(context)
+    print(
+        "- Log Agent"
+    )
 
-        # Chỉ gọi 1 lần với đầy đủ context và kết quả 3 agent
-        final_output = reasoning_agent.analyze(
-            context,
-            metric_result,
-            log_result,
-            trace_result
-        )
+    print(
+        "- Trace Agent"
+    )
 
-        # 1. Lưu kết quả nguyên nhân gốc rễ (RCA) vào bảng rca_results
-        save_rca_result(
-            investigation_id= investigation_id,
-            root_cause=final_output.get("reason", "unknown"),
-            confidence=float(final_output.get("confidence", 0.0)),
-            explanation=final_output.get("reasoning", "")
-        )
+    print(
+        "- Reasoning Agent"
+    )
 
-        # 2. Lưu kết quả bằng chứng Metric vào bảng evidence_records
-        for metric in final_output.get("metrics", []):
-            insert_evidence(
-                investigation_id= investigation_id,
-                service=context.service,
-                evidence_type="metric",
-                description=metric.get("description",""),
-                score=float(metric.get("value", 0.0))
-            )
-        # 3. Lưu kết quả bằng chứng Log vào bảng evidence_records
-        for log in final_output.get("logs", []):
-            insert_evidence(
-                investigation_id= investigation_id,
-                service=context.service,
-                evidence_type="log",
-                description=log.get("message",""),
-                score=float(log.get("count", 1.0))
-            )
-        # 4. Lưu kết quả bằng chứng Trace vào bảng evidence_records
-        for trace in final_output.get("traces", []):
-            insert_evidence(
-                investigation_id= investigation_id,
-                service=context.service,
-                evidence_type="trace",
-                description=trace.get("description",""),
-                score=float(trace.get("latency_ms", 0.0))
-            )
-        print("\nFinal Output JSON format:")
-        print(json.dumps(final_output, indent=4, default=str))
-
-
+    print(
+        "\nReasoning Agent will run AFTER "
+        "Metric / Log / Trace evidence is stored "
+        "in evidence_records."
+    )
     # =====================================================
     # STEP 10: METRIC AGENT
     # =====================================================
@@ -1050,7 +1036,6 @@ def run_pipeline(
             f"trace={trace_count}"
         )
 
-
     # =====================================================
     # STEP 16: FAULT LOCALIZATION
     # =====================================================
@@ -1104,7 +1089,8 @@ def run_pipeline(
     for context in target_contexts:
 
         evidence_df = get_investigation_evidence(
-            context.investigation_id
+            context.investigation_id,
+            service=context.service,
         )
 
         reasoning_contexts[context.service] = {
@@ -1165,7 +1151,7 @@ def run_pipeline(
         )
 
         # =================================================
-        # STEP 19: PROCESS RCA RESULT
+        # STEP192: PROCESS RCA RESULT
         # =================================================
 
         print("\n========================================")
