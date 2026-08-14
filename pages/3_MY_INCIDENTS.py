@@ -2015,7 +2015,7 @@ else:
 
             else:
 
-                service_text = "Các dịch vụ liên quan"
+                service_text = "Related services"
 
             # -------------------------------------------------
             # Create story title
