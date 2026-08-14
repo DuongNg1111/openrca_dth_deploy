@@ -167,15 +167,17 @@ def insert_metrics(
     records = []
 
     for _, row in df.iterrows():
-        try:
-            ts_val = int(pd.to_datetime(row["timestamp"]).timestamp()) if pd.notna(row["timestamp"]) else 0
-        except Exception:
-            ts_val = 0
+
+        timestamp_val = (
+            row["timestamp"]
+            if pd.notna(row["timestamp"])
+            else None
+        )
 
         records.append(
             (
                 investigation_id,
-                ts_val,  # <--- Thay row["timestamp"] thành ts_val
+                timestamp_val,
                 row["cmdb_id"],
                 row["kpi_name"],
                 row["value"]
@@ -323,10 +325,15 @@ def insert_traces(
 
     for _, row in df.iterrows():
 
+        timestamp_val = (
+            row["timestamp"]
+            if pd.notna(row["timestamp"])
+            else None
+        )
+
         raw_status = row["status_code"]
 
         try:
-
             status_code_val = (
                 int(float(raw_status))
                 if pd.notna(raw_status)
@@ -337,13 +344,12 @@ def insert_traces(
             ValueError,
             TypeError
         ):
-
             status_code_val = 0
 
         records.append(
             (
                 investigation_id,
-                ts_val,  # <--- Thay row["timestamp"] thành ts_val
+                timestamp_val,
                 row["cmdb_id"],
                 row["span_id"],
                 row["trace_id"],
