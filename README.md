@@ -1,73 +1,217 @@
 # OpenRCA_DTH — Logistics / Delivery Platform RCA
 
-> Capstone built on **[microsoft/OpenRCA](https://github.com/microsoft/OpenRCA)** (ICLR'25):
-> *Can Large Language Models Locate the Root Cause of Software Failures?*
+OpenRCA_DTH is an **LLM-assisted Root Cause Analysis (RCA) system** for a Logistics / Delivery Platform.
 
-We build an **LLM-assisted Root Cause Analysis (RCA)** system for a **Logistics** scenario.
-Given a natural-language failure query (a time window + the system), the pipeline reads telemetry
-(**metrics, logs, traces**) and outputs the **root cause component + reason** in OpenRCA's format.
+The system analyzes incident information together with **metrics, logs, and traces** to identify the most likely root cause, affected component, and reason.
 
+Inspired by Microsoft's [OpenRCA](https://github.com/microsoft/OpenRCA) research.
+
+---
+
+## Architecture
+
+```text
+Incident Query
+      │
+      ▼
+┌──────────────┐
+│ INPUT MODULE │
+│    Dương     │
+└──────┬───────┘
+       ▼
+┌────────────────┐
+│ PROCESS MODULE │
+│     Hoàng      │
+└──────┬─────────┘
+       ▼
+┌───────────────┐
+│ OUTPUT MODULE │
+│     Thanh     │
+└──────┬────────┘
+       ▼
+   RCA Result
 ```
-User query ──▶ [ INPUT ] ──▶ [ PROCESS ] ──▶ [ OUTPUT ] ──▶ {"root cause component", "reason", "datetime"}
-   (NL)         DEV 1           DEV 2            DEV 3
+
+The modules communicate through the shared schemas defined in:
+
+```text
+src/schemas.py
 ```
 
-## The 3 modules = 3 developers
-| GitHub | Suggested module | Folder |
-| --- | --- | --- |
-| @DuongNg1111 | Input module | `src/input_module` |
-| @HoangNguyen2803 | Process module | `src/process_module` |
-| @thanhthanh278 | Output module | `src/output_module` |
+---
 
-> The three modules talk to each other **only** through the dataclasses in
-> [`src/schemas.py`](src/schemas.py). Agree on those shapes first; then each dev can work in parallel.
+## Module Ownership
 
-## Quickstart (works out of the box, no dataset needed)
+| Module             | Developer | Documentation                                                  |
+| ------------------ | --------- | -------------------------------------------------------------- |
+| **Input Module**   | Duong Nguyen     | [`src/input_module/README.md`](src/input_module/README.md)     |
+| **Process Module** | Hoang Nguyen     | [`src/process_module/README.md`](src/process_module/README.md) |
+| **Output Module**  | Thanh Bui     | [`src/output_module/README.md`](src/output_module/README.md)   |
+
+Each module has its own README containing detailed information about its implementation.
+
+---
+
+## Installation
+
+### 1. Clone the repository
+
 ```bash
-python -m src.pipeline          # prints a sample OpenRCA-format prediction on MOCK data
-python tests/test_pipeline_smoke.py   # or: python -m pytest -q
-python experiments/run_experiment.py --config experiments/configs/baseline.yaml
+git clone <repository-url>
+cd OpenRCA_DTH
 ```
 
-To validate a local Market dataset without Jira, Gemini, or database writes,
-save `issue_key`, `incident_description`, `environment`, `affected_system`, and
-`incident_time` as a `RawQuery` JSON object and run:
+### 2. Create a virtual environment
+
+**Windows**
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+**Linux / macOS**
 
 ```bash
-python -m src.full_pipeline \
-  --raw-query-file local-query.json \
-  --data-root /path/to/Market \
-  --dataset cloudbed-1 \
-  --timestamp-offset-hours 8
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
-This full-pipeline command is a dry run by default. Database persistence
-requires the explicit `--write-database` flag, and agents additionally require
-`--run-agents`. The Python `run_pipeline()` API is also non-writing by default;
-programmatic persistence requires an explicit `dry_run=False`. `--dataset`
-is treated as an explicit source override, and windows crossing midnight load
-every covered date folder or fail with a missing-coverage error.
+### 3. Install dependencies
 
-## Where to start (read these in order)
-1. [`docs/00_capstone_handbook.md`](docs/00_capstone_handbook.md) — the whole journey, milestones, how Jira maps to the repo.
-2. [`docs/01_git_workflow.md`](docs/01_git_workflow.md) — branch / commit / PR rules (read before you push anything!).
-3. [`docs/02_environment_setup.md`](docs/02_environment_setup.md) — install Python + get the dataset.
-4. [`CONTRIBUTING.md`](CONTRIBUTING.md) — code & documentation conventions.
-5. Your module's README: `src/input_module/`, `src/process_module/`, `src/output_module/`.
-
-## Target system & dataset
-- OpenRCA system: **Market** (`dataset/Market/cloudbed-1`). See [`data/DATA.md`](data/DATA.md).
-- Output format (OpenRCA):
-```json
-{ "1": { "root cause occurrence datetime": "2021-03-25 09:21:00",
-         "root cause component": "order-service",
-         "root cause reason": "high disk I/O read usage" } }
+```bash
+pip install -r requirements.txt
 ```
 
-## Branching (PR-only `main`)
-`main ⟵ staging ⟵ dev ⟵ feature/*` — default branch is **`dev`**. You **cannot push to `main`**;
-open a Pull Request. Details in [`docs/01_git_workflow.md`](docs/01_git_workflow.md).
+---
 
-DUONG: test 1
-TEST: Duong 
-TEST: ThanhThanh
+## Database Setup
+
+OpenRCA_DTH uses **PostgreSQL** for investigation and RCA data.
+
+The project does not require the development team's database. Users should configure their own compatible PostgreSQL database.
+
+Create a database:
+
+```sql
+CREATE DATABASE openrca;
+```
+
+Configure the database connection in `.env`:
+
+```env
+DB_HOST=<database-host>
+DB_PORT=5432
+DB_NAME=openrca
+DB_USER=<database-user>
+DB_PASSWORD=<database-password>
+```
+
+Additional environment variables, such as the Gemini API key, should also be configured in `.env`.
+
+> Never commit `.env` or API credentials to Git.
+
+---
+
+## Run the Application
+
+### Pipeline API
+
+Start the FastAPI pipeline:
+
+```bash
+uvicorn src.pipeline_api:app --host 0.0.0.0 --port 8000
+```
+
+API:
+
+```text
+http://localhost:8000
+```
+
+API documentation:
+
+```text
+http://localhost:8000/docs
+```
+
+### Streamlit
+
+Open another terminal and run:
+
+```bash
+streamlit run app.py
+```
+
+Application:
+
+```text
+http://localhost:8501
+```
+
+---
+
+## Project Structure
+
+```mermaid
+flowchart TB
+    ROOT["OpenRCA_DTH"]
+
+    ROOT --> APP["app.py"]
+    ROOT --> SRC["src/"]
+    ROOT --> CONFIG["config/"]
+    ROOT --> DOCS["docs/"]
+    ROOT --> PAGES["pages/"]
+    ROOT --> SCRIPTS["scripts/"]
+    ROOT --> EXP["experiments/"]
+    ROOT --> NOTE["notebooks/"]
+
+    SRC --> INPUT["input_module/"]
+    SRC --> PROCESS["process_module/"]
+    SRC --> OUTPUT["output_module/"]
+
+    SRC --> AUTH["auth/"]
+    SRC --> DB["database/"]
+    SRC --> JIRA["jira/"]
+    SRC --> LLM["llm/"]
+    SRC --> EVAL["eval/"]
+
+    SRC --> PIPELINE["pipeline.py"]
+    SRC --> API["pipeline_api.py"]
+    SRC --> FULL["full_pipeline.py"]
+    SRC --> SCHEMAS["schemas.py"]
+
+    INPUT --> D["Dương"]
+    PROCESS --> H["Hoàng"]
+    OUTPUT --> T["Thanh"]
+```
+
+---
+
+## Documentation
+
+Detailed documentation is available in each main module:
+
+* **Input Module** — `src/input_module/README.md`
+* **Process Module** — `src/process_module/README.md`
+* **Output Module** — `src/output_module/README.md`
+
+Additional project documentation is available in:
+
+```text
+docs/
+```
+
+---
+
+## Acknowledgements
+
+We would like to express our sincere gratitude to:
+
+**Mr. Huynh Ngoc Thien** — our direct supervising lecturer, for his guidance and support throughout the project.
+
+**AI tools** — for assisting with code development, debugging, documentation, and technical exploration.
+
+**Project team members** — for their collaboration and contributions to the development of OpenRCA_DTH.
+
+*This project is based on and inspired by Microsoft's OpenRCA research and implementation. Since OpenRCA_DTH is an adaptation of the original project for our Logistics / Delivery Platform scenario, some implementation differences or limitations may occur.*
