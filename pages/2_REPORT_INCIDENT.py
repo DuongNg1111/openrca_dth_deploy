@@ -271,7 +271,7 @@ if submitted:
             # =================================================
 
             response = requests.post(
-                "http://localhost:8000/run-pipeline",
+                "http://18.140.152.77:8000/run-pipeline",
                 json={
                     "issue_key": issue_key
                 },
