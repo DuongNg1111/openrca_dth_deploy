@@ -72,24 +72,6 @@ Incident Description:
 {incident_description}
 """
 
-    # Jira Cloud API v3 requires description in
-    # Atlassian Document Format (ADF).
-    description_adf = {
-        "type": "doc",
-        "version": 1,
-        "content": [
-            {
-                "type": "paragraph",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": description
-                    }
-                ]
-            }
-        ]
-    }
-
     issue_dict = {
         "project": {
             "key": jira_cfg["project_key"]
@@ -99,7 +81,7 @@ Incident Description:
             if incident_description.strip()
             else f"Incident Report - {incident_time}"
         ),
-        "description": description_adf,
+        "description": description,
         "issuetype": {
             "name": "Task"
         },
