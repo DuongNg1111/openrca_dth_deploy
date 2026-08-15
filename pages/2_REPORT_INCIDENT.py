@@ -271,7 +271,7 @@ if submitted:
             # =================================================
 
             response = requests.post(
-                "http://localhost:8000/run-pipeline",
+                "https://based-commitment-dennis-visitors.trycloudflare.com/run-pipeline",
                 json={
                     "issue_key": issue_key
                 },
